@@ -1,0 +1,9 @@
+{
+    "name": "powersurge/gym-management",
+    "description": "PowerSurge Gym Management System",
+    "type": "project",
+    "require": {
+        "php": ">=8.1",
+        "phpmailer/phpmailer": "^7.1"
+    }
+}

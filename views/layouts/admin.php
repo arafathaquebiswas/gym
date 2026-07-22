@@ -1,0 +1,82 @@
+<?php
+/** @var string $content */
+/** @var array $flashes */
+$currentUser = Auth::user();
+$currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/');
+
+$navItems = [
+    ['dashboard', 'Dashboard', 'bi-speedometer2', url('/admin')],
+    ['trainers', 'Trainers', 'bi-person-badge', url('/admin/trainers')],
+    ['packages', 'Packages', 'bi-box-seam', url('/admin/packages')],
+];
+$comingSoon = ['Members', 'Store', 'POS', 'Reports', 'Settings'];
+?>
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= e($pageTitle ?? 'Admin') ?> | PowerSurge Admin</title>
+    <meta name="csrf-token" content="<?= e(Security::csrfToken()) ?>">
+    <link rel="icon" type="image/png" href="<?= asset('images/logo/logo.png') ?>">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="<?= asset('css/style.css') ?>" rel="stylesheet">
+    <link href="<?= asset('css/admin.css') ?>" rel="stylesheet">
+</head>
+<body class="admin-body">
+
+<div class="admin-shell">
+    <aside class="admin-sidebar">
+        <a href="<?= url('/admin') ?>" class="admin-brand">
+            <img src="<?= asset('images/logo/logo.png') ?>" alt="PowerSurge Gym" height="34">
+            <span>Power<span class="text-orange">Surge</span> Admin</span>
+        </a>
+        <nav class="admin-nav">
+            <?php foreach ($navItems as [$key, $label, $icon, $href]): ?>
+                <a href="<?= e($href) ?>" class="admin-nav-link <?= str_starts_with($currentPath, 'admin/' . $key) || ($key === 'dashboard' && $currentPath === 'admin') ? 'active' : '' ?>">
+                    <i class="bi <?= e($icon) ?>"></i> <?= e($label) ?>
+                </a>
+            <?php endforeach; ?>
+            <?php foreach ($comingSoon as $label): ?>
+                <span class="admin-nav-link disabled"><i class="bi bi-lock"></i> <?= e($label) ?> <small>soon</small></span>
+            <?php endforeach; ?>
+        </nav>
+        <div class="admin-sidebar-footer">
+            <a href="<?= url('/') ?>" class="admin-nav-link"><i class="bi bi-box-arrow-up-left"></i> View Website</a>
+            <a href="<?= url('/logout') ?>" class="admin-nav-link"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        </div>
+    </aside>
+
+    <div class="admin-main">
+        <header class="admin-topbar">
+            <h5 class="mb-0"><?= e($pageTitle ?? 'Dashboard') ?></h5>
+            <div class="admin-user">
+                <i class="bi bi-person-circle"></i> <?= e($currentUser['name'] ?? '') ?>
+                <span class="badge-ps badge ms-2"><?= e(ucfirst(str_replace('_', ' ', $currentUser['role'] ?? ''))) ?></span>
+            </div>
+        </header>
+
+        <?php if (!empty($flashes)): ?>
+        <div class="px-4 pt-3">
+            <?php foreach ($flashes as $flash): ?>
+                <div class="alert alert-<?= e($flash['type']) ?> alert-dismissible fade show" role="alert">
+                    <?= e($flash['message']) ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <main class="admin-content"><?= $content ?></main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<?php if (!empty($extraScripts)): foreach ($extraScripts as $script): ?>
+<script src="<?= asset($script) ?>"></script>
+<?php endforeach; endif; ?>
+</body>
+</html>

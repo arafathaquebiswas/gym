@@ -1,0 +1,28 @@
+# PowerSurge Gym — Apache configuration (XAMPP / Hostinger shared hosting)
+
+RewriteEngine On
+
+# Block direct access to internal application folders
+RewriteRule ^(config|core|models|controllers|database|vendor)/ - [F,L]
+
+# Never serve dotfiles (.env, .git, etc.)
+RewriteRule (^|/)\. - [F,L]
+
+# Route everything that isn't a real file/directory through the front controller
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [L]
+
+# Security headers (also set in PHP; kept here as defense-in-depth)
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Disable directory listing
+Options -Indexes
+
+# Reasonable upload limits (uploads/ handling comes in a later phase)
+php_value upload_max_filesize 4M
+php_value post_max_size 8M
