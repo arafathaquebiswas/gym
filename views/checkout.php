@@ -10,8 +10,14 @@ $pageTitle = 'Checkout';
 /** @var string $gymName */
 /** @var string|null $gymAddress */
 /** @var string|null $gymPhone */
+/** @var bool $deliveryOn */
+/** @var bool $pickupOn */
+/** @var array $zones */
+/** @var array $deliverySlots */
+/** @var array $pickupSlots */
 $isMember = Auth::hasRole('member');
 $currentUser = Auth::user();
+$defaultFulfillment = $deliveryOn ? 'delivery' : 'pickup';
 ?>
 
 <section class="section">
@@ -23,6 +29,7 @@ $currentUser = Auth::user();
         <div class="col-lg-7">
           <div class="glass-card p-4 mb-4">
             <h6 class="mb-3">Delivery or Pickup</h6>
+            <?php if ($deliveryOn && $pickupOn): ?>
             <div class="d-flex gap-4 mb-3">
               <div class="form-check">
                 <input type="radio" name="fulfillment_method" value="delivery" class="form-check-input fulfillment-radio" id="fmDelivery" checked>
@@ -33,14 +40,51 @@ $currentUser = Auth::user();
                 <label class="form-check-label" for="fmPickup">Store Pickup</label>
               </div>
             </div>
+            <?php else: ?>
+              <input type="hidden" name="fulfillment_method" value="<?= $defaultFulfillment ?>">
+              <p class="text-white-50 small mb-3"><?= $deliveryOn ? 'Home delivery only — store pickup is currently unavailable.' : 'Store pickup only — home delivery is currently unavailable.' ?></p>
+            <?php endif; ?>
 
-            <div id="pickupInfo" class="glass-card p-3 mb-3 d-none" style="background:rgba(255,255,255,.03)">
+            <div id="pickupInfo" class="glass-card p-3 mb-3 <?= $defaultFulfillment === 'pickup' ? '' : 'd-none' ?>" style="background:rgba(255,255,255,.03)">
               <p class="mb-1"><i class="bi bi-geo-alt text-orange"></i> Pick up at <strong><?= e($gymName) ?></strong></p>
               <?php if ($gymAddress): ?><p class="text-white-50 small mb-1"><?= e($gymAddress) ?></p><?php endif; ?>
               <?php if ($gymPhone): ?><p class="text-white-50 small mb-0">Phone: <?= e($gymPhone) ?></p><?php endif; ?>
+              <?php if (!empty($pickupSlots)): ?>
+              <div class="mt-2">
+                <label>Preferred Pickup Time</label>
+                <select name="pickup_time_slot_id" class="form-select pickup-time-slot">
+                  <option value="">No preference</option>
+                  <?php foreach ($pickupSlots as $slot): ?>
+                    <option value="<?= (int) $slot['id'] ?>"><?= e($slot['label']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <?php endif; ?>
             </div>
 
-            <div id="deliveryFields">
+            <div id="deliveryFields" class="<?= $defaultFulfillment === 'pickup' ? 'd-none' : '' ?>">
+              <?php if (!empty($zones)): ?>
+              <div class="mb-3">
+                <label>Delivery Zone *</label>
+                <select name="zone_id" id="fZone" class="form-select" <?= $deliveryOn ? 'required' : '' ?>>
+                  <option value="">— Select your zone —</option>
+                  <?php foreach ($zones as $zone): ?>
+                    <option value="<?= (int) $zone['id'] ?>" data-charge="<?= (float) $zone['charge'] ?>"><?= e($zone['name']) ?> (৳<?= number_format((float) $zone['charge']) ?>)</option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <?php endif; ?>
+              <?php if (!empty($deliverySlots)): ?>
+              <div class="mb-3">
+                <label>Preferred Delivery Time</label>
+                <select name="delivery_time_slot_id" class="form-select delivery-time-slot">
+                  <option value="">No preference</option>
+                  <?php foreach ($deliverySlots as $slot): ?>
+                    <option value="<?= (int) $slot['id'] ?>"><?= e($slot['label']) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <?php endif; ?>
               <?php if (!empty($savedAddresses)): ?>
               <div class="mb-3">
                 <label>Use a saved address</label>
@@ -184,34 +228,62 @@ document.querySelectorAll('.payment-method-radio').forEach(function (radio) {
 
 (function () {
   var subtotal = <?= (float) $subtotal ?>;
-  var deliveryShipping = <?= (float) $estimatedShipping ?>;
   var tax = <?= (float) $estimatedTax ?>;
+  var shippingEnabled = <?= $shippingEnabled ? 'true' : 'false' ?>;
+  var freeShippingMin = <?= (float) $freeShippingMin ?>;
+  var flatRate = <?= (float) $shippingFlatRate ?>;
+  var maxOverride = <?= $shippingMaxOverride !== null ? (float) $shippingMaxOverride : 'null' ?>;
   var money = function (n) { return '৳' + Math.round(n).toLocaleString('en-US'); };
 
   var deliveryFields = document.getElementById('deliveryFields');
   var pickupInfo = document.getElementById('pickupInfo');
   var cityInput = document.getElementById('fCity');
   var addressInput = document.getElementById('fAddress');
+  var zoneSelect = document.getElementById('fZone');
   var summaryShipping = document.getElementById('summaryShipping');
   var summaryTotal = document.getElementById('summaryTotal');
   var freeShippingHint = document.getElementById('freeShippingHint');
 
+  function computeShipping(isPickup) {
+    if (isPickup || !shippingEnabled) return 0;
+    if (freeShippingMin > 0 && subtotal >= freeShippingMin) return 0;
+    var zoneCharge = null;
+    if (zoneSelect && zoneSelect.value) {
+      var opt = zoneSelect.options[zoneSelect.selectedIndex];
+      zoneCharge = parseFloat(opt.dataset.charge);
+    }
+    var base = zoneCharge !== null && !isNaN(zoneCharge) ? zoneCharge : flatRate;
+    return maxOverride !== null ? Math.max(base, maxOverride) : base;
+  }
+
   function applyFulfillment(method) {
     var isPickup = method === 'pickup';
-    deliveryFields.classList.toggle('d-none', isPickup);
-    pickupInfo.classList.toggle('d-none', !isPickup);
-    cityInput.required = !isPickup;
-    addressInput.required = !isPickup;
-    freeShippingHint.classList.toggle('d-none', isPickup);
+    if (deliveryFields) deliveryFields.classList.toggle('d-none', isPickup);
+    if (pickupInfo) pickupInfo.classList.toggle('d-none', !isPickup);
+    if (cityInput) cityInput.required = !isPickup;
+    if (addressInput) addressInput.required = !isPickup;
+    if (zoneSelect) zoneSelect.required = !isPickup && zoneSelect.dataset.wasRequired === '1';
+    if (freeShippingHint) freeShippingHint.classList.toggle('d-none', isPickup);
 
-    var shipping = isPickup ? 0 : deliveryShipping;
+    var shipping = computeShipping(isPickup);
     summaryShipping.textContent = shipping > 0 ? money(shipping) : 'Free';
     summaryTotal.textContent = money(subtotal + shipping + tax);
   }
 
-  document.querySelectorAll('.fulfillment-radio').forEach(function (radio) {
+  var fulfillmentRadios = document.querySelectorAll('.fulfillment-radio');
+  fulfillmentRadios.forEach(function (radio) {
     radio.addEventListener('change', function () { applyFulfillment(this.value); });
   });
+
+  if (zoneSelect) {
+    zoneSelect.dataset.wasRequired = zoneSelect.required ? '1' : '0';
+    zoneSelect.addEventListener('change', function () {
+      var checkedRadio = document.querySelector('.fulfillment-radio:checked');
+      applyFulfillment(checkedRadio ? checkedRadio.value : '<?= $defaultFulfillment ?>');
+    });
+  }
+
+  applyFulfillment('<?= $defaultFulfillment ?>');
 })();
 
 var picker = document.getElementById('savedAddressPicker');

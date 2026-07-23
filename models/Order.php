@@ -20,6 +20,8 @@ final class Order extends Model
         $this->db->beginTransaction();
         try {
             $resolvedLines = [];
+            $lineMeta = [];
+            $stockChanges = [];
             $subtotal = 0.0;
             $maxShippingOverride = null;
 
@@ -38,8 +40,10 @@ final class Order extends Model
 
                 if ((int) $product['stock_qty'] >= $qty) {
                     $productModel->decrementStockIfAvailable((int) $product['id'], $qty);
+                    $stockChanges[] = ['product_id' => (int) $product['id'], 'qty' => $qty, 'note' => 'Order placed'];
                 } elseif ((int) $product['allow_preorder'] === 1 && Feature::on('preorder')) {
                     $productModel->adjustStock((int) $product['id'], -$qty); // may go negative — backorder demand
+                    $stockChanges[] = ['product_id' => (int) $product['id'], 'qty' => $qty, 'note' => 'Pre-order / backorder'];
                 } else {
                     throw new RuntimeException("Not enough stock for {$product['name']} (only {$product['stock_qty']} left).");
                 }
@@ -52,6 +56,13 @@ final class Order extends Model
                     'qty' => $qty,
                     'unit_price' => $unitPrice,
                     'subtotal' => round($unitPrice * $qty, 2),
+                ];
+                // Parallel to $resolvedLines (same index) — kept separate so these extra keys
+                // never reach the order_items INSERT (real prepared statements reject unknown params).
+                $lineMeta[] = [
+                    'had_offer' => (bool) $product['offer_is_live'],
+                    'regular_price' => (float) $product['selling_price'],
+                    'bogo_enabled' => (bool) $product['bogo_enabled'],
                 ];
                 $subtotal += $unitPrice * $qty;
             }
@@ -67,6 +78,7 @@ final class Order extends Model
             }
             $guestEmail = $userId === null ? ($customer['guest_email'] ?? null) : null;
 
+            $settingModel = new Setting();
             $discount = (float) ($payment['discount'] ?? 0);
             $promotionModel = new Promotion();
             $promotion = !empty($payment['couponCode'])
@@ -75,11 +87,44 @@ final class Order extends Model
             if (!empty($payment['couponCode']) && !$promotion) {
                 throw new RuntimeException('That coupon code is invalid, expired, or no longer applicable.');
             }
+
+            // Priority rule: Coupon > Flash Sale > Product Offer > Category Offer > Regular Price.
+            // A valid coupon outranks every item-level offer tier, so — unless the admin has
+            // explicitly enabled stacking — any line currently riding a flash/product/category/
+            // brand offer reverts to its regular price before the coupon discount is computed.
+            // BOGO and Bundle savings are a separate, quantity-based mechanic (not a price tier)
+            // and always apply regardless of this setting.
+            if ($promotion && !$settingModel->getBool('discount_stacking_enabled', false)) {
+                $subtotal = 0.0;
+                foreach ($resolvedLines as $i => &$rl) {
+                    if ($lineMeta[$i]['had_offer']) {
+                        $rl['unit_price'] = $lineMeta[$i]['regular_price'];
+                        $rl['subtotal'] = round($lineMeta[$i]['regular_price'] * $rl['qty'], 2);
+                    }
+                    $subtotal += $rl['subtotal'];
+                }
+                unset($rl);
+            }
+
             if ($promotion) {
                 $discount += $promotionModel->computeDiscount($promotion, $subtotal);
             }
 
-            $settingModel = new Setting();
+            $bogoDiscount = 0.0;
+            foreach ($resolvedLines as $i => $rl) {
+                if ($lineMeta[$i]['bogo_enabled']) {
+                    $freeUnits = intdiv($rl['qty'], 2);
+                    $bogoDiscount += $freeUnits * $rl['unit_price'];
+                }
+            }
+            $discount += round($bogoDiscount, 2);
+
+            $bundleDiscount = 0.0;
+            foreach ((new Bundle())->matchFor($cartLines) as $match) {
+                $bundleDiscount += $match['savings'];
+            }
+            $discount += round($bundleDiscount, 2);
+
             $netAfterDiscount = max(0, $subtotal - $discount);
             $fulfillmentMethod = $customer['fulfillment_method'] ?? 'delivery';
 
@@ -157,6 +202,11 @@ final class Order extends Model
             );
             foreach ($resolvedLines as $line) {
                 $itemStmt->execute(array_merge(['order_id' => $orderId], $line));
+            }
+
+            $stockMovementModel = new StockMovement();
+            foreach ($stockChanges as $change) {
+                $stockMovementModel->record($change['product_id'], -$change['qty'], 'order', $orderId, $change['note']);
             }
 
             $this->db->prepare(
@@ -304,8 +354,21 @@ final class Order extends Model
 
         if ($nowCancelled && !$wasCancelled) {
             $productModel = new Product();
+            $stockMovementModel = new StockMovement();
+            $movementType = $status === 'returned' ? 'return' : 'order';
+            $note = $status === 'returned' ? 'Order returned — stock restored' : 'Order cancelled — stock restored';
+
             foreach ((new OrderItem())->forOrder($id) as $item) {
-                $productModel->adjustStock((int) $item['product_id'], (int) $item['qty']);
+                $productId = (int) $item['product_id'];
+                $qty = (int) $item['qty'];
+                $before = $productModel->find($productId);
+
+                $productModel->adjustStock($productId, $qty);
+                $stockMovementModel->record($productId, $qty, $movementType, $id, $note, $changedBy);
+
+                if ($before && (int) $before['stock_qty'] <= 0) {
+                    StockNotifier::notifyBackInStock($before);
+                }
             }
         }
     }
@@ -346,6 +409,33 @@ final class Order extends Model
     public function delete(int $id): void
     {
         $this->db->prepare('DELETE FROM orders WHERE id = :id')->execute(['id' => $id]);
+    }
+
+    /** The same customer's other orders — by account if registered, else by guest email — for the admin order page. */
+    public function historyForCustomer(array $order, int $excludeId, int $limit = 10): array
+    {
+        if (!empty($order['user_id'])) {
+            $stmt = $this->db->prepare(
+                'SELECT id, order_no, created_at, total, status FROM orders
+                 WHERE user_id = :user_id AND id != :exclude_id
+                 ORDER BY created_at DESC LIMIT :limit'
+            );
+            $stmt->bindValue(':user_id', (int) $order['user_id'], PDO::PARAM_INT);
+        } elseif (!empty($order['guest_email'])) {
+            $stmt = $this->db->prepare(
+                'SELECT id, order_no, created_at, total, status FROM orders
+                 WHERE user_id IS NULL AND guest_email = :guest_email AND id != :exclude_id
+                 ORDER BY created_at DESC LIMIT :limit'
+            );
+            $stmt->bindValue(':guest_email', $order['guest_email']);
+        } else {
+            return [];
+        }
+
+        $stmt->bindValue(':exclude_id', $excludeId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
 
     public function statusHistory(int $id): array

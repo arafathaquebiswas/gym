@@ -20,6 +20,7 @@ final class SettingsAdminController extends AdminController
         'free_trial_enabled', 'free_trial_title', 'free_trial_subtitle', 'free_trial_button_text',
         'free_trial_button_link', 'free_trial_start_date', 'free_trial_end_date', 'free_trial_max_registrations',
         'feature_delivery', 'feature_pickup',
+        'discount_stacking_enabled',
     ];
 
     public function index(): void

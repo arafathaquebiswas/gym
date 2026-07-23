@@ -67,7 +67,10 @@ final class ProductCategory extends Model
 
     public function update(int $id, array $data): void
     {
-        $fields = array_intersect_key($data, array_flip(['parent_id', 'name', 'slug', 'description', 'image']));
+        $fields = array_intersect_key($data, array_flip([
+            'parent_id', 'name', 'slug', 'description', 'image',
+            'offer_enabled', 'offer_percent', 'offer_start_date', 'offer_end_date',
+        ]));
         if (!$fields) {
             return;
         }

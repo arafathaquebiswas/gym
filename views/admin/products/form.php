@@ -146,6 +146,10 @@ $checked = fn ($key) => !empty($product[$key]) ? 'checked' : '';
           <input type="checkbox" name="allow_preorder" value="1" class="form-check-input" id="allowPreorder" <?= $checked('allow_preorder') ?>>
           <label class="form-check-label" for="allowPreorder">Allow Pre-Order when out of stock</label>
         </div>
+        <div class="col-md-4 form-check align-self-end mb-2">
+          <input type="checkbox" name="bogo_enabled" value="1" class="form-check-input" id="bogoEnabled" <?= $checked('bogo_enabled') ?>>
+          <label class="form-check-label" for="bogoEnabled">Buy One Get One (every 2nd unit free)</label>
+        </div>
       </div>
     </div>
 

@@ -13,6 +13,7 @@ $yn = function (string $key, string $default = '1') use ($settings) {
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-currency">Currency &amp; Fines</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-shipping">Shipping &amp; Tax</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-delivery-pickup">Delivery &amp; Pickup</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-discounts">Discounts</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-membership">Membership</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-features">Feature Flags</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-free-trial">Free Trial</a></li>
@@ -186,6 +187,27 @@ $yn = function (string $key, string $default = '1') use ($settings) {
           <a href="<?= url('/admin/delivery-zones') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-geo-alt"></i> Manage Delivery Zones</a>
           <a href="<?= url('/admin/delivery-time-slots') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-clock"></i> Manage Time Slots</a>
           <a href="<?= url('/admin/delivery-staff') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-person-badge"></i> Manage Delivery Staff</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-discounts">
+      <div class="admin-card">
+        <h6 class="mb-3">Discounts &amp; Promotions</h6>
+        <p class="text-white-50 small">Priority when several offers could apply to the same item: Coupon &gt; Flash Sale &gt; Product Offer &gt; Category Offer &gt; Brand Offer &gt; Regular Price. Only the highest-priority one applies unless stacking is allowed below. Buy One Get One and Bundle savings are separate quantity-based mechanics and always apply on top.</p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label>Allow Coupons to Stack with Item-Level Offers</label>
+            <select name="discount_stacking_enabled" class="form-select"><?= $yn('discount_stacking_enabled', '0') ?></select>
+          </div>
+        </div>
+        <hr>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="<?= url('/admin/flash-sales') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-lightning-charge"></i> Manage Flash Sales</a>
+          <a href="<?= url('/admin/bundles') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-box-seam"></i> Manage Bundles</a>
+          <a href="<?= url('/admin/coupons') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-ticket-perforated"></i> Manage Coupons</a>
+          <a href="<?= url('/admin/categories') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-tags"></i> Category Offers</a>
+          <a href="<?= url('/admin/brands') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-award"></i> Brand Offers</a>
         </div>
       </div>
     </div>

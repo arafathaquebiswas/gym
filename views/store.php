@@ -17,6 +17,7 @@ $pageTitle = 'Store';
     <span class="hero-badge">Store</span>
     <h1>Supplements &amp; <span class="text-orange">Gym Gear</span></h1>
     <p class="lead mx-auto" style="max-width:600px">Everything you need to fuel training and recovery — available at the front desk.</p>
+    <a href="<?= url('/bundles') ?>" class="btn btn-ps-outline btn-sm mt-2"><i class="bi bi-gift"></i> View Bundle Deals</a>
   </div>
 </section>
 
@@ -86,10 +87,12 @@ $pageTitle = 'Store';
                   <?php if (strtotime($product['created_at']) >= strtotime('-14 days')): ?><span class="badge bg-info text-dark">New Arrival</span><?php endif; ?>
                   <?php if (in_array((int) $product['id'], $bestSellerIds, true)): ?><span class="badge bg-primary">Best Seller</span><?php endif; ?>
                   <?php if (in_array((int) $product['id'], $popularIds, true)): ?><span class="badge" style="background:#ff6a1a">Popular</span><?php endif; ?>
+                  <?php if (!empty($product['bogo_enabled'])): ?><span class="badge" style="background:#ff6a1a">BOGO</span><?php endif; ?>
                 </div>
                 <h6 class="mb-1 text-white"><?= e($product['name']) ?></h6>
                 <?php if (!empty($product['offer_is_live'])): ?>
-                  <div class="price">৳<?= number_format((float) $product['offer_price']) ?> <small class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></small></div>
+                  <div class="price">৳<?= number_format((float) $product['display_price']) ?> <small class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></small></div>
+                  <?php if ($product['discount_label']): ?><span class="badge" style="background:#ff6a1a;font-size:.65rem">⚡ <?= e($product['discount_label']) ?></span><?php endif; ?>
                 <?php else: ?>
                   <div class="price">৳<?= number_format((float) $product['selling_price']) ?></div>
                 <?php endif; ?>

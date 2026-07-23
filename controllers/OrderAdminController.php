@@ -2,7 +2,7 @@
 
 final class OrderAdminController extends AdminController
 {
-    private const STATUSES = ['pending', 'confirmed', 'preparing', 'ready_for_pickup', 'shipped', 'delivered', 'cancelled', 'returned'];
+    private const STATUSES = ['pending', 'confirmed', 'preparing', 'packed', 'ready_for_pickup', 'shipped', 'delivered', 'cancelled', 'returned'];
 
     public function index(): void
     {
@@ -116,7 +116,8 @@ final class OrderAdminController extends AdminController
 
     public function show(string $id): void
     {
-        $order = (new Order())->find((int) $id);
+        $orderModel = new Order();
+        $order = $orderModel->find((int) $id);
         if (!$order) {
             $this->abort404();
         }
@@ -125,11 +126,67 @@ final class OrderAdminController extends AdminController
             'pageTitle' => 'Order ' . $order['order_no'],
             'order' => $order,
             'items' => (new OrderItem())->forOrder((int) $id),
-            'history' => (new Order())->statusHistory((int) $id),
+            'history' => $orderModel->statusHistory((int) $id),
             'transactions' => $this->paymentTransactions((int) $id),
-            'refunds' => (new Order())->refundsForOrder((int) $id),
+            'refunds' => $orderModel->refundsForOrder((int) $id),
             'statuses' => self::STATUSES,
+            'deliveryStaff' => (new User())->findByRole('delivery'),
+            'customerHistory' => $orderModel->historyForCustomer($order, (int) $id),
         ]);
+    }
+
+    public function assignDeliveryPerson(string $id): void
+    {
+        Security::requireCsrf();
+
+        $orderModel = new Order();
+        if (!$orderModel->find((int) $id)) {
+            $this->abort404();
+        }
+
+        $rawPersonId = $this->input('delivery_person_id');
+        $deliveryPersonId = null;
+        if ($rawPersonId !== '') {
+            $person = (new User())->findById((int) $rawPersonId);
+            if (!$person || $person['role_slug'] !== 'delivery') {
+                flash('danger', 'Invalid delivery staff selected.');
+                redirect('admin/orders/' . $id);
+            }
+            $deliveryPersonId = (int) $rawPersonId;
+        }
+
+        $orderModel->assignDeliveryPerson((int) $id, $deliveryPersonId);
+        $this->logActivity('order_delivery_person_assigned', "Order #$id delivery person set to " . ($deliveryPersonId ?? 'none'));
+
+        flash('success', $deliveryPersonId ? 'Delivery person assigned.' : 'Delivery person unassigned.');
+        redirect('admin/orders/' . $id);
+    }
+
+    public function confirmPickup(string $id): void
+    {
+        Security::requireCsrf();
+
+        $orderModel = new Order();
+        $order = $orderModel->find((int) $id);
+        if (!$order) {
+            $this->abort404();
+        }
+
+        if ($order['fulfillment_method'] !== 'pickup') {
+            flash('danger', 'This order is not a store pickup order.');
+            redirect('admin/orders/' . $id);
+        }
+
+        if (!$orderModel->pinMatches($order, $this->input('pin'))) {
+            flash('danger', 'Incorrect PIN. Please check with the customer and try again.');
+            redirect('admin/orders/' . $id);
+        }
+
+        $orderModel->updateStatus((int) $id, 'delivered', (int) Auth::user()['id'], 'Picked up by customer (PIN verified)');
+        $this->logActivity('order_pickup_confirmed', "Order #$id pickup confirmed via PIN");
+
+        flash('success', 'Pickup confirmed — order marked as collected.');
+        redirect('admin/orders/' . $id);
     }
 
     public function updateStatus(string $id): void

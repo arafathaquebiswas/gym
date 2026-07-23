@@ -47,7 +47,30 @@
                       <?php if (!empty($brand['logo'])): ?>
                         <div class="mb-2"><?= media_tile($brand['logo'], $brand['name'], 'bi-tag', '', null) ?></div>
                       <?php endif; ?>
-                      <input type="file" name="logo" class="form-control" accept="image/jpeg,image/png,image/webp">
+                      <input type="file" name="logo" class="form-control mb-2" accept="image/jpeg,image/png,image/webp">
+                      <hr>
+                      <h6 class="small text-white-50">Brand Offer</h6>
+                      <div class="row g-2">
+                        <div class="col-6">
+                          <label>Enabled</label>
+                          <select name="offer_enabled" class="form-select form-select-sm">
+                            <option value="0" <?= empty($brand['offer_enabled']) ? 'selected' : '' ?>>No</option>
+                            <option value="1" <?= !empty($brand['offer_enabled']) ? 'selected' : '' ?>>Yes</option>
+                          </select>
+                        </div>
+                        <div class="col-6">
+                          <label>Discount %</label>
+                          <input type="number" step="0.01" min="0" max="100" name="offer_percent" class="form-control form-control-sm" value="<?= e((string) ($brand['offer_percent'] ?? '')) ?>">
+                        </div>
+                        <div class="col-6">
+                          <label>Start Date</label>
+                          <input type="date" name="offer_start_date" class="form-control form-control-sm" value="<?= e($brand['offer_start_date'] ?? '') ?>">
+                        </div>
+                        <div class="col-6">
+                          <label>End Date</label>
+                          <input type="date" name="offer_end_date" class="form-control form-control-sm" value="<?= e($brand['offer_end_date'] ?? '') ?>">
+                        </div>
+                      </div>
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-ps-outline btn-sm" data-bs-dismiss="modal">Cancel</button>

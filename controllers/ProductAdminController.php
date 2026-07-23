@@ -319,10 +319,48 @@ final class ProductAdminController extends AdminController
         }
 
         $productModel->adjustStock((int) $id, $delta);
+        (new StockMovement())->record((int) $id, $delta, 'adjustment', null, $reason ?: null, (int) Auth::user()['id']);
         $this->logActivity('product_stock_adjusted', "Adjusted stock for product #$id by $delta (" . ($reason ?: 'no reason given') . ')');
 
-        flash('success', 'Stock adjusted.');
+        $notified = 0;
+        if ((int) $product['stock_qty'] <= 0 && $delta > 0) {
+            $notified = StockNotifier::notifyBackInStock($product);
+        }
+
+        flash('success', 'Stock adjusted.' . ($notified > 0 ? " Notified $notified customer(s) that it's back in stock." : ''));
         redirect('admin/products');
+    }
+
+    public function toggleFeatured(string $id): void
+    {
+        Security::requireCsrf();
+
+        $productModel = new Product();
+        if (!$productModel->find((int) $id)) {
+            $this->abort404();
+        }
+
+        $productModel->toggleFeatured((int) $id);
+        $this->logActivity('product_featured_toggled', "Toggled featured status for product #$id");
+
+        flash('success', 'Featured status updated.');
+        redirect('admin/products');
+    }
+
+    public function history(string $id): void
+    {
+        $productModel = new Product();
+        $product = $productModel->find((int) $id);
+        if (!$product) {
+            $this->abort404();
+        }
+
+        $this->adminView('products/history', [
+            'pageTitle' => 'Inventory History — ' . $product['name'],
+            'product' => $product,
+            'movements' => (new StockMovement())->forProduct((int) $id),
+            'pendingNotifications' => count((new StockNotification())->pendingForProduct((int) $id)),
+        ]);
     }
 
     public function sales(): void
@@ -386,6 +424,7 @@ final class ProductAdminController extends AdminController
             'ingredients' => $this->rawInput('ingredients') ?: null,
             'nutrition_facts' => $this->rawInput('nutrition_facts') ?: null,
             'allow_preorder' => $this->input('allow_preorder') === '1' ? 1 : 0,
+            'bogo_enabled' => $this->input('bogo_enabled') === '1' ? 1 : 0,
             'status' => in_array($this->input('status'), Product::STATUSES, true) ? $this->input('status') : 'draft',
         ];
     }

@@ -28,7 +28,20 @@
         <div class="d-flex justify-content-between small text-white-50">
           <span><?= $order['fulfillment_method'] === 'pickup' ? 'Pickup at' : 'Delivering to' ?></span><span><?= e(order_delivery_label($order)) ?></span>
         </div>
+        <?php if ($order['time_slot_label']): ?>
+        <div class="d-flex justify-content-between small text-white-50">
+          <span>Preferred Time</span><span><?= e($order['time_slot_label']) ?></span>
+        </div>
+        <?php endif; ?>
       </div>
+
+      <?php if ($order['fulfillment_method'] === 'pickup' && !empty($order['pickup_pin'])): ?>
+      <div class="glass-card p-3 mt-3 text-center" style="background:rgba(255,255,255,.03)">
+        <p class="mb-2">Show this at the counter to collect your order:</p>
+        <div class="fs-3 fw-bold text-orange mb-2">PIN: <?= e($order['pickup_pin']) ?></div>
+        <img src="<?= QrCode::dataUri('Order: ' . $order['order_no'] . ' | PIN: ' . $order['pickup_pin']) ?>" alt="Pickup QR Code" style="max-width:180px;">
+      </div>
+      <?php endif; ?>
 
       <div class="mt-4 d-flex gap-2 justify-content-center flex-wrap">
         <a href="<?= url('/store') ?>" class="btn btn-ps-outline">Continue Shopping</a>

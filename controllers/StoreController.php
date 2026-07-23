@@ -7,6 +7,10 @@ final class StoreController extends Controller
         if (!Feature::on('store')) {
             $this->abort404();
         }
+        if (!Feature::storeAvailable()) {
+            $this->view('store-unavailable', ['pageTitle' => 'Store Unavailable']);
+            return;
+        }
 
         $productModel = new Product();
         $categoryModel = new ProductCategory();
@@ -38,10 +42,36 @@ final class StoreController extends Controller
         ]);
     }
 
+    public function bundles(): void
+    {
+        if (!Feature::on('store')) {
+            $this->abort404();
+        }
+        if (!Feature::storeAvailable()) {
+            $this->view('store-unavailable', ['pageTitle' => 'Store Unavailable']);
+            return;
+        }
+
+        $bundleModel = new Bundle();
+        $bundles = array_map(fn ($bundle) => [
+            'bundle' => $bundle,
+            'items' => $bundleModel->itemsFor((int) $bundle['id']),
+        ], $bundleModel->allActive());
+
+        $this->view('bundles', [
+            'pageTitle' => 'Bundle Deals',
+            'bundles' => $bundles,
+        ]);
+    }
+
     public function show(string $slug): void
     {
         if (!Feature::on('store')) {
             $this->abort404();
+        }
+        if (!Feature::storeAvailable()) {
+            $this->view('store-unavailable', ['pageTitle' => 'Store Unavailable']);
+            return;
         }
 
         $productModel = new Product();
@@ -119,6 +149,28 @@ final class StoreController extends Controller
         }
 
         flash('success', 'Thanks for your review! It will appear publicly once approved by our team.');
+        redirect('store/' . $slug);
+    }
+
+    public function notifyBackInStock(string $slug): void
+    {
+        Security::requireCsrf();
+
+        $product = (new Product())->findBySlug($slug);
+        if (!$product) {
+            $this->abort404();
+        }
+
+        $validator = new Validator(['email' => $this->input('email')]);
+        $validator->required('email', 'Email')->email('email');
+        if ($validator->fails()) {
+            flash('danger', $validator->firstError());
+            redirect('store/' . $slug);
+        }
+
+        (new StockNotification())->subscribe((int) $product['id'], $this->input('email'));
+
+        flash('success', "We'll email you as soon as {$product['name']} is back in stock.");
         redirect('store/' . $slug);
     }
 

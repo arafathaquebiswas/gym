@@ -26,4 +26,20 @@ final class Feature
     {
         return self::trainerModuleOn() && self::on('trainer_display');
     }
+
+    public static function deliveryOn(): bool
+    {
+        return self::on('delivery');
+    }
+
+    public static function pickupOn(): bool
+    {
+        return self::on('pickup');
+    }
+
+    /** False when the store module is on but neither fulfillment method is available — nothing could ever be handed over. */
+    public static function storeAvailable(): bool
+    {
+        return self::on('store') && (self::deliveryOn() || self::pickupOn());
+    }
 }

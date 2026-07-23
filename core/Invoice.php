@@ -36,6 +36,14 @@ final class Invoice
         $y += 14;
         $pdf->text(50, $y, ($order['fulfillment_method'] === 'pickup' ? 'Pickup at: ' : 'Delivery Address: ') . order_delivery_label($order), 10);
         $y += 14;
+        if (!empty($order['time_slot_label'])) {
+            $pdf->text(50, $y, 'Preferred Time: ' . $order['time_slot_label'], 10);
+            $y += 14;
+        }
+        if ($order['fulfillment_method'] === 'pickup' && !empty($order['pickup_pin'])) {
+            $pdf->text(50, $y, 'Pickup PIN: ' . $order['pickup_pin'], 10);
+            $y += 14;
+        }
         $pdf->text(50, $y, 'Order Status: ' . ucfirst(str_replace('_', ' ', $order['status'])), 10);
         $y += 20;
 

@@ -7,6 +7,10 @@ final class CartController extends Controller
         if (!Feature::on('store')) {
             $this->abort404();
         }
+        if (!Feature::storeAvailable()) {
+            $this->view('store-unavailable', ['pageTitle' => 'Store Unavailable']);
+            return;
+        }
 
         [$userId, $cartToken] = $this->identity();
         $productModel = new Product();
@@ -17,10 +21,13 @@ final class CartController extends Controller
             $subtotal += (float) $line['display_price'] * (int) $line['qty'];
         }
 
+        $cartLines = array_map(fn ($l) => ['product_id' => (int) $l['id'], 'qty' => (int) $l['qty']], $lines);
+
         $this->view('cart', [
             'pageTitle' => 'Your Cart',
             'lines' => $lines,
             'subtotal' => $subtotal,
+            'bundleMatches' => (new Bundle())->matchFor($cartLines),
         ]);
     }
 
@@ -30,6 +37,10 @@ final class CartController extends Controller
 
         if (!Feature::on('store')) {
             $this->abort404();
+        }
+        if (!Feature::storeAvailable()) {
+            flash('danger', 'The store is temporarily unavailable.');
+            redirect('store');
         }
 
         $productId = (int) $this->input('product_id');
@@ -63,6 +74,34 @@ final class CartController extends Controller
 
         flash('success', $product['name'] . ' added to your cart.');
         redirect($this->input('redirect_to') ?: 'cart');
+    }
+
+    public function addBundle(string $id): void
+    {
+        Security::requireCsrf();
+
+        if (!Feature::on('store')) {
+            $this->abort404();
+        }
+        if (!Feature::storeAvailable()) {
+            flash('danger', 'The store is temporarily unavailable.');
+            redirect('store');
+        }
+
+        $bundleModel = new Bundle();
+        $bundle = $bundleModel->find((int) $id);
+        if (!$bundle) {
+            $this->abort404();
+        }
+
+        [$userId, $cartToken] = $this->identity();
+        $cartModel = new Cart();
+        foreach ($bundleModel->itemsFor((int) $id) as $item) {
+            $cartModel->add($userId, $cartToken, (int) $item['product_id'], (int) $item['qty']);
+        }
+
+        flash('success', "Added the {$bundle['name']} bundle to your cart — the bundle price applies automatically.");
+        redirect('cart');
     }
 
     public function update(): void

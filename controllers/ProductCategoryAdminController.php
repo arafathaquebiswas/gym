@@ -58,6 +58,10 @@ final class ProductCategoryAdminController extends AdminController
             'parent_id' => (int) $this->input('parent_id') ?: null,
             'name' => $name,
             'description' => $this->input('description'),
+            'offer_enabled' => $this->input('offer_enabled') === '1' ? 1 : 0,
+            'offer_percent' => $this->input('offer_percent') !== '' ? (float) $this->input('offer_percent') : null,
+            'offer_start_date' => $this->input('offer_start_date') ?: null,
+            'offer_end_date' => $this->input('offer_end_date') ?: null,
         ]);
 
         $this->logActivity('category_updated', "Updated product category #$id: $name");

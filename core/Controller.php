@@ -42,6 +42,23 @@ abstract class Controller
         require BASE_PATH . '/views/layouts/admin.php';
     }
 
+    protected function deliveryView(string $view, array $data = []): void
+    {
+        extract($data, EXTR_SKIP);
+        $flashes = get_flashes();
+        $viewFile = BASE_PATH . '/views/delivery/' . $view . '.php';
+
+        if (!is_file($viewFile)) {
+            throw new RuntimeException("Delivery view not found: $view");
+        }
+
+        ob_start();
+        require $viewFile;
+        $content = ob_get_clean();
+
+        require BASE_PATH . '/views/layouts/delivery.php';
+    }
+
     protected function input(string $key, string $default = ''): string
     {
         return Security::sanitizeString($_POST[$key] ?? $_GET[$key] ?? $default);

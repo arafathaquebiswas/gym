@@ -10,6 +10,10 @@ final class CheckoutController extends Controller
         if (!Feature::on('store')) {
             $this->abort404();
         }
+        if (!Feature::storeAvailable()) {
+            $this->view('store-unavailable', ['pageTitle' => 'Store Unavailable']);
+            return;
+        }
 
         if (!Auth::hasRole('member') && !Feature::on('guest_checkout')) {
             flash('danger', 'Please log in to check out.');
@@ -29,21 +33,18 @@ final class CheckoutController extends Controller
 
         $settingModel = new Setting();
         $freeShippingMin = (float) $settingModel->get('free_shipping_min_amount', '0');
+        $shippingEnabled = $settingModel->getBool('shipping_enabled');
+        $flatRate = (float) $settingModel->get('shipping_flat_rate', '0');
+        $maxOverride = null;
+        foreach ($lines as $line) {
+            if ($line['shipping_charge'] !== null && $line['shipping_charge'] !== '') {
+                $maxOverride = max($maxOverride ?? 0.0, (float) $line['shipping_charge']);
+            }
+        }
 
         $shipping = 0.0;
-        if ($settingModel->getBool('shipping_enabled')) {
-            if ($freeShippingMin > 0 && $subtotal >= $freeShippingMin) {
-                $shipping = 0.0;
-            } else {
-                $flatRate = (float) $settingModel->get('shipping_flat_rate', '0');
-                $maxOverride = null;
-                foreach ($lines as $line) {
-                    if ($line['shipping_charge'] !== null && $line['shipping_charge'] !== '') {
-                        $maxOverride = max($maxOverride ?? 0.0, (float) $line['shipping_charge']);
-                    }
-                }
-                $shipping = $maxOverride !== null ? max($flatRate, $maxOverride) : $flatRate;
-            }
+        if ($shippingEnabled && !($freeShippingMin > 0 && $subtotal >= $freeShippingMin)) {
+            $shipping = $maxOverride !== null ? max($flatRate, $maxOverride) : $flatRate;
         }
 
         $tax = $settingModel->getBool('tax_enabled')
@@ -57,6 +58,9 @@ final class CheckoutController extends Controller
             $member = (new Member())->findByUserId((int) Auth::user()['id']);
         }
 
+        $deliveryOn = Feature::deliveryOn();
+        $pickupOn = Feature::pickupOn();
+
         $this->view('checkout', [
             'pageTitle' => 'Checkout',
             'lines' => $lines,
@@ -64,11 +68,19 @@ final class CheckoutController extends Controller
             'estimatedShipping' => $shipping,
             'estimatedTax' => $tax,
             'freeShippingMin' => $freeShippingMin,
+            'shippingEnabled' => $shippingEnabled,
+            'shippingFlatRate' => $flatRate,
+            'shippingMaxOverride' => $maxOverride,
             'savedAddresses' => $savedAddresses,
             'member' => $member,
             'gymName' => $settingModel->get('gym_name', 'PowerSurge Gym'),
             'gymAddress' => $settingModel->get('gym_address'),
             'gymPhone' => $settingModel->get('gym_phone'),
+            'deliveryOn' => $deliveryOn,
+            'pickupOn' => $pickupOn,
+            'zones' => $deliveryOn ? (new DeliveryZone())->allActive() : [],
+            'deliverySlots' => $deliveryOn ? (new DeliveryTimeSlot())->allActiveByType('delivery') : [],
+            'pickupSlots' => $pickupOn ? (new DeliveryTimeSlot())->allActiveByType('pickup') : [],
         ]);
     }
 
@@ -78,6 +90,10 @@ final class CheckoutController extends Controller
 
         if (!Feature::on('store')) {
             $this->abort404();
+        }
+        if (!Feature::storeAvailable()) {
+            flash('danger', 'The store is temporarily unavailable.');
+            redirect('store');
         }
 
         $isMember = Auth::hasRole('member');
@@ -102,11 +118,41 @@ final class CheckoutController extends Controller
         $email = $this->input('email');
         $phone = $this->input('phone');
 
+        $deliveryOn = Feature::deliveryOn();
+        $pickupOn = Feature::pickupOn();
+
         $fulfillmentMethod = $this->input('fulfillment_method', 'delivery');
         if (!in_array($fulfillmentMethod, ['delivery', 'pickup'], true)) {
             $fulfillmentMethod = 'delivery';
         }
+        if ($fulfillmentMethod === 'delivery' && !$deliveryOn) {
+            $fulfillmentMethod = 'pickup';
+        } elseif ($fulfillmentMethod === 'pickup' && !$pickupOn) {
+            $fulfillmentMethod = 'delivery';
+        }
         $isPickup = $fulfillmentMethod === 'pickup';
+
+        $zoneId = null;
+        if (!$isPickup) {
+            $activeZones = (new DeliveryZone())->allActive();
+            if (!empty($activeZones)) {
+                $rawZoneId = $this->input('zone_id');
+                $zoneId = $rawZoneId !== '' ? (int) $rawZoneId : null;
+                if ($zoneId === null || !in_array($zoneId, array_map('intval', array_column($activeZones, 'id')), true)) {
+                    flash('danger', 'Please select your delivery zone.');
+                    redirect('checkout');
+                }
+            }
+        }
+
+        $timeSlotId = null;
+        $rawTimeSlotId = $isPickup ? $this->input('pickup_time_slot_id') : $this->input('delivery_time_slot_id');
+        if ($rawTimeSlotId !== '') {
+            $slot = (new DeliveryTimeSlot())->find((int) $rawTimeSlotId);
+            if ($slot && (bool) $slot['is_active'] && $slot['type'] === $fulfillmentMethod) {
+                $timeSlotId = (int) $slot['id'];
+            }
+        }
 
         $validator = new Validator([
             'full_name' => $name, 'email' => $email, 'phone' => $phone,
@@ -155,6 +201,8 @@ final class CheckoutController extends Controller
             'guest_email' => $userId ? null : $email,
             'guest_phone' => $userId ? null : $phone,
             'fulfillment_method' => $fulfillmentMethod,
+            'zone_id' => $zoneId,
+            'time_slot_id' => $timeSlotId,
             'delivery_address' => $this->input('delivery_address'),
             'delivery_city' => $this->input('delivery_city'),
             'delivery_area' => $this->input('delivery_area') ?: null,

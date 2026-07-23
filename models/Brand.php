@@ -63,7 +63,10 @@ final class Brand extends Model
 
     public function update(int $id, array $data): void
     {
-        $fields = array_intersect_key($data, array_flip(['name', 'slug', 'description', 'logo']));
+        $fields = array_intersect_key($data, array_flip([
+            'name', 'slug', 'description', 'logo',
+            'offer_enabled', 'offer_percent', 'offer_start_date', 'offer_end_date',
+        ]));
         if (!$fields) {
             return;
         }

@@ -6,11 +6,11 @@
 /** @var array $filters */
 /** @var array $statusCounts */
 $statusLabels = [
-    '' => 'All', 'pending' => 'New', 'confirmed' => 'Confirmed', 'preparing' => 'Preparing',
+    '' => 'All', 'pending' => 'New', 'confirmed' => 'Confirmed', 'preparing' => 'Preparing', 'packed' => 'Packed',
     'ready_for_pickup' => 'Ready for Pickup', 'shipped' => 'Shipped', 'delivered' => 'Delivered',
     'cancelled' => 'Cancelled', 'returned' => 'Returned',
 ];
-$statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' => 'info', 'ready_for_pickup' => 'info', 'shipped' => 'primary', 'delivered' => 'success', 'cancelled' => 'danger', 'returned' => 'dark'];
+$statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' => 'info', 'packed' => 'info', 'ready_for_pickup' => 'info', 'shipped' => 'primary', 'delivered' => 'success', 'cancelled' => 'danger', 'returned' => 'dark'];
 ?>
 <div class="admin-card mb-4">
   <div class="d-flex flex-wrap gap-2">

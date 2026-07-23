@@ -192,7 +192,7 @@ $pageTitle = 'Home';
             <div class="cat-tag"><?= e($product['brand_name'] ?? '') ?></div>
             <h6 class="mb-1 text-white"><?= e($product['name']) ?></h6>
             <?php if (!empty($product['offer_is_live'])): ?>
-              <div class="price">৳<?= number_format((float) $product['offer_price']) ?> <small class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></small></div>
+              <div class="price">৳<?= number_format((float) $product['display_price']) ?> <small class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></small></div>
             <?php else: ?>
               <div class="price">৳<?= number_format((float) $product['selling_price']) ?></div>
             <?php endif; ?>

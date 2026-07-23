@@ -59,6 +59,10 @@ final class BrandAdminController extends AdminController
         $data = [
             'name' => $name,
             'description' => $this->input('description'),
+            'offer_enabled' => $this->input('offer_enabled') === '1' ? 1 : 0,
+            'offer_percent' => $this->input('offer_percent') !== '' ? (float) $this->input('offer_percent') : null,
+            'offer_start_date' => $this->input('offer_start_date') ?: null,
+            'offer_end_date' => $this->input('offer_end_date') ?: null,
         ];
 
         $logoPath = Upload::handle($_FILES['logo'] ?? [], 'brands');

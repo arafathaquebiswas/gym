@@ -24,6 +24,8 @@ $statusColors = ['draft' => 'secondary', 'published' => 'success', 'hidden' => '
     <div class="admin-card d-flex flex-column justify-content-center">
       <a href="<?= url('/admin/categories') ?>" class="btn btn-ps-outline btn-sm mb-1"><i class="bi bi-tags"></i> Categories</a>
       <a href="<?= url('/admin/brands') ?>" class="btn btn-ps-outline btn-sm mb-1"><i class="bi bi-award"></i> Brands</a>
+      <a href="<?= url('/admin/suppliers') ?>" class="btn btn-ps-outline btn-sm mb-1"><i class="bi bi-people"></i> Suppliers</a>
+      <a href="<?= url('/admin/purchases') ?>" class="btn btn-ps-outline btn-sm mb-1"><i class="bi bi-truck"></i> Purchases</a>
       <a href="<?= url('/admin/products/sales') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-receipt"></i> View Sales</a>
     </div>
   </div>
@@ -146,6 +148,11 @@ $statusColors = ['draft' => 'secondary', 'published' => 'success', 'hidden' => '
             <div class="d-flex gap-2">
               <a href="<?= url('/admin/products/' . $product['id'] . '/edit') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-pencil"></i></a>
               <button type="button" class="btn btn-ps-outline btn-sm" data-bs-toggle="modal" data-bs-target="#adjustStockModal<?= $product['id'] ?>"><i class="bi bi-box-seam"></i></button>
+              <a href="<?= url('/admin/products/' . $product['id'] . '/history') ?>" class="btn btn-ps-outline btn-sm" title="Inventory History"><i class="bi bi-clock-history"></i></a>
+              <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/toggle-featured') ?>">
+                <?= Security::csrfField() ?>
+                <button type="submit" class="btn btn-ps-outline btn-sm" title="Toggle Featured"><i class="bi <?= $product['is_featured'] ? 'bi-star-fill text-orange' : 'bi-star' ?>"></i></button>
+              </form>
               <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/delete') ?>" onsubmit="return confirm('Delete this product permanently?');">
                 <?= Security::csrfField() ?>
                 <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>

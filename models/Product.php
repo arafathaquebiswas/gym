@@ -7,6 +7,7 @@ final class Product extends Model
         'buying_price', 'selling_price', 'stock_qty', 'min_stock', 'expiry_date', 'image',
         'offer_price', 'offer_enabled', 'offer_start_date', 'offer_end_date', 'status',
         'ingredients', 'nutrition_facts', 'allow_preorder', 'shipping_charge',
+        'bogo_enabled', 'is_featured',
     ];
 
     public const STATUSES = ['draft', 'published', 'hidden'];
@@ -80,16 +81,23 @@ final class Product extends Model
         return $product ? $this->withComputedOffer($product) : null;
     }
 
+    /** Admin-curated is_featured products first; falls back to latest published so the homepage section never sits empty before anything's been marked. */
     public function featured(int $limit = 8): array
     {
         $stmt = $this->db->prepare(
             "SELECT p.*, b.name AS brand_name, b.slug AS brand_slug FROM products p
              LEFT JOIN brands b ON b.id = p.brand_id
-             WHERE p.status = 'published' ORDER BY p.created_at DESC LIMIT :limit"
+             WHERE p.status = 'published'
+             ORDER BY p.is_featured DESC, p.created_at DESC LIMIT :limit"
         );
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
+    }
+
+    public function toggleFeatured(int $id): void
+    {
+        $this->db->prepare('UPDATE products SET is_featured = NOT is_featured WHERE id = :id')->execute(['id' => $id]);
     }
 
     /** All sellable products for the POS screen's client-side search/cart — published or hidden (staff can still sell in person), never draft. */
@@ -275,6 +283,13 @@ final class Product extends Model
         return $stmt->fetchAll();
     }
 
+    /** Every product regardless of status/stock — for admin pickers (e.g. recording a purchase) where even out-of-stock/draft items must be selectable. */
+    public function allForAdminPicker(): array
+    {
+        $stmt = $this->db->query('SELECT id, name, sku, stock_qty FROM products ORDER BY name ASC');
+        return $stmt->fetchAll();
+    }
+
     public function skuExists(string $sku, ?int $excludeId = null): bool
     {
         $sql = 'SELECT COUNT(*) FROM products WHERE sku = :sku';
@@ -370,22 +385,79 @@ final class Product extends Model
     }
 
     /**
-     * Ported from Package::withComputedOffer() — same live-offer-window logic, different table/columns.
+     * Resolves the single effective price for a product by checking each discount tier in
+     * strict priority order — the first one that's currently live wins, full stop (never the
+     * biggest discount, never stacked). Order: Flash Sale > Product Offer > Category Offer >
+     * Brand Offer > Regular Price. Coupons are a separate, checkout-time-only tier layered on
+     * top by Order::create() (see its stacking-rule comment) — they never affect display_price.
+     *
      * Public so callers holding a raw product row from elsewhere (e.g. Cart::forIdentity()'s join) can
-     * compute the same display price without duplicating this logic.
+     * compute the same display price without duplicating this logic. category_id/brand_id must be
+     * present on $product for tiers 3/4 to apply — every query in this class selects them via `p.*`
+     * except the POS picker (allActiveInStock()), which only needs the product-offer tier anyway.
      */
     public function withComputedOffer(array $product): array
     {
+        $product['discount_source'] = null;
+        $product['discount_label'] = null;
+        $product['offer_ends_at'] = null;
+
+        $flashSale = (new FlashSale())->liveForProduct($product);
+        if ($flashSale) {
+            $product['offer_is_live'] = true;
+            $product['discount_source'] = 'flash_sale';
+            $product['discount_label'] = $flashSale['name'];
+            $product['display_price'] = round((float) $product['selling_price'] * (1 - (float) $flashSale['discount_percent'] / 100), 2);
+            // MySQL DATETIME ("Y-m-d H:i:s") isn't reliably parsed by `new Date()` in every browser — ISO 8601 ("T" separator) is.
+            $product['offer_ends_at'] = str_replace(' ', 'T', $flashSale['ends_at']);
+            return $product;
+        }
+
         $now = new DateTimeImmutable();
         $startOk = empty($product['offer_start_date']) || new DateTimeImmutable($product['offer_start_date']) <= $now;
         $endOk = empty($product['offer_end_date']) || new DateTimeImmutable($product['offer_end_date']) > $now;
+        if ((bool) $product['offer_enabled'] && !empty($product['offer_price']) && $startOk && $endOk) {
+            $product['offer_is_live'] = true;
+            $product['discount_source'] = 'product_offer';
+            $product['display_price'] = (float) $product['offer_price'];
+            $product['offer_ends_at'] = $product['offer_end_date'];
+            return $product;
+        }
 
-        $isLive = (bool) $product['offer_enabled'] && !empty($product['offer_price']) && $startOk && $endOk;
+        $category = !empty($product['category_id']) ? (new ProductCategory())->find((int) $product['category_id']) : null;
+        if ($category && self::offerWindowLive($category)) {
+            $product['offer_is_live'] = true;
+            $product['discount_source'] = 'category_offer';
+            $product['discount_label'] = $category['name'] . ' Sale';
+            $product['display_price'] = round((float) $product['selling_price'] * (1 - (float) $category['offer_percent'] / 100), 2);
+            $product['offer_ends_at'] = $category['offer_end_date'];
+            return $product;
+        }
 
-        $product['offer_is_live'] = $isLive;
-        $product['display_price'] = $isLive ? $product['offer_price'] : $product['selling_price'];
+        $brand = !empty($product['brand_id']) ? (new Brand())->find((int) $product['brand_id']) : null;
+        if ($brand && self::offerWindowLive($brand)) {
+            $product['offer_is_live'] = true;
+            $product['discount_source'] = 'brand_offer';
+            $product['discount_label'] = $brand['name'] . ' Sale';
+            $product['display_price'] = round((float) $product['selling_price'] * (1 - (float) $brand['offer_percent'] / 100), 2);
+            $product['offer_ends_at'] = $brand['offer_end_date'];
+            return $product;
+        }
 
+        $product['offer_is_live'] = false;
+        $product['display_price'] = $product['selling_price'];
         return $product;
+    }
+
+    private static function offerWindowLive(array $entity): bool
+    {
+        if (empty($entity['offer_enabled']) || empty($entity['offer_percent'])) {
+            return false;
+        }
+        $now = new DateTimeImmutable();
+        $startOk = empty($entity['offer_start_date']) || new DateTimeImmutable($entity['offer_start_date']) <= $now;
+        $endOk = empty($entity['offer_end_date']) || new DateTimeImmutable($entity['offer_end_date']) > $now;
+        return $startOk && $endOk;
     }
 
     private function buildFilterClause(array $filters): array

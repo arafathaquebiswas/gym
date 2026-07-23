@@ -2,7 +2,7 @@
 /** @var array $order */
 /** @var array $items */
 /** @var array $history */
-$statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' => 'info', 'ready_for_pickup' => 'info', 'shipped' => 'primary', 'delivered' => 'success', 'cancelled' => 'danger', 'returned' => 'dark'];
+$statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' => 'info', 'packed' => 'info', 'ready_for_pickup' => 'info', 'shipped' => 'primary', 'delivered' => 'success', 'cancelled' => 'danger', 'returned' => 'dark'];
 ?>
 <section class="section">
   <div class="container">
@@ -50,7 +50,7 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
           <span class="badge text-bg-<?= $statusColors[$order['status']] ?? 'secondary' ?> fs-6"><?= e(ucfirst(str_replace('_', ' ', $order['status']))) ?></span>
           <div class="text-white-50 small mt-2">Payment: <?= e(ucfirst($order['payment_status'])) ?> (<?= e(strtoupper(str_replace('_', ' ', $order['payment_method']))) ?>)</div>
         </div>
-        <div class="glass-card p-4">
+        <div class="glass-card p-4 mb-4">
           <h6 class="mb-2"><?= $order['fulfillment_method'] === 'pickup' ? 'Store Pickup' : 'Delivery Address' ?></h6>
           <?php if ($order['fulfillment_method'] === 'pickup'): ?>
           <p class="text-white-50 small mb-0"><?= e(order_delivery_label($order)) ?></p>
@@ -61,7 +61,21 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
             <?= $order['delivery_postal_code'] ? e($order['delivery_postal_code']) : '' ?>
           </p>
           <?php endif; ?>
+          <?php if ($order['time_slot_label']): ?>
+          <p class="text-white-50 small mb-0 mt-2">Preferred Time: <?= e($order['time_slot_label']) ?></p>
+          <?php endif; ?>
+          <?php if ($order['fulfillment_method'] === 'delivery' && $order['delivery_person_name']): ?>
+          <p class="text-white-50 small mb-0 mt-2">Delivery Person: <?= e($order['delivery_person_name']) ?><?= $order['delivery_person_phone'] ? ' (' . e($order['delivery_person_phone']) . ')' : '' ?></p>
+          <?php endif; ?>
         </div>
+
+        <?php if ($order['fulfillment_method'] === 'pickup' && !empty($order['pickup_pin']) && !in_array($order['status'], ['delivered', 'cancelled', 'returned'], true)): ?>
+        <div class="glass-card p-3 text-center" style="background:rgba(255,255,255,.03)">
+          <p class="mb-2">Show this at the counter to collect your order:</p>
+          <div class="fs-3 fw-bold text-orange mb-2">PIN: <?= e($order['pickup_pin']) ?></div>
+          <img src="<?= QrCode::dataUri('Order: ' . $order['order_no'] . ' | PIN: ' . $order['pickup_pin']) ?>" alt="Pickup QR Code" style="max-width:180px;">
+        </div>
+        <?php endif; ?>
       </div>
     </div>
   </div>

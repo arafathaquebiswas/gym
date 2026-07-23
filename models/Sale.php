@@ -51,6 +51,7 @@ final class Sale extends Model
                 'INSERT INTO sale_items (sale_id, product_id, qty, unit_price, subtotal)
                  VALUES (:sale_id, :product_id, :qty, :unit_price, :subtotal)'
             );
+            $stockMovementModel = new StockMovement();
             foreach ($cart as $line) {
                 $itemStmt->execute([
                     'sale_id' => $saleId,
@@ -60,6 +61,7 @@ final class Sale extends Model
                     'subtotal' => round($line['unit_price'] * $line['qty'], 2),
                 ]);
                 // trg_sale_items_after_insert decrements products.stock_qty automatically.
+                $stockMovementModel->record((int) $line['product_id'], -(int) $line['qty'], 'sale', $saleId, 'POS sale', $soldBy);
             }
 
             $paymentStmt = $this->db->prepare(

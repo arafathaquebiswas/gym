@@ -48,7 +48,14 @@ final class OrderMailer
             <p style="text-align:right;margin:4px 0;">Tax: ' . money((float) $order['tax']) . '</p>
             <p style="text-align:right;margin:4px 0;font-size:18px;font-weight:bold;color:#ff6a1a;">Total: ' . money((float) $order['total']) . '</p>
             <p>Payment Method: <strong>' . e(strtoupper(str_replace('_', ' ', $order['payment_method']))) . '</strong></p>
-            <p>' . ($order['fulfillment_method'] === 'pickup' ? 'Pickup at' : 'Delivering to') . ': ' . e(order_delivery_label($order)) . '</p>
+            <p>' . ($order['fulfillment_method'] === 'pickup' ? 'Pickup at' : 'Delivering to') . ': ' . e(order_delivery_label($order)) . '</p>'
+            . ($order['time_slot_label'] ? '<p>Preferred Time: ' . e($order['time_slot_label']) . '</p>' : '')
+            . ($order['fulfillment_method'] === 'pickup' && !empty($order['pickup_pin']) ? '
+            <div style="text-align:center;margin:20px 0;padding:16px;border:1px dashed #ccc;">
+                <p style="margin:0 0 8px;">Show this at the counter to collect your order:</p>
+                <p style="font-size:22px;font-weight:bold;color:#ff6a1a;margin:0 0 10px;">PIN: ' . e($order['pickup_pin']) . '</p>
+                <img src="' . QrCode::dataUri('Order: ' . $order['order_no'] . ' | PIN: ' . $order['pickup_pin']) . '" alt="Pickup QR Code" style="max-width:160px;">
+            </div>' : '') . '
             <p style="margin-top:24px;">
                 <a href="' . e($trackingLink) . '" style="background:#ff6a1a;color:#fff;padding:10px 20px;text-decoration:none;border-radius:6px;">Track Your Order</a>
             </p>

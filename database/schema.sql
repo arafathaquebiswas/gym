@@ -306,6 +306,10 @@ CREATE TABLE product_categories (
     slug        VARCHAR(120) NOT NULL UNIQUE,
     description VARCHAR(255) NULL,
     image       VARCHAR(255) NULL,
+    offer_enabled    TINYINT(1) NOT NULL DEFAULT 0,
+    offer_percent    DECIMAL(5,2) NULL,
+    offer_start_date DATE NULL,
+    offer_end_date   DATE NULL,
     CONSTRAINT fk_categories_parent FOREIGN KEY (parent_id) REFERENCES product_categories(id) ON DELETE SET NULL,
     INDEX idx_categories_parent (parent_id)
 ) ENGINE=InnoDB;
@@ -326,6 +330,10 @@ CREATE TABLE brands (
     slug            VARCHAR(120) NOT NULL UNIQUE,
     logo            VARCHAR(255) NULL,
     description     TEXT NULL,
+    offer_enabled    TINYINT(1) NOT NULL DEFAULT 0,
+    offer_percent    DECIMAL(5,2) NULL,
+    offer_start_date DATE NULL,
+    offer_end_date   DATE NULL,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -354,6 +362,8 @@ CREATE TABLE products (
     ingredients     TEXT NULL,
     nutrition_facts TEXT NULL,
     allow_preorder  TINYINT(1) NOT NULL DEFAULT 0,
+    bogo_enabled    TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Buy One Get One — every 2nd unit in a cart line is free',
+    is_featured     TINYINT(1) NOT NULL DEFAULT 0,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES product_categories(id) ON DELETE RESTRICT,
@@ -363,6 +373,43 @@ CREATE TABLE products (
     INDEX idx_products_brand (brand_id),
     INDEX idx_products_status (status),
     INDEX idx_products_stock (stock_qty)
+) ENGINE=InnoDB;
+
+-- Site-wide or scoped time-boxed discount — highest priority in the pricing engine (see Product::withComputedOffer()).
+CREATE TABLE flash_sales (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name            VARCHAR(150) NOT NULL,
+    discount_percent DECIMAL(5,2) NOT NULL,
+    scope           ENUM('all','category','brand','product') NOT NULL DEFAULT 'all',
+    scope_id        INT UNSIGNED NULL COMMENT 'category_id/brand_id/product_id depending on scope — no FK (polymorphic)',
+    starts_at       DATETIME NOT NULL,
+    ends_at         DATETIME NOT NULL,
+    is_active       TINYINT(1) NOT NULL DEFAULT 1,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_flash_sales_window (is_active, starts_at, ends_at)
+) ENGINE=InnoDB;
+
+-- A curated set of products sold together at a fixed combined price — auto-detected in the cart, not a separate SKU.
+CREATE TABLE bundles (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name        VARCHAR(150) NOT NULL,
+    slug        VARCHAR(180) NOT NULL UNIQUE,
+    bundle_price DECIMAL(10,2) NOT NULL,
+    image       VARCHAR(255) NULL,
+    is_active   TINYINT(1) NOT NULL DEFAULT 1,
+    starts_at   DATETIME NULL,
+    ends_at     DATETIME NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE bundle_items (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    bundle_id   INT UNSIGNED NOT NULL,
+    product_id  INT UNSIGNED NOT NULL,
+    qty         INT NOT NULL DEFAULT 1,
+    CONSTRAINT fk_bundle_items_bundle FOREIGN KEY (bundle_id) REFERENCES bundles(id) ON DELETE CASCADE,
+    CONSTRAINT fk_bundle_items_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+    INDEX idx_bundle_items_bundle (bundle_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE product_images (
@@ -398,6 +445,23 @@ CREATE TABLE purchase_items (
     CONSTRAINT fk_purchase_items_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
     INDEX idx_purchase_items_purchase (purchase_id),
     INDEX idx_purchase_items_product (product_id)
+) ENGINE=InnoDB;
+
+-- Unified ledger of every stock change (orders, POS sales, purchases, manual
+-- corrections) — reference_id is polymorphic (order/sale/purchase id depending
+-- on type), so it deliberately has no FK of its own.
+CREATE TABLE stock_movements (
+    id              BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id      INT UNSIGNED NOT NULL,
+    change_qty      INT NOT NULL COMMENT 'signed: positive = added, negative = removed',
+    type            ENUM('order','sale','purchase','adjustment','return') NOT NULL,
+    reference_id    INT UNSIGNED NULL COMMENT 'order_id/sale_id/purchase_id depending on type — no FK (polymorphic)',
+    note            VARCHAR(255) NULL,
+    created_by      INT UNSIGNED NULL,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_stock_movements_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_stock_movements_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_stock_movements_product (product_id, created_at)
 ) ENGINE=InnoDB;
 
 -- =============================================================
@@ -520,11 +584,34 @@ ALTER TABLE sales
 -- (models/Order.php) rather than via a DB trigger.
 -- =============================================================
 
+-- Delivery zones/time-slots are defined before `orders` since orders FKs reference them.
+CREATE TABLE delivery_zones (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL,
+    charge      DECIMAL(10,2) NOT NULL,
+    is_active   TINYINT(1) NOT NULL DEFAULT 1,
+    sort_order  INT UNSIGNED NOT NULL DEFAULT 0,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE delivery_time_slots (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    type        ENUM('delivery','pickup') NOT NULL,
+    label       VARCHAR(100) NOT NULL,
+    is_active   TINYINT(1) NOT NULL DEFAULT 1,
+    sort_order  INT UNSIGNED NOT NULL DEFAULT 0,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 CREATE TABLE orders (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     order_no            VARCHAR(30) NOT NULL UNIQUE,
     user_id             INT UNSIGNED NULL,
     fulfillment_method  ENUM('delivery','pickup') NOT NULL DEFAULT 'delivery',
+    zone_id             INT UNSIGNED NULL,
+    time_slot_id        INT UNSIGNED NULL,
+    delivery_person_id  INT UNSIGNED NULL,
+    pickup_pin          VARCHAR(6) NULL,
     guest_name          VARCHAR(120) NULL,
     guest_email         VARCHAR(150) NULL,
     guest_phone         VARCHAR(30) NULL,
@@ -542,13 +629,17 @@ CREATE TABLE orders (
     promotion_id        INT UNSIGNED NULL,
     payment_method      VARCHAR(30) NOT NULL COMMENT 'validated in application code (CheckoutController) so new gateways (Stripe, SSLCommerz, AmarPay, ...) can be added without a migration',
     payment_status      ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
-    status              ENUM('pending','confirmed','preparing','ready_for_pickup','shipped','delivered','cancelled','returned') NOT NULL DEFAULT 'pending',
+    status              ENUM('pending','confirmed','preparing','packed','ready_for_pickup','shipped','delivered','cancelled','returned') NOT NULL DEFAULT 'pending',
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT fk_orders_promotion FOREIGN KEY (promotion_id) REFERENCES promotions(id) ON DELETE SET NULL,
+    CONSTRAINT fk_orders_zone FOREIGN KEY (zone_id) REFERENCES delivery_zones(id) ON DELETE SET NULL,
+    CONSTRAINT fk_orders_time_slot FOREIGN KEY (time_slot_id) REFERENCES delivery_time_slots(id) ON DELETE SET NULL,
+    CONSTRAINT fk_orders_delivery_person FOREIGN KEY (delivery_person_id) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_orders_status (status),
-    INDEX idx_orders_user (user_id)
+    INDEX idx_orders_user (user_id),
+    INDEX idx_orders_delivery_person (delivery_person_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE order_items (
@@ -592,6 +683,17 @@ CREATE TABLE wishlist (
     CONSTRAINT fk_wishlist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_wishlist_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     UNIQUE KEY uniq_wishlist (user_id, product_id)
+) ENGINE=InnoDB;
+
+-- "Notify me when back in stock" — works for guests too (email only, no account needed).
+CREATE TABLE stock_notifications (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id  INT UNSIGNED NOT NULL,
+    email       VARCHAR(150) NOT NULL,
+    notified_at DATETIME NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_stock_notifications_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_stock_notifications (product_id, email)
 ) ENGINE=InnoDB;
 
 CREATE TABLE customer_addresses (

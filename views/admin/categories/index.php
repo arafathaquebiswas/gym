@@ -47,7 +47,30 @@ $topLevel = array_filter($categories, fn ($c) => !$c['parent_id']);
                         <?php endforeach; ?>
                       </select>
                       <label>Description</label>
-                      <input type="text" name="description" class="form-control" value="<?= e($cat['description'] ?? '') ?>">
+                      <input type="text" name="description" class="form-control mb-2" value="<?= e($cat['description'] ?? '') ?>">
+                      <hr>
+                      <h6 class="small text-white-50">Category Offer</h6>
+                      <div class="row g-2">
+                        <div class="col-6">
+                          <label>Enabled</label>
+                          <select name="offer_enabled" class="form-select form-select-sm">
+                            <option value="0" <?= empty($cat['offer_enabled']) ? 'selected' : '' ?>>No</option>
+                            <option value="1" <?= !empty($cat['offer_enabled']) ? 'selected' : '' ?>>Yes</option>
+                          </select>
+                        </div>
+                        <div class="col-6">
+                          <label>Discount %</label>
+                          <input type="number" step="0.01" min="0" max="100" name="offer_percent" class="form-control form-control-sm" value="<?= e((string) ($cat['offer_percent'] ?? '')) ?>">
+                        </div>
+                        <div class="col-6">
+                          <label>Start Date</label>
+                          <input type="date" name="offer_start_date" class="form-control form-control-sm" value="<?= e($cat['offer_start_date'] ?? '') ?>">
+                        </div>
+                        <div class="col-6">
+                          <label>End Date</label>
+                          <input type="date" name="offer_end_date" class="form-control form-control-sm" value="<?= e($cat['offer_end_date'] ?? '') ?>">
+                        </div>
+                      </div>
                     </div>
                     <div class="modal-footer">
                       <button type="button" class="btn btn-ps-outline btn-sm" data-bs-dismiss="modal">Cancel</button>

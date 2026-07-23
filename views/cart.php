@@ -1,4 +1,4 @@
-<?php $pageTitle = 'Your Cart'; /** @var array $lines */ /** @var float $subtotal */ ?>
+<?php $pageTitle = 'Your Cart'; /** @var array $lines */ /** @var float $subtotal */ /** @var array $bundleMatches */ ?>
 
 <section class="section">
   <div class="container">
@@ -10,6 +10,9 @@
         <a href="<?= url('/store') ?>" class="btn btn-ps">Continue Shopping</a>
       </div>
     <?php else: ?>
+    <?php foreach ($bundleMatches as $match): ?>
+    <div class="alert alert-success mb-4">🎁 Bundle Deal Applied: <strong><?= e($match['bundle']['name']) ?></strong> — you're saving ৳<?= number_format($match['savings']) ?>!</div>
+    <?php endforeach; ?>
     <div class="row g-4">
       <div class="col-lg-8">
         <div class="glass-card p-4">

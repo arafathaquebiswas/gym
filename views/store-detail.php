@@ -15,7 +15,7 @@ $allImages = array_merge(
     $images
 );
 $discountPercent = $product['offer_is_live'] && $product['selling_price'] > 0
-    ? round((($product['selling_price'] - $product['offer_price']) / $product['selling_price']) * 100)
+    ? round((($product['selling_price'] - $product['display_price']) / $product['selling_price']) * 100)
     : 0;
 $isOutOfStock = $product['stock_qty'] <= 0;
 $extraScripts = ['js/pricing-countdown.js'];
@@ -64,15 +64,16 @@ $extraScripts = ['js/pricing-countdown.js'];
         <div class="mb-2" data-pkg-card>
           <?php if ($product['offer_is_live']): ?>
             <div class="offer-only">
-              <div class="d-flex align-items-baseline gap-2">
-                <div class="pkg-price">৳<?= number_format((float) $product['offer_price']) ?></div>
+              <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                <div class="pkg-price">৳<?= number_format((float) $product['display_price']) ?></div>
                 <div class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></div>
                 <span class="badge bg-danger"><?= $discountPercent ?>% OFF</span>
+                <?php if ($product['discount_label']): ?><span class="badge" style="background:#ff6a1a"><?= e($product['discount_label']) ?></span><?php endif; ?>
               </div>
-              <span class="pkg-savings small">Save ৳<?= number_format((float) $product['selling_price'] - (float) $product['offer_price']) ?> (<?= $discountPercent ?>% OFF)</span>
-              <?php if ($product['offer_end_date']): ?>
+              <span class="pkg-savings small">Save ৳<?= number_format((float) $product['selling_price'] - (float) $product['display_price']) ?> (<?= $discountPercent ?>% OFF)</span>
+              <?php if ($product['offer_ends_at']): ?>
               <div class="offer-countdown-label mt-2 small">Offer Ends In</div>
-              <div class="offer-countdown" data-offer-countdown="<?= e($product['offer_end_date']) ?>">
+              <div class="offer-countdown" data-offer-countdown="<?= e($product['offer_ends_at']) ?>">
                 <div class="offer-countdown-unit"><div class="num js-days">00</div><div class="label">Days</div></div>
                 <div class="offer-countdown-unit"><div class="num js-hours">00</div><div class="label">Hrs</div></div>
                 <div class="offer-countdown-unit"><div class="num js-minutes">00</div><div class="label">Min</div></div>
@@ -101,6 +102,9 @@ $extraScripts = ['js/pricing-countdown.js'];
         <?php else: ?>
           <span class="badge bg-danger mb-3">Out of Stock</span>
         <?php endif; ?>
+        <?php if (!empty($product['bogo_enabled'])): ?>
+          <span class="badge mb-3" style="background:#ff6a1a">Buy One Get One Free</span>
+        <?php endif; ?>
 
         <?php if (!$isOutOfStock || ($product['allow_preorder'] && Feature::on('preorder'))): ?>
         <form method="post" action="<?= url('/cart/add') ?>" class="d-flex gap-2 align-items-center mb-3">
@@ -114,6 +118,11 @@ $extraScripts = ['js/pricing-countdown.js'];
         </form>
         <?php else: ?>
           <p class="text-white-50 small">This item is currently unavailable for online purchase.</p>
+          <form method="post" action="<?= url('/store/' . $product['slug'] . '/notify-back-in-stock') ?>" class="d-flex gap-2 mb-3" style="max-width:400px">
+            <?= Security::csrfField() ?>
+            <input type="email" name="email" class="form-control" placeholder="Your email" value="<?= e(Auth::user()['email'] ?? '') ?>" required>
+            <button type="submit" class="btn btn-ps-outline text-nowrap"><i class="bi bi-bell"></i> Notify Me</button>
+          </form>
         <?php endif; ?>
 
         <?php if (Auth::hasRole('member') && Feature::on('wishlist')): ?>
