@@ -219,8 +219,11 @@ CREATE TABLE members (
     weight_kg           DECIMAL(5,2) NULL,
     fitness_goal        VARCHAR(150) NULL,
     medical_notes       TEXT NULL,
+    notify_email        TINYINT(1) NOT NULL DEFAULT 1,
+    notify_promotions   TINYINT(1) NOT NULL DEFAULT 1,
     join_date           DATE NOT NULL,
     trainer_id          INT UNSIGNED NULL,
+    locker_number       VARCHAR(20) NULL,
     status              ENUM('pending','active','suspended','frozen','expired') NOT NULL DEFAULT 'pending',
     qr_code             VARCHAR(255) NULL,
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -329,6 +332,13 @@ CREATE TABLE products (
     min_stock       INT NOT NULL DEFAULT 5,
     expiry_date     DATE NULL,
     image           VARCHAR(255) NULL,
+    offer_price     DECIMAL(10,2) NULL,
+    offer_enabled   TINYINT(1) NOT NULL DEFAULT 0,
+    offer_start_date DATE NULL,
+    offer_end_date  DATE NULL,
+    ingredients     TEXT NULL,
+    nutrition_facts TEXT NULL,
+    allow_preorder  TINYINT(1) NOT NULL DEFAULT 0,
     is_active       TINYINT(1) NOT NULL DEFAULT 1,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -455,9 +465,11 @@ CREATE TABLE promotions (
     description     VARCHAR(255) NULL,
     discount_type   ENUM('percent','fixed','bogo','free_item') NOT NULL DEFAULT 'percent',
     discount_value  DECIMAL(10,2) NOT NULL DEFAULT 0,
-    applies_to      ENUM('membership','product','both') NOT NULL DEFAULT 'both',
+    max_discount_amount DECIMAL(10,2) NULL,
+    applies_to      ENUM('membership','product','trainer','both') NOT NULL DEFAULT 'both',
     min_purchase    DECIMAL(10,2) NOT NULL DEFAULT 0,
     usage_limit     INT UNSIGNED NULL,
+    per_customer_limit INT UNSIGNED NULL,
     used_count      INT UNSIGNED NOT NULL DEFAULT 0,
     start_date      DATE NOT NULL,
     end_date        DATE NOT NULL,
@@ -482,6 +494,162 @@ CREATE TABLE coupon_usages (
 
 ALTER TABLE sales
     ADD CONSTRAINT fk_sales_promotion FOREIGN KEY (promotion_id) REFERENCES promotions(id) ON DELETE SET NULL;
+
+-- =============================================================
+-- PUBLIC E-COMMERCE STORE: cart, wishlist, orders, reviews
+-- Deliberately separate from the POS sales/sale_items pair above —
+-- online orders need a delivery address + a multi-step status
+-- workflow (and can be cancelled after the fact, unlike a completed
+-- walk-in sale), so stock is decremented in application code
+-- (models/Order.php) rather than via a DB trigger.
+-- =============================================================
+
+CREATE TABLE orders (
+    id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_no            VARCHAR(30) NOT NULL UNIQUE,
+    user_id             INT UNSIGNED NULL,
+    guest_name          VARCHAR(120) NULL,
+    guest_email         VARCHAR(150) NULL,
+    guest_phone         VARCHAR(30) NULL,
+    delivery_address    VARCHAR(255) NOT NULL,
+    delivery_city       VARCHAR(100) NOT NULL,
+    delivery_area       VARCHAR(100) NULL,
+    delivery_postal_code VARCHAR(20) NULL,
+    order_notes         TEXT NULL,
+    admin_notes         TEXT NULL,
+    subtotal            DECIMAL(10,2) NOT NULL,
+    discount            DECIMAL(10,2) NOT NULL DEFAULT 0,
+    shipping_charge     DECIMAL(10,2) NOT NULL DEFAULT 0,
+    tax                 DECIMAL(10,2) NOT NULL DEFAULT 0,
+    total               DECIMAL(10,2) NOT NULL,
+    promotion_id        INT UNSIGNED NULL,
+    payment_method      VARCHAR(30) NOT NULL COMMENT 'validated in application code (CheckoutController) so new gateways (Stripe, SSLCommerz, AmarPay, ...) can be added without a migration',
+    payment_status      ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
+    status              ENUM('pending','confirmed','preparing','ready_for_pickup','shipped','delivered','cancelled','returned') NOT NULL DEFAULT 'pending',
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT fk_orders_promotion FOREIGN KEY (promotion_id) REFERENCES promotions(id) ON DELETE SET NULL,
+    INDEX idx_orders_status (status),
+    INDEX idx_orders_user (user_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE order_items (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_id        INT UNSIGNED NOT NULL,
+    product_id      INT UNSIGNED NOT NULL,
+    product_name    VARCHAR(150) NOT NULL,
+    sku             VARCHAR(50) NOT NULL,
+    qty             INT NOT NULL,
+    unit_price      DECIMAL(10,2) NOT NULL,
+    subtotal        DECIMAL(10,2) NOT NULL,
+    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
+    INDEX idx_order_items_order (order_id)
+) ENGINE=InnoDB;
+
+-- coupon_usages is defined earlier (before orders existed) — add the online-order link now.
+ALTER TABLE coupon_usages
+    ADD COLUMN order_id INT UNSIGNED NULL AFTER subscription_id,
+    ADD CONSTRAINT fk_coupon_usages_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
+
+CREATE TABLE shopping_cart (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED NULL,
+    cart_token  VARCHAR(64) NULL,
+    product_id  INT UNSIGNED NOT NULL,
+    qty         INT NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_cart_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_cart_user_product (user_id, product_id),
+    UNIQUE KEY uniq_cart_token_product (cart_token, product_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE wishlist (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED NOT NULL,
+    product_id  INT UNSIGNED NOT NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_wishlist_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_wishlist_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_wishlist (user_id, product_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE customer_addresses (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT UNSIGNED NOT NULL,
+    label           VARCHAR(50) NOT NULL DEFAULT 'Home',
+    full_name       VARCHAR(120) NOT NULL,
+    phone           VARCHAR(30) NOT NULL,
+    address         VARCHAR(255) NOT NULL,
+    city            VARCHAR(100) NOT NULL,
+    area            VARCHAR(100) NULL,
+    postal_code     VARCHAR(20) NULL,
+    is_default      TINYINT(1) NOT NULL DEFAULT 0,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_addresses_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE payment_transactions (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_id        INT UNSIGNED NOT NULL,
+    method          VARCHAR(20) NOT NULL,
+    amount          DECIMAL(10,2) NOT NULL,
+    reference_no    VARCHAR(100) NULL,
+    status          ENUM('pending','verified','failed') NOT NULL DEFAULT 'pending',
+    recorded_by     INT UNSIGNED NULL,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_payment_tx_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_payment_tx_recorded_by FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE order_status_history (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_id    INT UNSIGNED NOT NULL,
+    status      VARCHAR(30) NOT NULL,
+    note        VARCHAR(255) NULL,
+    changed_by  INT UNSIGNED NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_status_history_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_status_history_changed_by FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE product_reviews (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id  INT UNSIGNED NOT NULL,
+    member_id   INT UNSIGNED NOT NULL,
+    order_id    INT UNSIGNED NULL,
+    rating      TINYINT UNSIGNED NOT NULL,
+    comment     TEXT NULL,
+    status      ENUM('pending','approved','hidden') NOT NULL DEFAULT 'approved',
+    admin_reply TEXT NULL,
+    replied_at  DATETIME NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_product_reviews_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_product_reviews_member FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_product_reviews (product_id, member_id),
+    CONSTRAINT chk_product_review_rating CHECK (rating BETWEEN 1 AND 5)
+) ENGINE=InnoDB;
+
+CREATE TABLE product_review_photos (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    review_id   INT UNSIGNED NOT NULL,
+    image_path  VARCHAR(255) NOT NULL,
+    CONSTRAINT fk_review_photos_review FOREIGN KEY (review_id) REFERENCES product_reviews(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE refunds (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_id    INT UNSIGNED NOT NULL,
+    amount      DECIMAL(10,2) NOT NULL,
+    reason      VARCHAR(255) NOT NULL,
+    refunded_by INT UNSIGNED NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_refunds_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_refunds_refunded_by FOREIGN KEY (refunded_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
 
 -- =============================================================
 -- CONTENT: BLOG / GALLERY / TESTIMONIALS / FAQ / CONTACT / SETTINGS

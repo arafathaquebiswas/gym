@@ -165,6 +165,53 @@ final class TrainerAdminController extends AdminController
         redirect('admin/trainers');
     }
 
+    public function bulkAction(): void
+    {
+        Security::requireCsrf();
+
+        $ids = array_map('intval', (array) ($_POST['ids'] ?? []));
+        $action = $this->input('bulk_action');
+
+        if (!$ids) {
+            flash('danger', 'No trainers selected.');
+            redirect('admin/trainers');
+        }
+
+        $trainerModel = new Trainer();
+        $count = 0;
+
+        foreach ($ids as $id) {
+            $trainer = $trainerModel->find($id);
+            if (!$trainer) {
+                continue;
+            }
+
+            switch ($action) {
+                case 'activate':
+                    $trainerModel->update($id, ['is_active' => 1]);
+                    $count++;
+                    break;
+                case 'deactivate':
+                    $trainerModel->update($id, ['is_active' => 0]);
+                    $count++;
+                    break;
+                case 'delete':
+                    Upload::delete($trainer['photo']);
+                    Upload::delete($trainer['cover_photo']);
+                    foreach ((new TrainerGallery())->forTrainer($id) as $image) {
+                        Upload::delete($image['image_path']);
+                    }
+                    $trainerModel->delete($id);
+                    $count++;
+                    break;
+            }
+        }
+
+        $this->logActivity('trainers_bulk_action', "Bulk-$action on $count trainer(s)");
+        flash('success', "$count trainer(s) updated.");
+        redirect('admin/trainers');
+    }
+
     public function show(string $id): void
     {
         $trainerModel = new Trainer();
@@ -254,6 +301,7 @@ final class TrainerAdminController extends AdminController
 
         $trainerModel->move((int) $id, $direction);
 
+        $this->logActivity('trainer_reordered', "Moved trainer #$id $direction");
         flash('success', 'Display order updated.');
         redirect('admin/trainers');
     }

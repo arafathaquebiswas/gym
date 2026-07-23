@@ -56,7 +56,8 @@ function json_response(array $data, int $status = 200): never
 
 function money(float $amount): string
 {
-    return 'BDT ' . number_format($amount, 2);
+    $symbol = (new Setting())->get('currency_symbol', 'BDT');
+    return $symbol . ' ' . number_format($amount, 2);
 }
 
 function format_date(?string $date, string $format = 'd M Y'): string

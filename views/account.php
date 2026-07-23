@@ -3,7 +3,10 @@ $pageTitle = 'My Account';
 /** @var array|null $member */
 /** @var array|null $subscription */
 /** @var array $bookings */
+/** @var array $recentOrders */
+/** @var int $wishlistCount */
 $user = Auth::user();
+$statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' => 'info', 'ready_for_pickup' => 'info', 'shipped' => 'primary', 'delivered' => 'success', 'cancelled' => 'danger', 'returned' => 'dark'];
 ?>
 
 <section class="section">
@@ -11,7 +14,9 @@ $user = Auth::user();
     <div class="row g-4">
       <div class="col-lg-4">
         <div class="glass-card p-4 text-center">
-          <div class="img-placeholder mx-auto mb-3" style="width:120px;height:120px;border-radius:50%"><i class="bi bi-person"></i></div>
+          <div class="mx-auto mb-3" style="width:120px;height:120px;border-radius:50%;overflow:hidden">
+            <?= media_tile($member['photo'] ?? null, $user['name'], 'bi-person') ?>
+          </div>
           <h5 class="mb-0"><?= e($user['name']) ?></h5>
           <p class="text-white-50 small"><?= e($user['email']) ?></p>
           <?php if ($member): ?>
@@ -19,6 +24,7 @@ $user = Auth::user();
             <p class="text-white-50 small mt-3 mb-0">Member ID: <?= e($member['member_code']) ?></p>
             <p class="text-white-50 small">Joined: <?= format_date($member['join_date']) ?></p>
           <?php endif; ?>
+          <a href="<?= url('/account/profile') ?>" class="btn btn-ps-outline btn-sm mt-3"><i class="bi bi-pencil"></i> Edit Profile</a>
         </div>
       </div>
       <div class="col-lg-8">
@@ -49,9 +55,32 @@ $user = Auth::user();
             <?php endforeach; ?>
           <?php endif; ?>
         </div>
+        <div class="glass-card p-4 mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><i class="bi bi-bag-check text-orange"></i> Order History</h5>
+            <a href="<?= url('/account/orders') ?>" class="btn btn-ps-outline btn-sm">View All</a>
+          </div>
+          <?php if (empty($recentOrders)): ?>
+            <p class="text-white-50 mb-3">You haven't placed any store orders yet.</p>
+            <a href="<?= url('/store') ?>" class="btn btn-ps-outline btn-sm">Visit the Store</a>
+          <?php else: ?>
+            <?php foreach ($recentOrders as $order): ?>
+            <div class="booking-list-item d-flex justify-content-between align-items-center">
+              <div>
+                <a href="<?= url('/account/orders/' . $order['id']) ?>" class="text-white text-decoration-none fw-semibold">#<?= e($order['order_no']) ?></a>
+                <div class="text-white-50 small"><?= format_date($order['created_at'], 'd M Y') ?> &middot; ৳<?= number_format((float) $order['total']) ?></div>
+              </div>
+              <span class="badge text-bg-<?= $statusColors[$order['status']] ?? 'secondary' ?>"><?= e(ucfirst(str_replace('_', ' ', $order['status']))) ?></span>
+            </div>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </div>
         <div class="glass-card p-4">
-          <h5 class="mb-2"><i class="bi bi-hourglass-split text-orange"></i> Full Member Dashboard Coming Soon</h5>
-          <p class="text-white-50 mb-0">Attendance history, QR check-in, invoices, and progress tracking will be available here in the next phase of the PowerSurge platform.</p>
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="bi bi-heart text-orange"></i> Wishlist</h5>
+            <a href="<?= url('/account/wishlist') ?>" class="btn btn-ps-outline btn-sm"><?= (int) $wishlistCount ?> item<?= $wishlistCount === 1 ? '' : 's' ?></a>
+          </div>
+          <p class="text-white-50 mt-2 mb-0"><a href="<?= url('/account/addresses') ?>" class="text-white-50">Manage saved addresses →</a></p>
         </div>
       </div>
     </div>

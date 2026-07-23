@@ -57,10 +57,26 @@ $statusLabels = ['available' => 'Available', 'busy' => 'Busy', 'on_leave' => 'On
   <?php if (empty($trainers)): ?>
     <p class="text-white-50 text-center py-4 mb-0">No trainers match your filters.</p>
   <?php else: ?>
+
+  <form method="post" action="<?= url('/admin/trainers/bulk') ?>" id="bulkForm" class="d-none">
+    <?= Security::csrfField() ?>
+    <input type="hidden" name="bulk_action" id="bulkActionField">
+  </form>
+  <div id="bulkToolbar" class="d-none mb-3 d-flex gap-2 align-items-center">
+    <span class="text-white-50 small"><span id="bulkCount">0</span> selected</span>
+    <select id="bulkActionSelect" class="form-select form-select-sm" style="max-width:200px">
+      <option value="activate">Activate</option>
+      <option value="deactivate">Deactivate</option>
+      <option value="delete">Delete</option>
+    </select>
+    <button type="button" id="bulkApplyBtn" class="btn btn-ps-outline btn-sm">Apply</button>
+  </div>
+
   <div class="table-responsive">
     <table class="admin-table">
       <thead>
         <tr>
+          <th><input type="checkbox" id="selectAllTrainers"></th>
           <th>Order</th><th>Photo</th><th>Name</th><th>Specialization</th><th>Experience</th>
           <th>Monthly Fee</th><th>Status</th><th>Featured</th><th>Visible</th><th></th>
         </tr>
@@ -68,6 +84,7 @@ $statusLabels = ['available' => 'Available', 'busy' => 'Busy', 'on_leave' => 'On
       <tbody>
         <?php foreach ($trainers as $trainer): ?>
         <tr>
+          <td><input type="checkbox" class="row-check" value="<?= (int) $trainer['id'] ?>"></td>
           <td>
             <div class="order-btns">
               <form method="post" action="<?= url('/admin/trainers/' . $trainer['id'] . '/reorder') ?>">
@@ -149,3 +166,43 @@ $statusLabels = ['available' => 'Available', 'busy' => 'Busy', 'on_leave' => 'On
   <?php endif; ?>
   <?php endif; ?>
 </div>
+
+<script>
+(function () {
+  var checks = document.querySelectorAll('.row-check');
+  var toolbar = document.getElementById('bulkToolbar');
+  if (!toolbar) return;
+  var countEl = document.getElementById('bulkCount');
+  var selectAll = document.getElementById('selectAllTrainers');
+
+  function update() {
+    var checked = document.querySelectorAll('.row-check:checked');
+    countEl.textContent = checked.length;
+    toolbar.classList.toggle('d-none', checked.length === 0);
+  }
+  checks.forEach(function (c) { c.addEventListener('change', update); });
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      checks.forEach(function (c) { c.checked = selectAll.checked; });
+      update();
+    });
+  }
+
+  document.getElementById('bulkApplyBtn').addEventListener('click', function () {
+    var checked = document.querySelectorAll('.row-check:checked');
+    if (!checked.length) return;
+    var action = document.getElementById('bulkActionSelect').value;
+    if (!confirm('Apply "' + action + '" to ' + checked.length + ' selected trainer(s)?')) return;
+
+    var form = document.getElementById('bulkForm');
+    form.querySelectorAll('input[name="ids[]"]').forEach(function (el) { el.remove(); });
+    checked.forEach(function (c) {
+      var input = document.createElement('input');
+      input.type = 'hidden'; input.name = 'ids[]'; input.value = c.value;
+      form.appendChild(input);
+    });
+    document.getElementById('bulkActionField').value = action;
+    form.submit();
+  });
+})();
+</script>

@@ -129,6 +129,7 @@ final class MembershipAdminController extends AdminController
     {
         Security::requireCsrf();
         $this->requireExists($id)->toggleActive((int) $id);
+        $this->logActivity('package_active_toggled', "Toggled active/visible for package #$id");
         flash('success', 'Visibility updated.');
         redirect('admin/packages');
     }
@@ -137,6 +138,7 @@ final class MembershipAdminController extends AdminController
     {
         Security::requireCsrf();
         $this->requireExists($id)->toggleFeatured((int) $id);
+        $this->logActivity('package_featured_toggled', "Toggled featured for package #$id");
         flash('success', 'Featured status updated.');
         redirect('admin/packages');
     }
@@ -145,6 +147,7 @@ final class MembershipAdminController extends AdminController
     {
         Security::requireCsrf();
         $this->requireExists($id)->toggleOfferEnabled((int) $id);
+        $this->logActivity('package_offer_toggled', "Toggled offer for package #$id");
         flash('success', 'Offer status updated.');
         redirect('admin/packages');
     }
@@ -160,6 +163,7 @@ final class MembershipAdminController extends AdminController
         }
 
         $this->requireExists($id)->move((int) $id, $direction);
+        $this->logActivity('package_reordered', "Moved package #$id $direction");
         flash('success', 'Display order updated.');
         redirect('admin/packages');
     }

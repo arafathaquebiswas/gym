@@ -31,6 +31,7 @@
         <h6>Company</h6>
         <ul class="list-unstyled">
           <li><a href="<?= url('/store') ?>">Store</a></li>
+          <li><a href="<?= url('/track-order') ?>">Track Order</a></li>
           <li><a href="<?= url('/gallery') ?>">Gallery</a></li>
           <li><a href="<?= url('/blog') ?>">Blog</a></li>
           <li><a href="<?= url('/faq') ?>">FAQ</a></li>

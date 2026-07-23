@@ -94,6 +94,19 @@ INSERT INTO product_categories (name, slug, description) VALUES
 ('Accessories', 'accessories', 'Bottles, shakers, bags and apparel'),
 ('Equipment', 'equipment', 'Gloves, belts, wraps and training gear');
 
+-- Granular admin-facing subcategories under the 3 broad groups above.
+INSERT INTO product_categories (parent_id, name, slug) VALUES
+((SELECT id FROM product_categories WHERE slug='supplements'), 'Protein', 'protein'),
+((SELECT id FROM product_categories WHERE slug='supplements'), 'Creatine', 'creatine'),
+((SELECT id FROM product_categories WHERE slug='supplements'), 'Mass Gainer', 'mass-gainer'),
+((SELECT id FROM product_categories WHERE slug='supplements'), 'Pre Workout', 'pre-workout'),
+((SELECT id FROM product_categories WHERE slug='supplements'), 'Vitamins', 'vitamins'),
+((SELECT id FROM product_categories WHERE slug='accessories'), 'Bottle', 'bottle'),
+((SELECT id FROM product_categories WHERE slug='accessories'), 'Shaker', 'shaker'),
+((SELECT id FROM product_categories WHERE slug='accessories'), 'T-Shirt', 't-shirt'),
+((SELECT id FROM product_categories WHERE slug='accessories'), 'Hoodie', 'hoodie'),
+((SELECT id FROM product_categories WHERE slug='equipment'), 'Gloves', 'gloves');
+
 -- ---- Products ----------------------------------------------------
 -- image values are relative to /assets/images (see views for asset() usage).
 -- Real product photos exist for the rows below where a real brand is shown

@@ -144,10 +144,26 @@ $pageTitle = 'Home';
       <?php foreach (array_slice($products, 0, 4) as $product): ?>
       <div class="col-6 col-lg-3">
         <div class="glass-card product-card text-start">
-          <div class="product-thumb"><?= media_tile($product['image'], $product['name'], 'bi-box-seam') ?></div>
-          <div class="cat-tag"><?= e($product['brand'] ?? '') ?></div>
-          <h6 class="mb-1"><?= e($product['name']) ?></h6>
-          <div class="price">৳<?= number_format($product['selling_price']) ?></div>
+          <a href="<?= url('/store/' . $product['slug']) ?>" class="text-decoration-none">
+            <div class="product-thumb"><?= media_tile($product['image'], $product['name'], 'bi-box-seam') ?></div>
+            <div class="cat-tag"><?= e($product['brand'] ?? '') ?></div>
+            <h6 class="mb-1 text-white"><?= e($product['name']) ?></h6>
+            <?php if (!empty($product['offer_is_live'])): ?>
+              <div class="price">৳<?= number_format((float) $product['offer_price']) ?> <small class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></small></div>
+            <?php else: ?>
+              <div class="price">৳<?= number_format((float) $product['selling_price']) ?></div>
+            <?php endif; ?>
+          </a>
+          <?php if ((int) $product['stock_qty'] > 0 || $product['allow_preorder']): ?>
+          <form method="post" action="<?= url('/cart/add') ?>" class="mt-2">
+            <?= Security::csrfField() ?>
+            <input type="hidden" name="product_id" value="<?= (int) $product['id'] ?>">
+            <input type="hidden" name="qty" value="1">
+            <button type="submit" class="btn btn-ps-outline btn-sm w-100"><i class="bi bi-cart-plus"></i> Add to Cart</button>
+          </form>
+          <?php else: ?>
+          <span class="badge bg-danger mt-2">Out of Stock</span>
+          <?php endif; ?>
         </div>
       </div>
       <?php endforeach; ?>

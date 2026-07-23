@@ -54,4 +54,32 @@ final class User extends Model
         $stmt = $this->db->prepare('UPDATE users SET last_login_at = NOW() WHERE id = :id');
         $stmt->execute(['id' => $id]);
     }
+
+    private const WRITABLE_FIELDS = ['name', 'email', 'phone', 'status'];
+
+    public function update(int $id, array $data): void
+    {
+        $fields = array_intersect_key($data, array_flip(self::WRITABLE_FIELDS));
+        if (!$fields) {
+            return;
+        }
+        $set = implode(', ', array_map(fn ($c) => "$c = :$c", array_keys($fields)));
+        $fields['id'] = $id;
+
+        $stmt = $this->db->prepare("UPDATE users SET $set WHERE id = :id");
+        $stmt->execute($fields);
+    }
+
+    public function updatePassword(int $id, string $newPassword): void
+    {
+        $stmt = $this->db->prepare('UPDATE users SET password_hash = :hash WHERE id = :id');
+        $stmt->execute(['hash' => password_hash($newPassword, PASSWORD_DEFAULT), 'id' => $id]);
+    }
+
+    /** Cascades (via FK ON DELETE CASCADE) to members, member_subscriptions, attendance, etc. */
+    public function delete(int $id): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM users WHERE id = :id');
+        $stmt->execute(['id' => $id]);
+    }
 }

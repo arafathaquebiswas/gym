@@ -124,4 +124,12 @@ final class TrainerBooking extends Model
         $stmt->execute(['trainer_id' => $trainerId]);
         return $stmt->fetchAll();
     }
+
+    /** Count of all upcoming confirmed bookings across all trainers — used by the admin dashboard. */
+    public function upcomingCount(): int
+    {
+        return (int) $this->db->query(
+            "SELECT COUNT(*) FROM trainer_booking WHERE status = 'confirmed' AND booking_date >= CURDATE()"
+        )->fetchColumn();
+    }
 }

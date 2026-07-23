@@ -39,7 +39,12 @@ final class AuthController extends Controller
         }
 
         Auth::logAttempt($db, (int) $user['id'], $email, 'success');
+
+        // Capture the guest session's cart token before Auth::login() regenerates the session ID.
+        $guestCartToken = session_id();
         Auth::login($user);
+        (new Cart())->mergeGuestIntoUser($guestCartToken, (int) $user['id']);
+
         $userModel->touchLastLogin((int) $user['id']);
 
         flash('success', 'Welcome back, ' . $user['name'] . '!');
@@ -96,7 +101,9 @@ final class AuthController extends Controller
         $memberModel->createForUser($userId);
 
         $user = $userModel->findById($userId);
+        $guestCartToken = session_id();
         Auth::login($user);
+        (new Cart())->mergeGuestIntoUser($guestCartToken, $userId);
 
         Mailer::send($email, $name, 'Welcome to PowerSurge Gym', "<p>Hi {$name},</p><p>Your account has been created. Visit the gym to activate a membership package.</p>");
 
@@ -109,17 +116,6 @@ final class AuthController extends Controller
         Auth::logout();
         flash('success', 'You have been logged out.');
         redirect('login');
-    }
-
-    public function account(): void
-    {
-        Auth::requireRole('member');
-        $memberModel = new Member();
-        $member = $memberModel->findByUserId((int) Auth::user()['id']);
-        $subscription = $member ? $memberModel->activeSubscription((int) $member['id']) : null;
-        $bookings = $member ? (new TrainerBooking())->upcomingForMember((int) $member['id']) : [];
-
-        $this->view('account', ['member' => $member, 'subscription' => $subscription, 'bookings' => $bookings]);
     }
 
     private function redirectToDashboard(): never

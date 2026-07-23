@@ -13,6 +13,8 @@ $navItems = [
 ];
 $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/');
 if ($currentPath === '') { $currentPath = 'home'; }
+$cartIdentity = Cart::identity();
+$cartCount = (new Cart())->count($cartIdentity['user_id'], $cartIdentity['cart_token']);
 ?>
 <nav class="navbar navbar-expand-lg navbar-ps sticky-top py-3">
   <div class="container">
@@ -31,7 +33,13 @@ if ($currentPath === '') { $currentPath = 'home'; }
           </li>
         <?php endforeach; ?>
       </ul>
-      <div class="d-flex gap-2">
+      <div class="d-flex gap-2 align-items-center">
+        <a href="<?= url('/cart') ?>" class="btn btn-ps-outline btn-sm position-relative">
+          <i class="bi bi-cart3"></i>
+          <?php if ($cartCount > 0): ?>
+            <span class="badge-ps badge position-absolute top-0 start-100 translate-middle rounded-pill"><?= (int) $cartCount ?></span>
+          <?php endif; ?>
+        </a>
         <?php if ($currentUser): ?>
           <a href="<?= url(Auth::isStaff() ? '/admin' : '/account') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-person-circle"></i> <?= e($currentUser['name']) ?></a>
           <a href="<?= url('/logout') ?>" class="btn btn-ps btn-sm">Logout</a>

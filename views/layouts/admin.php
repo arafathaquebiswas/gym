@@ -8,8 +8,20 @@ $navItems = [
     ['dashboard', 'Dashboard', 'bi-speedometer2', url('/admin')],
     ['trainers', 'Trainers', 'bi-person-badge', url('/admin/trainers')],
     ['packages', 'Packages', 'bi-box-seam', url('/admin/packages')],
+    ['coupons', 'Coupons', 'bi-ticket-perforated', url('/admin/coupons')],
+    ['members', 'Members', 'bi-people', url('/admin/members')],
+    ['products', 'Store', 'bi-shop', url('/admin/products')],
+    ['pos', 'POS', 'bi-calculator', url('/admin/pos')],
+    ['orders', 'Orders', 'bi-bag-check', url('/admin/orders')],
+    ['reports', 'Reports', 'bi-bar-chart', url('/admin/reports')],
+    ['messages', 'Messages', 'bi-envelope', url('/admin/messages')],
+    ['reviews', 'Reviews', 'bi-star', url('/admin/reviews')],
+    ['audit-log', 'Audit Log', 'bi-clock-history', url('/admin/audit-log')],
+    ['settings', 'Settings', 'bi-gear', url('/admin/settings')],
 ];
-$comingSoon = ['Members', 'Store', 'POS', 'Reports', 'Settings'];
+$unreadMessageCount = (new ContactMessage())->newCount();
+$newOrderCount = (new Order())->statusCounts()['pending'] ?? 0;
+$pendingReviewCount = (new ProductReview())->pendingCount();
 ?>
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
@@ -35,12 +47,15 @@ $comingSoon = ['Members', 'Store', 'POS', 'Reports', 'Settings'];
         </a>
         <nav class="admin-nav">
             <?php foreach ($navItems as [$key, $label, $icon, $href]): ?>
-                <a href="<?= e($href) ?>" class="admin-nav-link <?= str_starts_with($currentPath, 'admin/' . $key) || ($key === 'dashboard' && $currentPath === 'admin') ? 'active' : '' ?>">
+                <?php $isActive = str_starts_with($currentPath, 'admin/' . $key)
+                    || ($key === 'dashboard' && $currentPath === 'admin')
+                    || ($key === 'products' && str_starts_with($currentPath, 'admin/categories')); ?>
+                <a href="<?= e($href) ?>" class="admin-nav-link <?= $isActive ? 'active' : '' ?>">
                     <i class="bi <?= e($icon) ?>"></i> <?= e($label) ?>
+                    <?php if ($key === 'messages' && $unreadMessageCount > 0): ?><span class="badge text-bg-success ms-1"><?= (int) $unreadMessageCount ?></span><?php endif; ?>
+                    <?php if ($key === 'orders' && $newOrderCount > 0): ?><span class="badge text-bg-success ms-1"><?= (int) $newOrderCount ?></span><?php endif; ?>
+                    <?php if ($key === 'reviews' && $pendingReviewCount > 0): ?><span class="badge text-bg-success ms-1"><?= (int) $pendingReviewCount ?></span><?php endif; ?>
                 </a>
-            <?php endforeach; ?>
-            <?php foreach ($comingSoon as $label): ?>
-                <span class="admin-nav-link disabled"><i class="bi bi-lock"></i> <?= e($label) ?> <small>soon</small></span>
             <?php endforeach; ?>
         </nav>
         <div class="admin-sidebar-footer">
