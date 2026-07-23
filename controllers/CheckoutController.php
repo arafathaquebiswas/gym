@@ -251,8 +251,10 @@ final class CheckoutController extends Controller
 
         // A mail failure (e.g. SMTP not configured) must never block the order itself —
         // Mailer::send() already no-ops silently in that case.
-        $placedOrder = (new Order())->find($result['id']);
-        OrderMailer::sendConfirmation($placedOrder, (new OrderItem())->forOrder($result['id']));
+        if ((new Setting())->getBool('auto_email_notifications')) {
+            $placedOrder = (new Order())->find($result['id']);
+            OrderMailer::sendConfirmation($placedOrder, (new OrderItem())->forOrder($result['id']));
+        }
 
         flash('success', 'Order placed successfully — order #' . $result['order_no']);
         redirect('checkout/confirmation/' . $result['id']);

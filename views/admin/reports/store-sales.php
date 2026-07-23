@@ -10,6 +10,7 @@
     <a href="<?= url('/admin/reports') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> All Reports</a>
   </div>
   <?php include __DIR__ . '/_filter.php'; ?>
+  <?php include __DIR__ . '/_export_buttons.php'; ?>
 
   <h6 class="mt-3 mb-2">By Category</h6>
   <?php if (empty($byCategory)): ?>

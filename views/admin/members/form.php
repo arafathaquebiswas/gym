@@ -88,14 +88,18 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
           <label>Join Date</label>
           <input type="date" name="join_date" class="form-control" value="<?= $v('join_date', date('Y-m-d')) ?>">
         </div>
+        <?php if ($isEdit): ?>
         <div class="col-md-3">
           <label>Status</label>
-          <select name="status" class="form-select">
-            <?php foreach (['pending' => 'Pending', 'active' => 'Active', 'suspended' => 'Suspended', 'frozen' => 'Frozen', 'expired' => 'Expired'] as $val => $label): ?>
-              <option value="<?= $val ?>" <?= ($member['status'] ?? 'active') === $val ? 'selected' : '' ?>><?= $label ?></option>
-            <?php endforeach; ?>
-          </select>
+          <?php $statusLabels = ['pending' => 'Pending', 'active' => 'Active', 'expired' => 'Expired']; ?>
+          <div>
+            <span class="badge text-bg-<?= ['pending' => 'secondary', 'active' => 'success', 'expired' => 'dark'][$member['status']] ?? 'secondary' ?> py-2 px-3">
+              <?= e($statusLabels[$member['status']] ?? ucfirst($member['status'])) ?>
+            </span>
+          </div>
+          <small class="text-white-50">Set automatically by package purchases/renewals — not editable here.</small>
         </div>
+        <?php endif; ?>
         <?php if (Feature::trainerModuleOn()): ?>
         <div class="col-md-3">
           <label>Assigned Trainer</label>

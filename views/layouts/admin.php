@@ -4,34 +4,56 @@
 $currentUser = Auth::user();
 $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/');
 
+/**
+ * Each item: [key, label, icon, href, children].
+ * children (nullable) is an array of [label, href, matchPrefix, excludePrefix] used to build an
+ * expandable sub-menu — cross-page shortcuts belong here, in the sidebar, never scattered as
+ * ad-hoc buttons inside a page's own content.
+ */
 $navItems = [
-    ['dashboard', 'Dashboard', 'bi-speedometer2', url('/admin')],
+    ['dashboard', 'Dashboard', 'bi-speedometer2', url('/admin'), null],
 ];
 if (Feature::trainerModuleOn()) {
-    $navItems[] = ['trainers', 'Trainers', 'bi-person-badge', url('/admin/trainers')];
+    $navItems[] = ['trainers', 'Trainers', 'bi-person-badge', url('/admin/trainers'), null];
 }
-$navItems[] = ['packages', 'Packages', 'bi-box-seam', url('/admin/packages')];
+$navItems[] = ['packages', 'Packages', 'bi-box-seam', url('/admin/packages'), null];
 if (Feature::on('coupons')) {
-    $navItems[] = ['coupons', 'Coupons', 'bi-ticket-perforated', url('/admin/coupons')];
+    $navItems[] = ['coupons', 'Coupons', 'bi-ticket-perforated', url('/admin/coupons'), null];
 }
-$navItems[] = ['members', 'Members', 'bi-people', url('/admin/members')];
+$navItems[] = ['members', 'Members', 'bi-people', url('/admin/members'), null];
 if (Feature::on('store')) {
-    $navItems[] = ['products', 'Store', 'bi-shop', url('/admin/products')];
+    $navItems[] = ['products', 'Store', 'bi-shop', url('/admin/products'), [
+        ['Products', url('/admin/products'), 'admin/products', 'admin/products/sales'],
+        ['Categories', url('/admin/categories'), 'admin/categories', null],
+        ['Attributes', url('/admin/attributes'), 'admin/attributes', null],
+        ['Brands', url('/admin/brands'), 'admin/brands', null],
+        ['Suppliers', url('/admin/suppliers'), 'admin/suppliers', null],
+        ['Purchases', url('/admin/purchases'), 'admin/purchases', null],
+        ['Sales', url('/admin/products/sales'), 'admin/products/sales', null],
+    ]];
 }
-$navItems[] = ['pos', 'POS', 'bi-calculator', url('/admin/pos')];
+$navItems[] = ['pos', 'POS', 'bi-calculator', url('/admin/pos'), null];
 if (Feature::on('store')) {
-    $navItems[] = ['orders', 'Orders', 'bi-bag-check', url('/admin/orders')];
+    $navItems[] = ['orders', 'Orders', 'bi-bag-check', url('/admin/orders'), null];
 }
-$navItems[] = ['reports', 'Reports', 'bi-bar-chart', url('/admin/reports')];
-$navItems[] = ['messages', 'Messages', 'bi-envelope', url('/admin/messages')];
+$navItems[] = ['reports', 'Reports', 'bi-bar-chart', url('/admin/reports'), null];
+$navItems[] = ['messages', 'Messages', 'bi-envelope', url('/admin/messages'), null];
 if (Feature::on('reviews')) {
-    $navItems[] = ['reviews', 'Reviews', 'bi-star', url('/admin/reviews')];
+    $navItems[] = ['reviews', 'Reviews', 'bi-star', url('/admin/reviews'), null];
 }
-$navItems[] = ['audit-log', 'Audit Log', 'bi-clock-history', url('/admin/audit-log')];
-$navItems[] = ['settings', 'Settings', 'bi-gear', url('/admin/settings')];
+$navItems[] = ['audit-log', 'Audit Log', 'bi-clock-history', url('/admin/audit-log'), null];
+$navItems[] = ['settings', 'Settings', 'bi-gear', url('/admin/settings'), null];
 $unreadMessageCount = (new ContactMessage())->newCount();
 $newOrderCount = (new Order())->statusCounts()['pending'] ?? 0;
 $pendingReviewCount = (new ProductReview())->pendingCount();
+
+$childIsActive = function (array $child) use ($currentPath): bool {
+    [, , $prefix, $exclude] = $child;
+    if ($exclude && str_starts_with($currentPath, $exclude)) {
+        return false;
+    }
+    return str_starts_with($currentPath, $prefix);
+};
 ?>
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
@@ -56,16 +78,33 @@ $pendingReviewCount = (new ProductReview())->pendingCount();
             <span>Power<span class="text-orange">Surge</span> Admin</span>
         </a>
         <nav class="admin-nav">
-            <?php foreach ($navItems as [$key, $label, $icon, $href]): ?>
-                <?php $isActive = str_starts_with($currentPath, 'admin/' . $key)
-                    || ($key === 'dashboard' && $currentPath === 'admin')
-                    || ($key === 'products' && str_starts_with($currentPath, 'admin/categories')); ?>
+            <?php foreach ($navItems as [$key, $label, $icon, $href, $children]): ?>
+                <?php
+                $groupActive = $children ? array_reduce($children, fn ($carry, $c) => $carry || $childIsActive($c), false) : false;
+                $isActive = $groupActive
+                    || str_starts_with($currentPath, 'admin/' . $key)
+                    || ($key === 'dashboard' && $currentPath === 'admin');
+                ?>
+                <?php if ($children): ?>
+                <a href="#navGroup<?= $key ?>" class="admin-nav-link <?= $isActive ? 'active' : '' ?> d-flex align-items-center" data-bs-toggle="collapse" role="button" aria-expanded="<?= $isActive ? 'true' : 'false' ?>">
+                    <i class="bi <?= e($icon) ?>"></i> <?= e($label) ?>
+                    <i class="bi bi-chevron-down ms-auto small nav-group-chevron"></i>
+                </a>
+                <div class="collapse <?= $isActive ? 'show' : '' ?>" id="navGroup<?= $key ?>">
+                    <div class="admin-nav-sub">
+                        <?php foreach ($children as $child): [$childLabel, $childHref] = $child; ?>
+                            <a href="<?= e($childHref) ?>" class="admin-nav-sublink <?= $childIsActive($child) ? 'active' : '' ?>"><?= e($childLabel) ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php else: ?>
                 <a href="<?= e($href) ?>" class="admin-nav-link <?= $isActive ? 'active' : '' ?>">
                     <i class="bi <?= e($icon) ?>"></i> <?= e($label) ?>
                     <?php if ($key === 'messages' && $unreadMessageCount > 0): ?><span class="badge text-bg-success ms-1"><?= (int) $unreadMessageCount ?></span><?php endif; ?>
                     <?php if ($key === 'orders' && $newOrderCount > 0): ?><span class="badge text-bg-success ms-1"><?= (int) $newOrderCount ?></span><?php endif; ?>
                     <?php if ($key === 'reviews' && $pendingReviewCount > 0): ?><span class="badge text-bg-success ms-1"><?= (int) $pendingReviewCount ?></span><?php endif; ?>
                 </a>
+                <?php endif; ?>
             <?php endforeach; ?>
         </nav>
         <div class="admin-sidebar-footer">
@@ -102,6 +141,7 @@ $pendingReviewCount = (new ProductReview())->pendingCount();
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= asset('js/payment-method-toggle.js') ?>"></script>
 <script src="<?= asset('js/password-toggle.js') ?>"></script>
+<script src="<?= asset('js/admin-details-toggle.js') ?>"></script>
 <?php if (!empty($extraScripts)): foreach ($extraScripts as $script): ?>
 <script src="<?= asset($script) ?>"></script>
 <?php endforeach; endif; ?>

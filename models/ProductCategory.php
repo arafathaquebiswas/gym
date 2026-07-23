@@ -4,7 +4,16 @@ final class ProductCategory extends Model
 {
     public function all(): array
     {
-        $stmt = $this->db->query('SELECT * FROM product_categories ORDER BY name ASC');
+        $stmt = $this->db->query('SELECT * FROM product_categories ORDER BY sort_order ASC, name ASC');
+        return $stmt->fetchAll();
+    }
+
+    /** Active top-level categories with their active children, in display order — for the public store's category picker. */
+    public function allActiveForStorefront(): array
+    {
+        $stmt = $this->db->query(
+            "SELECT * FROM product_categories WHERE status = 'active' ORDER BY sort_order ASC, name ASC"
+        );
         return $stmt->fetchAll();
     }
 
@@ -53,7 +62,8 @@ final class ProductCategory extends Model
     public function create(array $data): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO product_categories (parent_id, name, slug, description, image) VALUES (:parent_id, :name, :slug, :description, :image)'
+            'INSERT INTO product_categories (parent_id, name, slug, description, image, status, sort_order)
+             VALUES (:parent_id, :name, :slug, :description, :image, :status, :sort_order)'
         );
         $stmt->execute([
             'parent_id' => $data['parent_id'] ?: null,
@@ -61,6 +71,8 @@ final class ProductCategory extends Model
             'slug' => $data['slug'],
             'description' => $data['description'] ?: null,
             'image' => $data['image'] ?? null,
+            'status' => $data['status'] ?? 'active',
+            'sort_order' => $data['sort_order'] ?? $this->nextSortOrder(),
         ]);
         return (int) $this->db->lastInsertId();
     }
@@ -68,7 +80,7 @@ final class ProductCategory extends Model
     public function update(int $id, array $data): void
     {
         $fields = array_intersect_key($data, array_flip([
-            'parent_id', 'name', 'slug', 'description', 'image',
+            'parent_id', 'name', 'slug', 'description', 'image', 'status', 'sort_order',
             'offer_enabled', 'offer_percent', 'offer_start_date', 'offer_end_date',
         ]));
         if (!$fields) {
@@ -79,6 +91,57 @@ final class ProductCategory extends Model
 
         $stmt = $this->db->prepare("UPDATE product_categories SET $set WHERE id = :id");
         $stmt->execute($fields);
+    }
+
+    public function toggleStatus(int $id): void
+    {
+        $this->db->prepare(
+            "UPDATE product_categories SET status = IF(status = 'active', 'hidden', 'active') WHERE id = :id"
+        )->execute(['id' => $id]);
+    }
+
+    /** New display-order values for a set of category IDs, e.g. after a drag-and-drop reorder. */
+    public function reorder(array $orderedIds): void
+    {
+        $stmt = $this->db->prepare('UPDATE product_categories SET sort_order = :sort_order WHERE id = :id');
+        foreach (array_values($orderedIds) as $i => $id) {
+            $stmt->execute(['sort_order' => $i, 'id' => (int) $id]);
+        }
+    }
+
+    /** Swaps this category's sort_order with its nearest sibling (same parent) immediately before/after it. */
+    public function moveUp(int $id): void
+    {
+        $this->swapWithSibling($id, '<', 'DESC');
+    }
+
+    public function moveDown(int $id): void
+    {
+        $this->swapWithSibling($id, '>', 'ASC');
+    }
+
+    private function swapWithSibling(int $id, string $operator, string $direction): void
+    {
+        $category = $this->find($id);
+        if (!$category) {
+            return;
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT * FROM product_categories
+             WHERE (parent_id <=> :parent_id) AND sort_order $operator :sort_order
+             ORDER BY sort_order $direction LIMIT 1"
+        );
+        $stmt->execute(['parent_id' => $category['parent_id'], 'sort_order' => $category['sort_order']]);
+        $sibling = $stmt->fetch();
+        if (!$sibling) {
+            return;
+        }
+
+        $this->db->prepare('UPDATE product_categories SET sort_order = :sort_order WHERE id = :id')
+            ->execute(['sort_order' => $sibling['sort_order'], 'id' => $id]);
+        $this->db->prepare('UPDATE product_categories SET sort_order = :sort_order WHERE id = :id')
+            ->execute(['sort_order' => $category['sort_order'], 'id' => $sibling['id']]);
     }
 
     /** Blocked at the controller layer if products still reference this category (FK is ON DELETE RESTRICT). */
@@ -92,5 +155,10 @@ final class ProductCategory extends Model
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM products WHERE category_id = :id');
         $stmt->execute(['id' => $id]);
         return (int) $stmt->fetchColumn();
+    }
+
+    private function nextSortOrder(): int
+    {
+        return (int) $this->db->query('SELECT COALESCE(MAX(sort_order), 0) + 10 FROM product_categories')->fetchColumn();
     }
 }

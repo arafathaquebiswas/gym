@@ -82,7 +82,83 @@ final class ProductAdminController extends AdminController
             'categories' => (new ProductCategory())->allWithParent(),
             'brands' => (new Brand())->all(),
             'gallery' => (new ProductImage())->forProduct((int) $id),
+            'allAttributes' => (new ProductAttribute())->allWithValues(),
+            'assignedAttributes' => (new ProductAttribute())->forProduct((int) $id),
+            'variants' => (new ProductVariant())->forProduct((int) $id),
+            'tags' => (new ProductTag())->forProduct((int) $id),
+            'relatedProductIds' => array_column((new RelatedProduct())->forProduct((int) $id), 'id'),
+            'allProducts' => $productModel->allForAdminPicker(),
         ]);
+    }
+
+    /** Sets which attributes (Size, Color, ...) this product uses — drives the variant-builder picker below. */
+    public function assignAttributes(string $id): void
+    {
+        Security::requireCsrf();
+
+        $productModel = new Product();
+        if (!$productModel->find((int) $id)) {
+            $this->abort404();
+        }
+
+        $attributeIds = array_map('intval', (array) ($_POST['attribute_ids'] ?? []));
+        (new ProductAttribute())->setForProduct((int) $id, $attributeIds);
+        $this->logActivity('product_attributes_assigned', "Set attributes for product #$id");
+
+        flash('success', 'Product attributes updated.');
+        redirect('admin/products/' . $id . '/edit');
+    }
+
+    public function updateTagsAndRelated(string $id): void
+    {
+        Security::requireCsrf();
+
+        $productModel = new Product();
+        if (!$productModel->find((int) $id)) {
+            $this->abort404();
+        }
+
+        $tagNames = array_filter(array_map('trim', explode(',', $this->rawInput('tags'))));
+        (new ProductTag())->setForProduct((int) $id, $tagNames);
+
+        $relatedIds = array_map('intval', (array) ($_POST['related_product_ids'] ?? []));
+        (new RelatedProduct())->setForProduct((int) $id, $relatedIds);
+
+        $this->logActivity('product_tags_related_updated', "Updated tags/related products for product #$id");
+        flash('success', 'Tags and related products updated.');
+        redirect('admin/products/' . $id . '/edit');
+    }
+
+    public function duplicate(string $id): void
+    {
+        Security::requireCsrf();
+
+        $productModel = new Product();
+        if (!$productModel->find((int) $id)) {
+            $this->abort404();
+        }
+
+        $newId = $productModel->duplicate((int) $id);
+        $this->logActivity('product_duplicated', "Duplicated product #$id as #$newId");
+
+        flash('success', 'Product duplicated — review and publish the copy when ready.');
+        redirect('admin/products/' . $newId . '/edit');
+    }
+
+    public function toggleArchived(string $id): void
+    {
+        Security::requireCsrf();
+
+        $productModel = new Product();
+        if (!$productModel->find((int) $id)) {
+            $this->abort404();
+        }
+
+        $productModel->toggleArchived((int) $id);
+        $this->logActivity('product_archived_toggled', "Toggled archived state for product #$id");
+
+        flash('success', 'Product archive status updated.');
+        redirect('admin/products');
     }
 
     /** Accepts one or more files from a multi-file input named "images[]" — mirrors TrainerAdminController::galleryUpload(). */
@@ -322,8 +398,13 @@ final class ProductAdminController extends AdminController
         (new StockMovement())->record((int) $id, $delta, 'adjustment', null, $reason ?: null, (int) Auth::user()['id']);
         $this->logActivity('product_stock_adjusted', "Adjusted stock for product #$id by $delta (" . ($reason ?: 'no reason given') . ')');
 
+        $newStockQty = (int) $product['stock_qty'] + $delta;
+        if ($delta < 0) {
+            LowStockAlerter::checkAndNotify($product, $newStockQty);
+        }
+
         $notified = 0;
-        if ((int) $product['stock_qty'] <= 0 && $delta > 0) {
+        if ((int) $product['stock_qty'] <= 0 && $delta > 0 && (new Setting())->getBool('auto_email_notifications')) {
             $notified = StockNotifier::notifyBackInStock($product);
         }
 

@@ -2,6 +2,7 @@
 /** @var string $content */
 /** @var array $flashes */
 $currentUser = Auth::user();
+$currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/');
 ?>
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
@@ -26,8 +27,11 @@ $currentUser = Auth::user();
             <span>Power<span class="text-orange">Surge</span> Delivery</span>
         </a>
         <nav class="admin-nav">
-            <a href="<?= url('/delivery') ?>" class="admin-nav-link active">
+            <a href="<?= url('/delivery') ?>" class="admin-nav-link <?= $currentPath === 'delivery' ? 'active' : '' ?>">
                 <i class="bi bi-truck"></i> My Deliveries
+            </a>
+            <a href="<?= url('/delivery/history') ?>" class="admin-nav-link <?= $currentPath === 'delivery/history' ? 'active' : '' ?>">
+                <i class="bi bi-clock-history"></i> Delivery History
             </a>
         </nav>
         <div class="admin-sidebar-footer">

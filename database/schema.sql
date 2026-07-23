@@ -213,6 +213,7 @@ CREATE TABLE members (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id             INT UNSIGNED NOT NULL UNIQUE,
     member_code         VARCHAR(20) NOT NULL UNIQUE,
+    money_received_no   VARCHAR(20) NULL UNIQUE,
     photo               VARCHAR(255) NULL,
     dob                 DATE NULL,
     gender              ENUM('male','female','other') NULL,
@@ -245,6 +246,8 @@ CREATE TABLE member_subscriptions (
     start_date      DATE NOT NULL,
     end_date        DATE NOT NULL,
     price_paid      DECIMAL(10,2) NOT NULL,
+    discount_amount DECIMAL(10,2) NULL,
+    notes           VARCHAR(255) NULL,
     status          ENUM('active','expired','frozen','cancelled') NOT NULL DEFAULT 'active',
     freeze_start    DATE NULL,
     freeze_end      DATE NULL,
@@ -306,6 +309,8 @@ CREATE TABLE product_categories (
     slug        VARCHAR(120) NOT NULL UNIQUE,
     description VARCHAR(255) NULL,
     image       VARCHAR(255) NULL,
+    status      ENUM('active','hidden') NOT NULL DEFAULT 'active',
+    sort_order  INT UNSIGNED NOT NULL DEFAULT 0,
     offer_enabled    TINYINT(1) NOT NULL DEFAULT 0,
     offer_percent    DECIMAL(5,2) NULL,
     offer_start_date DATE NULL,
@@ -364,6 +369,7 @@ CREATE TABLE products (
     allow_preorder  TINYINT(1) NOT NULL DEFAULT 0,
     bogo_enabled    TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Buy One Get One — every 2nd unit in a cart line is free',
     is_featured     TINYINT(1) NOT NULL DEFAULT 0,
+    is_archived     TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Retired but kept for historical order records — orthogonal to status',
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES product_categories(id) ON DELETE RESTRICT,
@@ -373,6 +379,105 @@ CREATE TABLE products (
     INDEX idx_products_brand (brand_id),
     INDEX idx_products_status (status),
     INDEX idx_products_stock (stock_qty)
+) ENGINE=InnoDB;
+
+-- =============================================================
+-- PRODUCT CATALOG: dynamic attributes/variants (unlimited, admin-defined —
+-- no hardcoded sizes/colors/weights). A "simple" product with no variants
+-- keeps selling directly off its own selling_price/stock_qty/sku above;
+-- products with variants sell through product_variants instead.
+-- =============================================================
+
+CREATE TABLE product_attributes (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name        VARCHAR(100) NOT NULL,
+    slug        VARCHAR(120) NOT NULL UNIQUE,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE attribute_values (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    attribute_id    INT UNSIGNED NOT NULL,
+    value           VARCHAR(100) NOT NULL,
+    sort_order      INT UNSIGNED NOT NULL DEFAULT 0,
+    CONSTRAINT fk_attribute_values_attribute FOREIGN KEY (attribute_id) REFERENCES product_attributes(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_attribute_value (attribute_id, value),
+    INDEX idx_attribute_values_attribute (attribute_id)
+) ENGINE=InnoDB;
+
+-- Which attributes a given product uses (drives the variant-builder UI before any variant exists).
+CREATE TABLE product_attribute_links (
+    id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id   INT UNSIGNED NOT NULL,
+    attribute_id INT UNSIGNED NOT NULL,
+    sort_order   INT UNSIGNED NOT NULL DEFAULT 0,
+    CONSTRAINT fk_product_attribute_links_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_product_attribute_links_attribute FOREIGN KEY (attribute_id) REFERENCES product_attributes(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_product_attribute (product_id, attribute_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE product_variants (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id  INT UNSIGNED NOT NULL,
+    sku         VARCHAR(50) NOT NULL UNIQUE,
+    barcode     VARCHAR(50) NULL UNIQUE,
+    price       DECIMAL(10,2) NULL COMMENT 'NULL falls back to the parent product selling_price',
+    offer_price DECIMAL(10,2) NULL,
+    stock_qty   INT NOT NULL DEFAULT 0,
+    weight      DECIMAL(10,3) NULL COMMENT 'kg',
+    image       VARCHAR(255) NULL,
+    status      ENUM('active','inactive') NOT NULL DEFAULT 'active',
+    sort_order  INT UNSIGNED NOT NULL DEFAULT 0,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_product_variants_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    INDEX idx_product_variants_product (product_id)
+) ENGINE=InnoDB;
+
+-- Each variant is defined as a combination of attribute values (e.g. Size=Medium + Color=Red).
+CREATE TABLE product_variant_values (
+    id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    variant_id          INT UNSIGNED NOT NULL,
+    attribute_value_id  INT UNSIGNED NOT NULL,
+    CONSTRAINT fk_variant_values_variant FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE,
+    CONSTRAINT fk_variant_values_attribute_value FOREIGN KEY (attribute_value_id) REFERENCES attribute_values(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_variant_value (variant_id, attribute_value_id),
+    INDEX idx_variant_values_variant (variant_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE variant_images (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    variant_id  INT UNSIGNED NOT NULL,
+    image_path  VARCHAR(255) NOT NULL,
+    sort_order  INT UNSIGNED NOT NULL DEFAULT 0,
+    CONSTRAINT fk_variant_images_variant FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE,
+    INDEX idx_variant_images_variant (variant_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE product_tags (
+    id      INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name    VARCHAR(60) NOT NULL,
+    slug    VARCHAR(80) NOT NULL UNIQUE
+) ENGINE=InnoDB;
+
+CREATE TABLE product_tag_map (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id  INT UNSIGNED NOT NULL,
+    tag_id      INT UNSIGNED NOT NULL,
+    CONSTRAINT fk_product_tag_map_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_product_tag_map_tag FOREIGN KEY (tag_id) REFERENCES product_tags(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_product_tag (product_id, tag_id)
+) ENGINE=InnoDB;
+
+-- Admin-curated override/supplement to the automatic relatedProducts()/frequentlyBoughtWith() algorithms.
+CREATE TABLE related_products (
+    id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    product_id          INT UNSIGNED NOT NULL,
+    related_product_id  INT UNSIGNED NOT NULL,
+    sort_order          INT UNSIGNED NOT NULL DEFAULT 0,
+    CONSTRAINT fk_related_products_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_related_products_related FOREIGN KEY (related_product_id) REFERENCES products(id) ON DELETE CASCADE,
+    UNIQUE KEY uniq_related_product (product_id, related_product_id)
 ) ENGINE=InnoDB;
 
 -- Site-wide or scoped time-boxed discount — highest priority in the pricing engine (see Product::withComputedOffer()).
@@ -651,6 +756,7 @@ CREATE TABLE order_items (
     qty             INT NOT NULL,
     unit_price      DECIMAL(10,2) NOT NULL,
     subtotal        DECIMAL(10,2) NOT NULL,
+    discount_source VARCHAR(20) NULL COMMENT 'product_offer/category_offer/brand_offer/flash_sale/bogo — null = regular price',
     CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
     INDEX idx_order_items_order (order_id)

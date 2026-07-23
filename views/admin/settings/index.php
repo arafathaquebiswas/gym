@@ -16,6 +16,7 @@ $yn = function (string $key, string $default = '1') use ($settings) {
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-discounts">Discounts</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-membership">Membership</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-features">Feature Flags</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-automation">Automation</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-free-trial">Free Trial</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-smtp">SMTP</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-backup">Backup &amp; Restore</a></li>
@@ -181,6 +182,10 @@ $yn = function (string $key, string $default = '1') use ($settings) {
             <label>Store Pickup</label>
             <select name="feature_pickup" class="form-select"><?= $yn('feature_pickup') ?></select>
           </div>
+          <div class="col-md-6">
+            <label>Delivery Staff Earnings per Order (৳) <small class="text-white-50">(optional — leave 0 to hide earnings on their dashboard)</small></label>
+            <input type="number" step="0.01" min="0" name="delivery_fee_per_order" class="form-control" value="<?= $v('delivery_fee_per_order', '0') ?>">
+          </div>
         </div>
         <hr>
         <div class="d-flex flex-wrap gap-2">
@@ -295,6 +300,25 @@ $yn = function (string $key, string $default = '1') use ($settings) {
           <div class="col-md-4">
             <label>Contact Form</label>
             <select name="feature_contact_form" class="form-select"><?= $yn('feature_contact_form') ?></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-automation">
+      <div class="admin-card">
+        <h6 class="mb-3">Automation</h6>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label>Auto Email Notifications <small class="text-white-50 d-block">Order confirmation emails and "back in stock" alerts to customers</small></label>
+            <select name="auto_email_notifications" class="form-select"><?= $yn('auto_email_notifications') ?></select>
+          </div>
+          <div class="col-md-6">
+            <label>Auto Low Stock Alerts <small class="text-white-50 d-block">Emails the gym's own email (below) the moment a product's stock drops to or below its minimum level</small></label>
+            <select name="auto_low_stock_alerts" class="form-select"><?= $yn('auto_low_stock_alerts', '0') ?></select>
+          </div>
+          <div class="col-12">
+            <p class="text-white-50 small mb-0">Low stock alerts are sent to the Gym Email set in the "Gym Info" tab, and require SMTP to be configured in the "SMTP" tab. Only fires once per drop below the threshold — not on every sale while stock stays low.</p>
           </div>
         </div>
       </div>

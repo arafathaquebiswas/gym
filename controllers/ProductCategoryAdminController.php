@@ -25,12 +25,15 @@ final class ProductCategoryAdminController extends AdminController
         }
 
         $slug = $this->uniqueSlug($categoryModel, $name);
+        $imagePath = Upload::handle($_FILES['image'] ?? [], 'categories');
 
         $categoryModel->create([
             'parent_id' => (int) $this->input('parent_id') ?: null,
             'name' => $name,
             'slug' => $slug,
             'description' => $this->input('description'),
+            'image' => $imagePath,
+            'status' => $this->input('status') === 'hidden' ? 'hidden' : 'active',
         ]);
 
         $this->logActivity('category_created', "Created product category: $name");
@@ -54,18 +57,69 @@ final class ProductCategoryAdminController extends AdminController
             redirect('admin/categories');
         }
 
-        $categoryModel->update((int) $id, [
+        $data = [
             'parent_id' => (int) $this->input('parent_id') ?: null,
             'name' => $name,
             'description' => $this->input('description'),
+            'status' => $this->input('status') === 'hidden' ? 'hidden' : 'active',
             'offer_enabled' => $this->input('offer_enabled') === '1' ? 1 : 0,
             'offer_percent' => $this->input('offer_percent') !== '' ? (float) $this->input('offer_percent') : null,
             'offer_start_date' => $this->input('offer_start_date') ?: null,
             'offer_end_date' => $this->input('offer_end_date') ?: null,
-        ]);
+        ];
+
+        $imagePath = Upload::handle($_FILES['image'] ?? [], 'categories');
+        if ($imagePath) {
+            Upload::delete($category['image']);
+            $data['image'] = $imagePath;
+        }
+
+        $categoryModel->update((int) $id, $data);
 
         $this->logActivity('category_updated', "Updated product category #$id: $name");
         flash('success', 'Category updated successfully.');
+        redirect('admin/categories');
+    }
+
+    public function toggleStatus(string $id): void
+    {
+        Security::requireCsrf();
+
+        $categoryModel = new ProductCategory();
+        if (!$categoryModel->find((int) $id)) {
+            $this->abort404();
+        }
+
+        $categoryModel->toggleStatus((int) $id);
+        $this->logActivity('category_status_toggled', "Toggled visibility for category #$id");
+
+        flash('success', 'Category visibility updated.');
+        redirect('admin/categories');
+    }
+
+    public function moveUp(string $id): void
+    {
+        Security::requireCsrf();
+
+        $categoryModel = new ProductCategory();
+        if (!$categoryModel->find((int) $id)) {
+            $this->abort404();
+        }
+
+        $categoryModel->moveUp((int) $id);
+        redirect('admin/categories');
+    }
+
+    public function moveDown(string $id): void
+    {
+        Security::requireCsrf();
+
+        $categoryModel = new ProductCategory();
+        if (!$categoryModel->find((int) $id)) {
+            $this->abort404();
+        }
+
+        $categoryModel->moveDown((int) $id);
         redirect('admin/categories');
     }
 

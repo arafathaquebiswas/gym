@@ -28,12 +28,21 @@ final class Sale extends Model
                 $discount += $promotionModel->computeDiscount($promotion, $subtotal);
             }
 
-            $total = max(0, round($subtotal - $discount, 2));
+            $netAfterDiscount = max(0, $subtotal - $discount);
+
+            // Same tax_enabled/tax_percent settings the online store checkout uses — POS previously hardcoded tax to 0.
+            $settingModel = new Setting();
+            $tax = 0.0;
+            if ($settingModel->getBool('tax_enabled')) {
+                $tax = round($netAfterDiscount * ((float) $settingModel->get('tax_percent', '0') / 100), 2);
+            }
+
+            $total = max(0, round($netAfterDiscount + $tax, 2));
             $invoiceNo = $this->generateInvoiceNo();
 
             $stmt = $this->db->prepare(
                 'INSERT INTO sales (invoice_no, member_id, sold_by, sale_date, subtotal, discount, tax, total, payment_method, payment_status, promotion_id)
-                 VALUES (:invoice_no, :member_id, :sold_by, NOW(), :subtotal, :discount, 0, :total, :payment_method, "paid", :promotion_id)'
+                 VALUES (:invoice_no, :member_id, :sold_by, NOW(), :subtotal, :discount, :tax, :total, :payment_method, "paid", :promotion_id)'
             );
             $stmt->execute([
                 'invoice_no' => $invoiceNo,
@@ -41,6 +50,7 @@ final class Sale extends Model
                 'sold_by' => $soldBy,
                 'subtotal' => $subtotal,
                 'discount' => $discount,
+                'tax' => $tax,
                 'total' => $total,
                 'payment_method' => $paymentMethod,
                 'promotion_id' => $promotion['id'] ?? null,
@@ -52,7 +62,10 @@ final class Sale extends Model
                  VALUES (:sale_id, :product_id, :qty, :unit_price, :subtotal)'
             );
             $stockMovementModel = new StockMovement();
+            $productModel = new Product();
             foreach ($cart as $line) {
+                $productBefore = $productModel->find((int) $line['product_id']);
+
                 $itemStmt->execute([
                     'sale_id' => $saleId,
                     'product_id' => $line['product_id'],
@@ -62,6 +75,9 @@ final class Sale extends Model
                 ]);
                 // trg_sale_items_after_insert decrements products.stock_qty automatically.
                 $stockMovementModel->record((int) $line['product_id'], -(int) $line['qty'], 'sale', $saleId, 'POS sale', $soldBy);
+                if ($productBefore) {
+                    LowStockAlerter::checkAndNotify($productBefore, (int) $productBefore['stock_qty'] - (int) $line['qty']);
+                }
             }
 
             $paymentStmt = $this->db->prepare(

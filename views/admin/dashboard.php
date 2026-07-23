@@ -18,6 +18,11 @@
 /** @var array $topProducts */
 /** @var array $topMembers */
 /** @var int $upcomingTrainerBookings */
+/** @var array $memberStatusCounts */
+/** @var array $newMembersByMonth */
+/** @var array $revenueByDay */
+$memberStatusLabels = ['pending' => 'Pending', 'active' => 'Active', 'expired' => 'Expired'];
+$memberStatusColors = ['pending' => '#a7a7b0', 'active' => '#2ecc71', 'expired' => '#6c6c74'];
 $stats = [
     ["Today's Revenue", money($todaysRevenue), 'bi-cash-stack', null],
     ["Today's POS Sales", $todaysPosSales, 'bi-calculator', 'admin/reports/sales'],
@@ -48,6 +53,34 @@ $stats = [
     <?php if ($link): ?></a><?php endif; ?>
   </div>
   <?php endforeach; ?>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="admin-card">
+      <h6 class="mb-3">Member Status Distribution</h6>
+      <?php if (empty($memberStatusCounts)): ?>
+        <p class="text-white-50 small mb-0">No members yet.</p>
+      <?php else: ?>
+        <div style="height:140px"><canvas id="chartMemberStatus"></canvas></div>
+      <?php endif; ?>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="admin-card">
+      <h6 class="mb-3">New Member Registrations <span class="text-white-50 small fw-normal">(last 12 months)</span></h6>
+      <div style="height:140px"><canvas id="chartNewMembers"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="admin-card">
+      <h6 class="mb-3">Revenue Trend <span class="text-white-50 small fw-normal">(last 30 days)</span></h6>
+      <div style="height:100px"><canvas id="chartRevenue"></canvas></div>
+    </div>
+  </div>
 </div>
 
 <div class="row g-3 mb-4">
@@ -109,3 +142,78 @@ $stats = [
   <a href="<?= url('/admin/trainers/create') ?>" class="btn btn-ps-outline me-2"><i class="bi bi-plus-lg"></i> Add Trainer</a>
   <a href="<?= url('/admin/reports') ?>" class="btn btn-ps-outline"><i class="bi bi-bar-chart"></i> View Reports</a>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  Chart.defaults.color = '#a7a7b0';
+  Chart.defaults.borderColor = 'rgba(255,255,255,.08)';
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+
+  <?php if (!empty($memberStatusCounts)): ?>
+  new Chart(document.getElementById('chartMemberStatus'), {
+    type: 'pie',
+    data: {
+      labels: <?= json_encode(array_map(fn ($r) => $memberStatusLabels[$r['status']] ?? ucfirst($r['status']), $memberStatusCounts)) ?>,
+      datasets: [{
+        data: <?= json_encode(array_map(fn ($r) => (int) $r['cnt'], $memberStatusCounts)) ?>,
+        backgroundColor: <?= json_encode(array_map(fn ($r) => $memberStatusColors[$r['status']] ?? '#ff6a1a', $memberStatusCounts)) ?>,
+        borderColor: '#17171c',
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      plugins: { legend: { position: 'bottom' } },
+      maintainAspectRatio: false,
+    },
+  });
+  <?php endif; ?>
+
+  new Chart(document.getElementById('chartNewMembers'), {
+    type: 'bar',
+    data: {
+      labels: <?= json_encode($newMembersByMonth['labels']) ?>,
+      datasets: [{
+        label: 'New Members',
+        data: <?= json_encode($newMembersByMonth['data']) ?>,
+        backgroundColor: '#ff6a1a',
+        borderRadius: 6,
+        maxBarThickness: 36,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: 'rgba(255,255,255,.06)' } },
+        x: { grid: { display: false } },
+      },
+      plugins: { legend: { display: false } },
+    },
+  });
+
+  new Chart(document.getElementById('chartRevenue'), {
+    type: 'line',
+    data: {
+      labels: <?= json_encode($revenueByDay['labels']) ?>,
+      datasets: [{
+        label: 'Revenue (৳)',
+        data: <?= json_encode($revenueByDay['data']) ?>,
+        borderColor: '#ff6a1a',
+        backgroundColor: 'rgba(255,106,26,.15)',
+        fill: true,
+        tension: .35,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,.06)' } },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 10 } },
+      },
+      plugins: { legend: { display: false } },
+    },
+  });
+})();
+</script>

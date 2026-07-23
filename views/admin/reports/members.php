@@ -3,7 +3,7 @@
 /** @var array $newMembers */
 /** @var string $from */
 /** @var string $to */
-$statusLabels = ['pending' => 'Pending', 'active' => 'Active', 'suspended' => 'Suspended', 'frozen' => 'Frozen', 'expired' => 'Expired'];
+$statusLabels = ['pending' => 'Pending', 'active' => 'Active', 'expired' => 'Expired'];
 ?>
 <div class="admin-card mb-4">
   <div class="d-flex justify-content-between align-items-center mb-2">
@@ -25,6 +25,7 @@ $statusLabels = ['pending' => 'Pending', 'active' => 'Active', 'suspended' => 'S
 <div class="admin-card">
   <h6 class="mb-2">New Members</h6>
   <?php include __DIR__ . '/_filter.php'; ?>
+  <?php include __DIR__ . '/_export_buttons.php'; ?>
 
   <?php if (empty($newMembers)): ?>
     <p class="text-white-50 text-center py-4 mb-0">No new members joined in this date range.</p>

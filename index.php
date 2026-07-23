@@ -130,6 +130,7 @@ $router->post('/admin/members/{id}/checkin', [MemberAdminController::class, 'che
 $router->post('/admin/members/{id}/checkout', [MemberAdminController::class, 'checkOut']);
 $router->post('/admin/members/{id}/charge-trainer-fee', [MemberAdminController::class, 'chargeTrainerFee']);
 $router->post('/admin/members/{id}/charge-locker-fine', [MemberAdminController::class, 'chargeLockerFine']);
+$router->get('/admin/members/{id}/payments', [MemberAdminController::class, 'paymentHistory']);
 
 // ---- Admin: Store (Products & Categories) ------------------------------------------
 $router->get('/admin/products', [ProductAdminController::class, 'index']);
@@ -143,6 +144,14 @@ $router->post('/admin/products/{id}/status', [ProductAdminController::class, 'se
 $router->post('/admin/products/{id}/adjust-stock', [ProductAdminController::class, 'adjustStock']);
 $router->get('/admin/products/{id}/history', [ProductAdminController::class, 'history']);
 $router->post('/admin/products/{id}/toggle-featured', [ProductAdminController::class, 'toggleFeatured']);
+$router->post('/admin/products/{id}/toggle-archived', [ProductAdminController::class, 'toggleArchived']);
+$router->post('/admin/products/{id}/duplicate', [ProductAdminController::class, 'duplicate']);
+$router->post('/admin/products/{id}/attributes', [ProductAdminController::class, 'assignAttributes']);
+$router->post('/admin/products/{id}/tags-related', [ProductAdminController::class, 'updateTagsAndRelated']);
+$router->post('/admin/products/{id}/variants', [ProductVariantAdminController::class, 'store']);
+$router->post('/admin/products/{id}/variants/{variantId}', [ProductVariantAdminController::class, 'update']);
+$router->post('/admin/products/{id}/variants/{variantId}/delete', [ProductVariantAdminController::class, 'destroy']);
+$router->post('/admin/products/{id}/variants/{variantId}/adjust-stock', [ProductVariantAdminController::class, 'adjustStock']);
 $router->post('/admin/products/{id}/gallery', [ProductAdminController::class, 'galleryUpload']);
 $router->post('/admin/products/{id}/gallery/{imageId}/delete', [ProductAdminController::class, 'galleryDelete']);
 
@@ -150,6 +159,17 @@ $router->get('/admin/categories', [ProductCategoryAdminController::class, 'index
 $router->post('/admin/categories', [ProductCategoryAdminController::class, 'store']);
 $router->post('/admin/categories/{id}', [ProductCategoryAdminController::class, 'update']);
 $router->post('/admin/categories/{id}/delete', [ProductCategoryAdminController::class, 'destroy']);
+$router->post('/admin/categories/{id}/toggle-status', [ProductCategoryAdminController::class, 'toggleStatus']);
+$router->post('/admin/categories/{id}/move-up', [ProductCategoryAdminController::class, 'moveUp']);
+$router->post('/admin/categories/{id}/move-down', [ProductCategoryAdminController::class, 'moveDown']);
+
+$router->get('/admin/attributes', [ProductAttributeAdminController::class, 'index']);
+$router->post('/admin/attributes', [ProductAttributeAdminController::class, 'store']);
+$router->post('/admin/attributes/{id}', [ProductAttributeAdminController::class, 'update']);
+$router->post('/admin/attributes/{id}/delete', [ProductAttributeAdminController::class, 'destroy']);
+$router->post('/admin/attributes/{id}/values', [ProductAttributeAdminController::class, 'storeValue']);
+$router->post('/admin/attribute-values/{id}', [ProductAttributeAdminController::class, 'updateValue']);
+$router->post('/admin/attribute-values/{id}/delete', [ProductAttributeAdminController::class, 'destroyValue']);
 
 $router->get('/admin/brands', [BrandAdminController::class, 'index']);
 $router->post('/admin/brands', [BrandAdminController::class, 'store']);
@@ -198,6 +218,7 @@ $router->post('/admin/delivery-staff/{id}', [DeliveryStaffAdminController::class
 $router->post('/admin/delivery-staff/{id}/delete', [DeliveryStaffAdminController::class, 'destroy']);
 
 $router->get('/delivery', [DeliveryController::class, 'dashboard']);
+$router->get('/delivery/history', [DeliveryController::class, 'history']);
 $router->post('/delivery/{id}/status', [DeliveryController::class, 'updateStatus']);
 
 $router->get('/admin/products/sales', [ProductAdminController::class, 'sales']);
@@ -232,6 +253,13 @@ $router->get('/admin/reports/trainer-income', [ReportController::class, 'trainer
 $router->get('/admin/reports/store-sales', [ReportController::class, 'storeSales']);
 $router->get('/admin/reports/online-orders', [ReportController::class, 'onlineOrders']);
 $router->get('/admin/reports/stock', [ReportController::class, 'stock']);
+$router->get('/admin/reports/products', [ReportController::class, 'productReport']);
+$router->get('/admin/reports/delivery', [ReportController::class, 'deliveryReport']);
+$router->get('/admin/reports/pickup', [ReportController::class, 'pickupReport']);
+$router->get('/admin/reports/customers', [ReportController::class, 'customerReport']);
+$router->get('/admin/reports/coupons', [ReportController::class, 'couponReport']);
+$router->get('/admin/reports/offer-performance', [ReportController::class, 'offerPerformance']);
+$router->get('/admin/reports/monthly-revenue', [ReportController::class, 'monthlyRevenue']);
 
 // ---- Admin: Settings ---------------------------------------------------------------
 $router->get('/admin/settings', [SettingsAdminController::class, 'index']);

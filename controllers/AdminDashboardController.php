@@ -4,6 +4,8 @@ final class AdminDashboardController extends AdminController
 {
     public function index(): void
     {
+        (new Member())->syncAllStatuses();
+
         $trainerModel = new Trainer();
         $trainers = $trainerModel->allForAdmin();
         $productStats = (new Product())->adminStatistics();
@@ -64,6 +66,22 @@ final class AdminDashboardController extends AdminController
 
         $upcomingTrainerBookings = (new TrainerBooking())->upcomingCount();
 
+        $memberStatusCounts = $db->query('SELECT status, COUNT(*) AS cnt FROM members GROUP BY status')->fetchAll();
+        $newMembersByMonth = $this->monthlySeries(
+            $db,
+            "SELECT DATE_FORMAT(join_date, '%Y-%m') AS ym, COUNT(*) AS cnt FROM members
+             WHERE join_date >= DATE_SUB(CURDATE(), INTERVAL 11 MONTH)
+             GROUP BY ym",
+            'ym', 'cnt'
+        );
+        $revenueByDay = $this->dailySeries(
+            $db,
+            "SELECT DATE(paid_at) AS d, SUM(amount) AS total FROM payments
+             WHERE status = 'completed' AND paid_at >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
+             GROUP BY d",
+            'd', 'total'
+        );
+
         $this->adminView('dashboard', [
             'pageTitle' => 'Dashboard',
             'trainerCount' => count($trainers),
@@ -85,6 +103,43 @@ final class AdminDashboardController extends AdminController
             'topProducts' => $topProducts,
             'topMembers' => $topMembers,
             'upcomingTrainerBookings' => $upcomingTrainerBookings,
+            'memberStatusCounts' => $memberStatusCounts,
+            'newMembersByMonth' => $newMembersByMonth,
+            'revenueByDay' => $revenueByDay,
         ]);
+    }
+
+    /** Zero-filled monthly counts for the last 12 months (including the current one), regardless of which months actually had rows. */
+    private function monthlySeries(PDO $db, string $sql, string $keyColumn, string $valueColumn): array
+    {
+        $rows = $db->query($sql)->fetchAll();
+        $byMonth = array_column($rows, $valueColumn, $keyColumn);
+
+        $labels = [];
+        $data = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $ym = date('Y-m', strtotime("-$i months"));
+            $labels[] = date('M Y', strtotime("-$i months"));
+            $data[] = (int) ($byMonth[$ym] ?? 0);
+        }
+
+        return ['labels' => $labels, 'data' => $data];
+    }
+
+    /** Zero-filled daily totals for the last 30 days (including today), regardless of which days actually had rows. */
+    private function dailySeries(PDO $db, string $sql, string $keyColumn, string $valueColumn): array
+    {
+        $rows = $db->query($sql)->fetchAll();
+        $byDay = array_column($rows, $valueColumn, $keyColumn);
+
+        $labels = [];
+        $data = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $d = date('Y-m-d', strtotime("-$i days"));
+            $labels[] = date('d M', strtotime("-$i days"));
+            $data[] = (float) ($byDay[$d] ?? 0);
+        }
+
+        return ['labels' => $labels, 'data' => $data];
     }
 }

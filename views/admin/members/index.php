@@ -6,8 +6,8 @@
 /** @var array $filters */
 /** @var array $trainers */
 /** @var array $stats */
-$statusLabels = ['pending' => 'Pending', 'active' => 'Active', 'suspended' => 'Suspended', 'frozen' => 'Frozen', 'expired' => 'Expired'];
-$statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' => 'danger', 'frozen' => 'info', 'expired' => 'dark'];
+$statusLabels = ['pending' => 'Pending', 'active' => 'Active', 'expired' => 'Expired'];
+$statusColors = ['pending' => 'secondary', 'active' => 'success', 'expired' => 'dark'];
 ?>
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
@@ -118,37 +118,62 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
       <thead>
         <tr>
           <th><input type="checkbox" id="selectAllMembers"></th>
-          <th>Photo</th><th>Name</th><th>Phone</th><th>Email</th><th>Package</th><th>Trainer</th>
-          <th>Locker</th><th>Status</th><th>Join Date</th><th>Expiry</th><th>Attendance</th><th>BMI</th><th></th>
+          <th></th><th>Photo</th><th>Member ID</th><th>Money Received No.</th><th>Name</th><th>Phone</th><th>Status</th><th>Package</th><th>Trainer</th><th>Expiry</th><th></th>
         </tr>
       </thead>
       <tbody>
         <?php foreach ($members as $member): ?>
         <tr>
           <td><input type="checkbox" class="row-check" value="<?= (int) $member['id'] ?>" data-name="<?= e($member['name']) ?>"></td>
-          <td><?= media_tile($member['photo'], $member['name'], 'bi-person', 'thumb') ?></td>
           <td>
-            <a href="<?= url('/admin/members/' . $member['id']) ?>" class="text-white fw-semibold text-decoration-none"><?= e($member['name']) ?></a>
-            <div class="text-white-50 small"><?= e($member['member_code']) ?></div>
+            <button type="button" class="btn btn-link text-white-50 p-0" data-bs-toggle="collapse" data-bs-target="#memberDetails<?= $member['id'] ?>" aria-expanded="false">
+              <i class="bi bi-chevron-right details-chevron"></i>
+            </button>
           </td>
+          <td><?= media_tile($member['photo'], $member['name'], 'bi-person', 'thumb') ?></td>
+          <td><span class="text-white-50 small"><?= e($member['member_code']) ?></span></td>
+          <td><span class="text-white-50 small"><?= e($member['money_received_no'] ?? '—') ?></span></td>
+          <td><a href="<?= url('/admin/members/' . $member['id']) ?>" class="text-white fw-semibold text-decoration-none"><?= e($member['name']) ?></a></td>
           <td><?= e($member['phone'] ?? '—') ?></td>
-          <td><?= e($member['email']) ?></td>
+          <td><span class="badge text-bg-<?= $statusColors[$member['status']] ?? 'secondary' ?>"><?= e($statusLabels[$member['status']] ?? $member['status']) ?></span></td>
           <td><?= e($member['package_name'] ?? '—') ?></td>
           <td><?= e($member['trainer_name'] ?? '—') ?></td>
-          <td><?= e($member['locker_number'] ?? '—') ?></td>
-          <td><span class="badge text-bg-<?= $statusColors[$member['status']] ?? 'secondary' ?>"><?= e($statusLabels[$member['status']] ?? $member['status']) ?></span></td>
-          <td><?= format_date($member['join_date']) ?></td>
           <td><?= $member['subscription_end'] ? format_date($member['subscription_end']) : '—' ?></td>
-          <td><?= (int) $member['attendance_this_month'] ?> / mo</td>
-          <td><?= $member['bmi'] ? e((string) $member['bmi']) . ' (' . e($member['bmi_category']) . ')' : '—' ?></td>
           <td>
-            <div class="d-flex gap-2">
-              <a href="<?= url('/admin/members/' . $member['id']) ?>" class="btn btn-ps-outline btn-sm" title="View"><i class="bi bi-eye"></i></a>
-              <a href="<?= url('/admin/members/' . $member['id'] . '/edit') ?>" class="btn btn-ps-outline btn-sm" title="Edit"><i class="bi bi-pencil"></i></a>
-              <form method="post" action="<?= url('/admin/members/' . $member['id'] . '/delete') ?>" onsubmit="return confirm('Delete this member permanently? This removes their login, subscriptions, and attendance history.');">
-                <?= Security::csrfField() ?>
-                <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete"><i class="bi bi-trash"></i></button>
-              </form>
+            <div class="dropdown">
+              <button type="button" class="btn btn-ps-outline btn-sm" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button>
+              <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                <li><a class="dropdown-item" href="<?= url('/admin/members/' . $member['id']) ?>"><i class="bi bi-eye me-2"></i>View</a></li>
+                <li><a class="dropdown-item" href="<?= url('/admin/members/' . $member['id'] . '/edit') ?>"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                <li>
+                  <button type="button" class="dropdown-item js-open-renew"
+                    data-id="<?= (int) $member['id'] ?>"
+                    data-name="<?= e($member['name']) ?>"
+                    data-trainer-id="<?= (int) ($member['trainer_id'] ?? 0) ?>">
+                    <i class="bi bi-arrow-repeat me-2"></i>Renew Membership
+                  </button>
+                </li>
+                <li><a class="dropdown-item" href="<?= url('/admin/members/' . $member['id'] . '/payments') ?>"><i class="bi bi-receipt me-2"></i>Payment History</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <form method="post" action="<?= url('/admin/members/' . $member['id'] . '/delete') ?>" onsubmit="return confirm('Delete this member permanently? This removes their login, subscriptions, and attendance history.');">
+                    <?= Security::csrfField() ?>
+                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button>
+                  </form>
+                </li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+        <tr class="collapse" id="memberDetails<?= $member['id'] ?>">
+          <td></td>
+          <td colspan="11">
+            <div class="d-flex flex-wrap gap-4 py-2 small text-white-50">
+              <div><span class="text-white-50">Email</span><br><span class="text-white"><?= e($member['email']) ?></span></div>
+              <div><span class="text-white-50">Locker</span><br><span class="text-white"><?= e($member['locker_number'] ?? '—') ?></span></div>
+              <div><span class="text-white-50">Join Date</span><br><span class="text-white"><?= format_date($member['join_date']) ?></span></div>
+              <div><span class="text-white-50">Attendance</span><br><span class="text-white"><?= (int) $member['attendance_this_month'] ?> / mo</span></div>
+              <div><span class="text-white-50">BMI</span><br><span class="text-white"><?= $member['bmi'] ? e((string) $member['bmi']) . ' (' . e($member['bmi_category']) . ')' : '—' ?></span></div>
             </div>
           </td>
         </tr>
@@ -170,6 +195,126 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
   <?php endif; ?>
   <?php endif; ?>
 </div>
+
+<div class="modal fade" id="renewMembershipModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark">
+      <form method="post" id="renewMembershipForm" class="admin-form">
+        <?= Security::csrfField() ?>
+        <div class="modal-header">
+          <h5 class="modal-title">Renew Membership — <span id="renewMemberName"></span></h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body row g-3">
+          <div class="col-md-6">
+            <label>Package</label>
+            <select name="package_id" id="renewPackageSelect" class="form-select" required>
+              <option value="">Select a package</option>
+              <?php foreach ($packages as $package): ?>
+                <option value="<?= (int) $package['id'] ?>"
+                  data-duration="<?= (int) $package['duration_days'] ?>"
+                  data-price="<?= (float) $package['display_price'] ?>">
+                  <?= e($package['name']) ?> (৳<?= number_format((float) $package['display_price']) ?>)
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label>Duration (days)</label>
+            <input type="number" min="1" name="duration_days" id="renewDuration" class="form-control">
+          </div>
+          <?php if (Feature::trainerModuleOn()): ?>
+          <div class="col-md-6">
+            <label>Trainer <small class="text-white-50">(optional)</small></label>
+            <select name="trainer_id" id="renewTrainerSelect" class="form-select">
+              <option value="">— No change / None —</option>
+              <?php foreach ($trainers as $trainer): ?>
+                <option value="<?= (int) $trainer['id'] ?>"><?= e($trainer['name']) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <?php endif; ?>
+          <div class="col-md-6">
+            <label>Discount (৳) <small class="text-white-50">(optional)</small></label>
+            <input type="number" step="0.01" min="0" name="discount" id="renewDiscount" class="form-control" value="0">
+          </div>
+          <div class="col-md-6">
+            <label>Payment Method</label>
+            <select name="payment_method" class="form-select payment-method-select" required>
+              <option value="" disabled selected>Select Payment Method</option>
+              <option value="cash">Cash</option>
+              <option value="card">Card</option>
+              <option value="bkash">bKash</option>
+              <option value="nagad">Nagad</option>
+              <option value="rocket">Rocket</option>
+              <option value="bank_transfer">Bank Transfer</option>
+            </select>
+          </div>
+          <div class="col-md-6 reference-no-wrap d-none">
+            <label>Transaction / Reference ID</label>
+            <input type="text" name="reference_no" class="form-control reference-no-input" placeholder="e.g. bKash transaction ID">
+          </div>
+          <div class="col-md-6">
+            <label>Amount Received (৳)</label>
+            <input type="number" step="0.01" min="0" name="price_paid" id="renewAmountReceived" class="form-control" required>
+          </div>
+          <div class="col-md-6">
+            <label>Renewal Date</label>
+            <input type="date" name="start_date" id="renewStartDate" class="form-control" value="<?= date('Y-m-d') ?>">
+          </div>
+          <div class="col-12">
+            <label>Notes <small class="text-white-50">(optional)</small></label>
+            <textarea name="notes" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-link text-white-50" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-ps btn-sm">Renew Membership</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var renewModalEl = document.getElementById('renewMembershipModal');
+  if (!renewModalEl) return;
+
+  var form = document.getElementById('renewMembershipForm');
+  var nameEl = document.getElementById('renewMemberName');
+  var packageSelect = document.getElementById('renewPackageSelect');
+  var durationField = document.getElementById('renewDuration');
+  var amountField = document.getElementById('renewAmountReceived');
+  var discountField = document.getElementById('renewDiscount');
+  var trainerSelect = document.getElementById('renewTrainerSelect');
+
+  function applyPackageDefaults() {
+    var opt = packageSelect.options[packageSelect.selectedIndex];
+    if (!opt || !opt.value) return;
+    durationField.value = opt.getAttribute('data-duration') || '';
+    var price = parseFloat(opt.getAttribute('data-price') || '0');
+    var discount = parseFloat(discountField.value || '0') || 0;
+    amountField.value = Math.max(0, price - discount).toFixed(2);
+  }
+
+  packageSelect.addEventListener('change', applyPackageDefaults);
+  discountField.addEventListener('input', applyPackageDefaults);
+
+  document.querySelectorAll('.js-open-renew').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      form.action = '<?= url('/admin/members') ?>/' + btn.getAttribute('data-id') + '/renew';
+      nameEl.textContent = btn.getAttribute('data-name');
+      packageSelect.value = '';
+      durationField.value = '';
+      discountField.value = '0';
+      amountField.value = '';
+      if (trainerSelect) trainerSelect.value = btn.getAttribute('data-trainer-id') || '';
+      bootstrap.Modal.getOrCreateInstance(renewModalEl).show();
+    });
+  });
+})();
+</script>
 
 <script>
 (function () {

@@ -10,6 +10,7 @@
     <a href="<?= url('/admin/reports') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> All Reports</a>
   </div>
   <?php include __DIR__ . '/_filter.php'; ?>
+  <?php include __DIR__ . '/_export_buttons.php'; ?>
 
   <div class="fs-4 fw-bold text-orange mb-3"><?= money($grandTotal) ?> <span class="fs-6 text-white-50 fw-normal">total order value in range</span></div>
 

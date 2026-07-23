@@ -1,13 +1,37 @@
 <?php
 /** @var array $products */
 /** @var float $totalValue */
+/** @var array $movements */
+/** @var string $from */
+/** @var string $to */
+$movementTypeLabels = ['order' => 'Online Orders', 'sale' => 'POS Sales', 'purchase' => 'Purchases', 'adjustment' => 'Manual Adjustments', 'return' => 'Returns'];
 ?>
 <div class="admin-card mb-4">
   <div class="d-flex justify-content-between align-items-center mb-2">
-    <h6 class="mb-0">Stock Report</h6>
+    <h6 class="mb-0">Inventory Report</h6>
     <a href="<?= url('/admin/reports') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> All Reports</a>
   </div>
-  <div class="fs-4 fw-bold text-orange"><?= money($totalValue) ?> <span class="fs-6 text-white-50 fw-normal">total inventory value (at buying price)</span></div>
+  <div class="fs-4 fw-bold text-orange mb-3"><?= money($totalValue) ?> <span class="fs-6 text-white-50 fw-normal">total inventory value (at buying price)</span></div>
+  <?php include __DIR__ . '/_filter.php'; ?>
+  <?php include __DIR__ . '/_export_buttons.php'; ?>
+
+  <?php if (!empty($movements)): ?>
+  <h6 class="small text-white-50 mb-2">Stock Movement Summary (<?= e($from) ?> to <?= e($to) ?>)</h6>
+  <div class="table-responsive mb-2">
+    <table class="admin-table">
+      <thead><tr><th>Source</th><th>Added</th><th>Removed</th></tr></thead>
+      <tbody>
+        <?php foreach ($movements as $m): ?>
+        <tr>
+          <td><?= e($movementTypeLabels[$m['type']] ?? ucfirst($m['type'])) ?></td>
+          <td class="text-success">+<?= (int) $m['added'] ?></td>
+          <td class="text-danger">−<?= (int) $m['removed'] ?></td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <?php endif; ?>
 </div>
 
 <div class="admin-card">

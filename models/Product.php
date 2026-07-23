@@ -100,17 +100,107 @@ final class Product extends Model
         $this->db->prepare('UPDATE products SET is_featured = NOT is_featured WHERE id = :id')->execute(['id' => $id]);
     }
 
+    public function toggleArchived(int $id): void
+    {
+        $this->db->prepare('UPDATE products SET is_archived = NOT is_archived WHERE id = :id')->execute(['id' => $id]);
+    }
+
+    public function hasVariants(int $id): bool
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM product_variants WHERE product_id = :id');
+        $stmt->execute(['id' => $id]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    /**
+     * Clones a product's own fields plus its attribute links and variants (each variant gets a
+     * fresh auto-suffixed SKU/barcode so uniqueness constraints hold). Gallery photos and reviews
+     * are deliberately not copied — a duplicate is a starting point for a new listing, not a
+     * full mirror of another product's history.
+     */
+    public function duplicate(int $id): int
+    {
+        $original = $this->find($id);
+        if (!$original) {
+            throw new RuntimeException('Product not found.');
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $data = array_intersect_key($original, array_flip(self::WRITABLE_FIELDS));
+            $data['sku'] = $this->uniqueSuffixedSku($original['sku']);
+            $data['status'] = 'draft';
+            $data['is_featured'] = 0;
+
+            $name = $original['name'] . ' (Copy)';
+            $slug = $original['slug'] . '-copy';
+            $i = 2;
+            while ($this->slugExists($slug)) {
+                $slug = $original['slug'] . '-copy-' . $i++;
+            }
+            $data['name'] = $name;
+            $data['slug'] = $slug;
+
+            $newId = $this->create($data);
+
+            $attributeIds = array_column((new ProductAttribute())->forProduct($id), 'id');
+            if ($attributeIds) {
+                (new ProductAttribute())->setForProduct($newId, $attributeIds);
+            }
+
+            $variantModel = new ProductVariant();
+            foreach ($variantModel->forProduct($id) as $variant) {
+                $variantModel->create([
+                    'product_id' => $newId,
+                    'sku' => $this->uniqueSuffixedSku($variant['sku'], $variantModel),
+                    'barcode' => null,
+                    'price' => $variant['price'],
+                    'offer_price' => $variant['offer_price'],
+                    'stock_qty' => 0,
+                    'weight' => $variant['weight'],
+                    'image' => $variant['image'],
+                    'status' => $variant['status'],
+                    'sort_order' => $variant['sort_order'],
+                ], array_column($variant['attribute_values'], 'id'));
+            }
+
+            $this->db->commit();
+            return $newId;
+        } catch (Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    private function uniqueSuffixedSku(string $baseSku, ?ProductVariant $variantModel = null): string
+    {
+        $sku = $baseSku . '-COPY';
+        $i = 2;
+        $exists = fn (string $s) => $variantModel ? $variantModel->skuExists($s) : $this->skuExists($s);
+        while ($exists($sku)) {
+            $sku = $baseSku . '-COPY' . $i++;
+        }
+        return $sku;
+    }
+
     /** All sellable products for the POS screen's client-side search/cart — published or hidden (staff can still sell in person), never draft. */
     public function allActiveInStock(): array
     {
         $stmt = $this->db->query(
             "SELECT p.id, p.name, p.sku, p.barcode, p.selling_price, p.offer_price, p.offer_enabled,
-                    p.offer_start_date, p.offer_end_date, p.stock_qty, c.name AS category_name
+                    p.offer_start_date, p.offer_end_date, p.stock_qty, p.image, c.name AS category_name
              FROM products p JOIN product_categories c ON c.id = p.category_id
              WHERE p.status != 'draft' AND p.stock_qty > 0
              ORDER BY p.name ASC"
         );
-        return array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
+        $products = array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
+        foreach ($products as &$product) {
+            $product['image_url'] = $product['image']
+                ? (str_starts_with($product['image'], 'uploads/') ? url($product['image']) : asset('images/' . $product['image']))
+                : null;
+        }
+        unset($product);
+        return $products;
     }
 
     /** Top sellers by combined online + in-store quantity over the last 90 days. */

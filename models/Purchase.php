@@ -65,8 +65,10 @@ final class Purchase extends Model
 
             $this->db->commit();
 
-            foreach ($restocked as $product) {
-                StockNotifier::notifyBackInStock($product);
+            if ((new Setting())->getBool('auto_email_notifications')) {
+                foreach ($restocked as $product) {
+                    StockNotifier::notifyBackInStock($product);
+                }
             }
 
             return ['id' => $purchaseId, 'invoice_no' => $invoiceNo];

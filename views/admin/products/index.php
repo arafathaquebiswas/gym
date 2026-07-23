@@ -11,23 +11,14 @@ $statusLabels = ['draft' => 'Draft', 'published' => 'Published', 'hidden' => 'Hi
 $statusColors = ['draft' => 'secondary', 'published' => 'success', 'hidden' => 'dark'];
 ?>
 <div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-4">
     <div class="admin-card"><div class="text-white-50 small">Total Products</div><div class="fs-3 fw-bold text-orange"><?= (int) $stats['total'] ?></div></div>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-4">
     <div class="admin-card"><div class="text-white-50 small">Low Stock</div><div class="fs-3 fw-bold text-orange"><?= (int) $stats['lowStock'] ?></div></div>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md-4">
     <div class="admin-card"><div class="text-white-50 small">Stock Value</div><div class="fs-3 fw-bold text-orange"><?= money($stats['stockValue']) ?></div></div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="admin-card d-flex flex-column justify-content-center">
-      <a href="<?= url('/admin/categories') ?>" class="btn btn-ps-outline btn-sm mb-1"><i class="bi bi-tags"></i> Categories</a>
-      <a href="<?= url('/admin/brands') ?>" class="btn btn-ps-outline btn-sm mb-1"><i class="bi bi-award"></i> Brands</a>
-      <a href="<?= url('/admin/suppliers') ?>" class="btn btn-ps-outline btn-sm mb-1"><i class="bi bi-people"></i> Suppliers</a>
-      <a href="<?= url('/admin/purchases') ?>" class="btn btn-ps-outline btn-sm mb-1"><i class="bi bi-truck"></i> Purchases</a>
-      <a href="<?= url('/admin/products/sales') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-receipt"></i> View Sales</a>
-    </div>
   </div>
 </div>
 
@@ -113,23 +104,27 @@ $statusColors = ['draft' => 'secondary', 'published' => 'success', 'hidden' => '
       <thead>
         <tr>
           <th><input type="checkbox" id="selectAllProducts"></th>
-          <th>Photo</th><th>Name</th><th>SKU</th><th>Category</th><th>Price</th><th>Offer</th>
-          <th>Stock</th><th>Status</th><th></th>
+          <th></th><th>Photo</th><th>Name</th><th>Price</th><th>Stock</th><th>Status</th><th></th>
         </tr>
       </thead>
       <tbody>
         <?php foreach ($products as $product): ?>
         <tr class="<?= $product['stock_qty'] <= $product['min_stock'] ? 'table-danger bg-opacity-25' : '' ?>">
           <td><input type="checkbox" class="row-check" value="<?= (int) $product['id'] ?>"></td>
+          <td>
+            <button type="button" class="btn btn-link text-white-50 p-0" data-bs-toggle="collapse" data-bs-target="#details<?= $product['id'] ?>" aria-expanded="false">
+              <i class="bi bi-chevron-right details-chevron"></i>
+            </button>
+          </td>
           <td><?= media_tile($product['image'], $product['name'], 'bi-box-seam', 'thumb') ?></td>
           <td>
             <a href="<?= url('/admin/products/' . $product['id'] . '/edit') ?>" class="text-white fw-semibold text-decoration-none"><?= e($product['name']) ?></a>
             <?php if (!empty($product['brand_name'])): ?><div class="text-white-50 small"><?= e($product['brand_name']) ?></div><?php endif; ?>
           </td>
-          <td><?= e($product['sku']) ?></td>
-          <td><?= e($product['category_name']) ?></td>
-          <td>৳<?= number_format((float) $product['selling_price']) ?></td>
-          <td><?= $product['offer_is_live'] ? '৳' . number_format((float) $product['offer_price']) . ' <span class="badge text-bg-success">Live</span>' : '—' ?></td>
+          <td>
+            ৳<?= number_format((float) $product['selling_price']) ?>
+            <?php if ($product['offer_is_live']): ?><div class="small text-success">৳<?= number_format((float) $product['offer_price']) ?> offer</div><?php endif; ?>
+          </td>
           <td>
             <?= (int) $product['stock_qty'] ?>
             <?php if ($product['stock_qty'] <= $product['min_stock']): ?><i class="bi bi-exclamation-triangle-fill text-danger" title="Low stock"></i><?php endif; ?>
@@ -143,20 +138,41 @@ $statusColors = ['draft' => 'secondary', 'published' => 'success', 'hidden' => '
                 <?php endforeach; ?>
               </select>
             </form>
+            <?php if ($product['is_archived']): ?><span class="badge text-bg-dark mt-1">Archived</span><?php endif; ?>
           </td>
           <td>
-            <div class="d-flex gap-2">
-              <a href="<?= url('/admin/products/' . $product['id'] . '/edit') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-pencil"></i></a>
-              <button type="button" class="btn btn-ps-outline btn-sm" data-bs-toggle="modal" data-bs-target="#adjustStockModal<?= $product['id'] ?>"><i class="bi bi-box-seam"></i></button>
-              <a href="<?= url('/admin/products/' . $product['id'] . '/history') ?>" class="btn btn-ps-outline btn-sm" title="Inventory History"><i class="bi bi-clock-history"></i></a>
-              <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/toggle-featured') ?>">
-                <?= Security::csrfField() ?>
-                <button type="submit" class="btn btn-ps-outline btn-sm" title="Toggle Featured"><i class="bi <?= $product['is_featured'] ? 'bi-star-fill text-orange' : 'bi-star' ?>"></i></button>
-              </form>
-              <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/delete') ?>" onsubmit="return confirm('Delete this product permanently?');">
-                <?= Security::csrfField() ?>
-                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
-              </form>
+            <div class="dropdown">
+              <button type="button" class="btn btn-ps-outline btn-sm" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button>
+              <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                <li><a class="dropdown-item" href="<?= url('/admin/products/' . $product['id'] . '/edit') ?>"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                <li><button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#adjustStockModal<?= $product['id'] ?>"><i class="bi bi-box-seam me-2"></i>Adjust Stock</button></li>
+                <li><a class="dropdown-item" href="<?= url('/admin/products/' . $product['id'] . '/history') ?>"><i class="bi bi-clock-history me-2"></i>Inventory History</a></li>
+                <li>
+                  <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/toggle-featured') ?>">
+                    <?= Security::csrfField() ?>
+                    <button type="submit" class="dropdown-item"><i class="bi <?= $product['is_featured'] ? 'bi-star-fill text-orange' : 'bi-star' ?> me-2"></i><?= $product['is_featured'] ? 'Unfeature' : 'Feature' ?></button>
+                  </form>
+                </li>
+                <li>
+                  <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/duplicate') ?>">
+                    <?= Security::csrfField() ?>
+                    <button type="submit" class="dropdown-item"><i class="bi bi-copy me-2"></i>Duplicate</button>
+                  </form>
+                </li>
+                <li>
+                  <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/toggle-archived') ?>" onsubmit="return confirm('<?= $product['is_archived'] ? 'Unarchive' : 'Archive' ?> this product?');">
+                    <?= Security::csrfField() ?>
+                    <button type="submit" class="dropdown-item"><i class="bi <?= $product['is_archived'] ? 'bi-box-arrow-up' : 'bi-archive' ?> me-2"></i><?= $product['is_archived'] ? 'Unarchive' : 'Archive' ?></button>
+                  </form>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/delete') ?>" onsubmit="return confirm('Delete this product permanently?');">
+                    <?= Security::csrfField() ?>
+                    <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button>
+                  </form>
+                </li>
+              </ul>
             </div>
 
             <div class="modal fade" id="adjustStockModal<?= $product['id'] ?>" tabindex="-1">
@@ -178,6 +194,18 @@ $statusColors = ['draft' => 'secondary', 'published' => 'success', 'hidden' => '
                   </form>
                 </div>
               </div>
+            </div>
+          </td>
+        </tr>
+        <tr class="collapse" id="details<?= $product['id'] ?>">
+          <td></td>
+          <td colspan="7">
+            <div class="d-flex flex-wrap gap-4 py-2 small text-white-50">
+              <div><span class="text-white-50">SKU</span><br><span class="text-white"><?= e($product['sku']) ?></span></div>
+              <div><span class="text-white-50">Barcode</span><br><span class="text-white"><?= e($product['barcode'] ?? '—') ?></span></div>
+              <div><span class="text-white-50">Category</span><br><span class="text-white"><?= e($product['category_name']) ?></span></div>
+              <div><span class="text-white-50">Offer</span><br><span class="text-white"><?= $product['offer_is_live'] ? '৳' . number_format((float) $product['offer_price']) . ' (live)' : '—' ?></span></div>
+              <div><span class="text-white-50">Featured</span><br><span class="text-white"><?= $product['is_featured'] ? 'Yes' : 'No' ?></span></div>
             </div>
           </td>
         </tr>

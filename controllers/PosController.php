@@ -4,9 +4,14 @@ final class PosController extends AdminController
 {
     public function index(): void
     {
+        $settingModel = new Setting();
+
         $this->adminView('pos/index', [
             'pageTitle' => 'Point of Sale',
             'productsJson' => json_encode((new Product())->allActiveInStock()),
+            'membersJson' => json_encode((new Member())->allForPicker()),
+            'taxEnabled' => $settingModel->getBool('tax_enabled'),
+            'taxPercent' => (float) $settingModel->get('tax_percent', '0'),
         ]);
     }
 

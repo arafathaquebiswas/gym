@@ -12,11 +12,40 @@ final class DeliveryController extends Controller
 
     public function dashboard(): void
     {
-        $orders = (new Order())->forDeliveryPerson((int) Auth::user()['id']);
+        $driverId = (int) Auth::user()['id'];
+        $orderModel = new Order();
+        $feePerOrder = (float) (new Setting())->get('delivery_fee_per_order', '0');
 
-        $this->deliveryView('dashboard', [
+        $data = [
             'pageTitle' => 'My Deliveries',
-            'orders' => $orders,
+            'orders' => $orderModel->forDeliveryPerson($driverId),
+            'todayStats' => $orderModel->todaysStatsForDeliveryPerson($driverId),
+            'feePerOrder' => $feePerOrder,
+        ];
+
+        if ($feePerOrder > 0) {
+            $monthStart = date('Y-m-01');
+            $today = date('Y-m-d');
+            $deliveredThisMonth = $orderModel->completedCountForDeliveryPersonInRange($driverId, $monthStart, $today);
+            $data['monthlyEarnings'] = $deliveredThisMonth * $feePerOrder;
+            $data['deliveredThisMonth'] = $deliveredThisMonth;
+        }
+
+        $this->deliveryView('dashboard', $data);
+    }
+
+    public function history(): void
+    {
+        $driverId = (int) Auth::user()['id'];
+        $page = max(1, (int) $this->input('page', '1'));
+        $result = (new Order())->forDeliveryPersonHistory($driverId, $page);
+
+        $this->deliveryView('history', [
+            'pageTitle' => 'Delivery History',
+            'orders' => $result['items'],
+            'total' => $result['total'],
+            'page' => $result['page'],
+            'totalPages' => $result['totalPages'],
         ]);
     }
 
@@ -36,7 +65,8 @@ final class DeliveryController extends Controller
             redirect('delivery');
         }
 
-        $orderModel->updateStatus((int) $id, $status, (int) Auth::user()['id'], null);
+        $note = $this->rawInput('note') ?: null;
+        $orderModel->updateStatus((int) $id, $status, (int) Auth::user()['id'], $note);
 
         flash('success', 'Order status updated.');
         redirect('delivery');

@@ -27,4 +27,42 @@ final class Payment extends Model
         ]);
         return (int) $this->db->lastInsertId();
     }
+
+    /**
+     * Full payment history for one member, oldest first, with each row labeled by
+     * type — the first membership payment is "New Membership", every one after it
+     * is "Renewal" (both share the member's one permanent money_received_no).
+     */
+    public function forMember(int $memberId): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT p.*, mp.name AS package_name
+             FROM payments p
+             LEFT JOIN member_subscriptions ms ON ms.id = p.subscription_id
+             LEFT JOIN membership_packages mp ON mp.id = ms.package_id
+             WHERE p.member_id = :member_id
+             ORDER BY p.paid_at ASC, p.id ASC'
+        );
+        $stmt->execute(['member_id' => $memberId]);
+        $rows = $stmt->fetchAll();
+
+        $typeLabels = [
+            'trainer_fee' => 'Trainer Fee',
+            'locker_fine' => 'Locker Fine',
+            'store_sale' => 'Store Purchase',
+            'admission' => 'Admission',
+        ];
+
+        $seenMembership = false;
+        foreach ($rows as &$row) {
+            if ($row['type'] === 'membership') {
+                $row['type_label'] = $seenMembership ? 'Renewal' : 'New Membership';
+                $seenMembership = true;
+            } else {
+                $row['type_label'] = $typeLabels[$row['type']] ?? ucfirst($row['type']);
+            }
+        }
+
+        return $rows;
+    }
 }

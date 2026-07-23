@@ -182,4 +182,138 @@ $checked = fn ($key) => !empty($product[$key]) ? 'checked' : '';
     <button type="submit" class="btn btn-ps-outline btn-sm">Upload</button>
   </form>
 </div>
+
+<?php
+/** @var array $allAttributes */
+/** @var array $assignedAttributes */
+/** @var array $variants */
+/** @var array $tags */
+/** @var array $relatedProductIds */
+/** @var array $allProducts */
+$attributeValuesById = [];
+foreach ($allAttributes as $attr) {
+    $attributeValuesById[$attr['id']] = $attr['values'];
+}
+$assignedAttributeIds = array_column($assignedAttributes, 'id');
+?>
+
+<div class="admin-card mt-4">
+  <h6 class="mb-2">Attributes Used By This Product</h6>
+  <p class="text-white-50 small">Pick which attributes apply (e.g. Size, Color) — this drives the value pickers when building variants below.</p>
+  <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/attributes') ?>">
+    <?= Security::csrfField() ?>
+    <div class="d-flex flex-wrap gap-3 mb-3">
+      <?php foreach ($allAttributes as $attr): ?>
+      <div class="form-check">
+        <input type="checkbox" name="attribute_ids[]" value="<?= (int) $attr['id'] ?>" class="form-check-input" id="attr<?= $attr['id'] ?>" <?= in_array((int) $attr['id'], $assignedAttributeIds, true) ? 'checked' : '' ?>>
+        <label class="form-check-label" for="attr<?= $attr['id'] ?>"><?= e($attr['name']) ?></label>
+      </div>
+      <?php endforeach; ?>
+      <?php if (empty($allAttributes)): ?>
+        <p class="text-white-50 small mb-0">No attributes exist yet — <a href="<?= url('/admin/attributes') ?>">create some first</a>.</p>
+      <?php endif; ?>
+    </div>
+    <button type="submit" class="btn btn-ps-outline btn-sm">Save Attributes</button>
+  </form>
+</div>
+
+<div class="admin-card mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h6 class="mb-0">Variants (<?= count($variants) ?>)</h6>
+    <?php if (!empty($assignedAttributeIds)): ?>
+      <button type="button" class="btn btn-ps btn-sm" data-bs-toggle="modal" data-bs-target="#addVariantModal"><i class="bi bi-plus-lg"></i> Add Variant</button>
+    <?php endif; ?>
+  </div>
+
+  <?php if (empty($assignedAttributeIds)): ?>
+    <p class="text-white-50 small mb-0">Assign at least one attribute above before adding variants.</p>
+  <?php elseif (empty($variants)): ?>
+    <p class="text-white-50 text-center py-3 mb-0">No variants yet — this product sells as a single item using the price/stock above.</p>
+  <?php else: ?>
+  <div class="table-responsive">
+    <table class="admin-table">
+      <thead><tr><th>Attributes</th><th>SKU</th><th>Barcode</th><th>Price</th><th>Offer</th><th>Stock</th><th>Weight</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        <?php foreach ($variants as $variant): ?>
+        <tr>
+          <td><?= e(implode(', ', array_map(fn ($v) => $v['attribute_name'] . ': ' . $v['value'], $variant['attribute_values']))) ?></td>
+          <td><?= e($variant['sku']) ?></td>
+          <td><?= e($variant['barcode'] ?? '—') ?></td>
+          <td><?= $variant['price'] !== null ? '৳' . number_format((float) $variant['price']) : '<span class="text-white-50">Default</span>' ?></td>
+          <td><?= $variant['offer_price'] !== null ? '৳' . number_format((float) $variant['offer_price']) : '—' ?></td>
+          <td><?= (int) $variant['stock_qty'] ?></td>
+          <td><?= $variant['weight'] !== null ? $variant['weight'] . ' kg' : '—' ?></td>
+          <td><span class="badge text-bg-<?= $variant['status'] === 'active' ? 'success' : 'secondary' ?>"><?= ucfirst($variant['status']) ?></span></td>
+          <td>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-ps-outline btn-sm" data-bs-toggle="modal" data-bs-target="#editVariantModal<?= $variant['id'] ?>"><i class="bi bi-pencil"></i></button>
+              <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/variants/' . $variant['id'] . '/delete') ?>" onsubmit="return confirm('Delete this variant?');">
+                <?= Security::csrfField() ?>
+                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+
+        <div class="modal fade" id="editVariantModal<?= $variant['id'] ?>" tabindex="-1">
+          <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-dark">
+              <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/variants/' . $variant['id']) ?>" enctype="multipart/form-data">
+                <?= Security::csrfField() ?>
+                <div class="modal-header"><h6 class="modal-title">Edit Variant</h6></div>
+                <div class="modal-body">
+                  <?php
+                  $variantValueIds = array_column($variant['attribute_values'], 'id');
+                  include __DIR__ . '/_variant_fields.php';
+                  ?>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-ps-outline btn-sm" data-bs-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-ps btn-sm">Save</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+  <?php endif; ?>
+</div>
+
+<div class="modal fade" id="addVariantModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content bg-dark">
+      <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/variants') ?>" enctype="multipart/form-data">
+        <?= Security::csrfField() ?>
+        <div class="modal-header"><h6 class="modal-title">Add Variant</h6></div>
+        <div class="modal-body">
+          <?php $variant = null; $variantValueIds = []; include __DIR__ . '/_variant_fields.php'; ?>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-ps-outline btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-ps btn-sm">Add Variant</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="admin-card mt-4">
+  <h6 class="mb-3">Tags &amp; Related Products</h6>
+  <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/tags-related') ?>">
+    <?= Security::csrfField() ?>
+    <label>Tags <small class="text-white-50">(comma-separated — unlimited, any text)</small></label>
+    <input type="text" name="tags" class="form-control mb-3" value="<?= e(implode(', ', array_column($tags, 'name'))) ?>" placeholder="e.g. best-seller, high-protein, unflavored">
+
+    <label>Related Products <small class="text-white-50">(hand-picked — shown alongside the automatic suggestions)</small></label>
+    <select name="related_product_ids[]" class="form-select mb-3" multiple size="6">
+      <?php foreach ($allProducts as $p): if ((int) $p['id'] === (int) $product['id']) continue; ?>
+        <option value="<?= (int) $p['id'] ?>" <?= in_array((int) $p['id'], $relatedProductIds, true) ? 'selected' : '' ?>><?= e($p['name']) ?> (<?= e($p['sku']) ?>)</option>
+      <?php endforeach; ?>
+    </select>
+    <button type="submit" class="btn btn-ps-outline btn-sm">Save Tags &amp; Related Products</button>
+  </form>
+</div>
 <?php endif; ?>

@@ -26,6 +26,7 @@ final class MemberAdminController extends AdminController
     public function index(): void
     {
         $memberModel = new Member();
+        $memberModel->syncAllStatuses();
 
         $filters = [
             'search' => $this->input('search'),
@@ -108,6 +109,7 @@ final class MemberAdminController extends AdminController
         if ($packageId > 0) {
             $this->createInitialSubscription($memberId, $packageId);
         }
+        $memberModel->recomputeStatus($memberId);
 
         $this->logActivity('member_created', "Created member #$memberId: $name");
         flash('success', 'Member added successfully.');
@@ -190,6 +192,7 @@ final class MemberAdminController extends AdminController
     public function show(string $id): void
     {
         $memberModel = new Member();
+        $memberModel->recomputeStatus((int) $id);
         $member = $memberModel->find((int) $id);
         if (!$member) {
             $this->abort404();
@@ -218,6 +221,21 @@ final class MemberAdminController extends AdminController
         ]);
     }
 
+    public function paymentHistory(string $id): void
+    {
+        $memberModel = new Member();
+        $member = $memberModel->find((int) $id);
+        if (!$member) {
+            $this->abort404();
+        }
+
+        $this->adminView('members/payment-history', [
+            'pageTitle' => 'Payment History — ' . $member['name'],
+            'member' => $member,
+            'payments' => (new Payment())->forMember((int) $id),
+        ]);
+    }
+
     public function renew(string $id): void
     {
         Security::requireCsrf();
@@ -240,11 +258,19 @@ final class MemberAdminController extends AdminController
         $startDate = $this->input('start_date') ?: date('Y-m-d');
         $pricePaid = (float) $this->input('price_paid', (string) $package['regular_price']);
         $couponCode = $this->input('coupon_code') ?: null;
+        $durationDays = $this->input('duration_days') !== '' ? (int) $this->input('duration_days') : null;
+        $discountAmount = $this->input('discount') !== '' ? (float) $this->input('discount') : null;
+        $notes = $this->input('notes') ?: null;
+        $trainerId = $this->input('trainer_id');
 
-        $result = $this->renewMember((int) $id, $package, $startDate, $pricePaid, $paymentMethod, $couponCode, $referenceNo);
+        $result = $this->renewMember((int) $id, $package, $startDate, $pricePaid, $paymentMethod, $couponCode, $referenceNo, $durationDays, $discountAmount, $notes);
         if ($result === false) {
             flash('danger', 'That coupon code is invalid, expired, or no longer applicable.');
             redirect('admin/members/' . $id);
+        }
+
+        if (Feature::trainerModuleOn() && $trainerId !== null && $trainerId !== '') {
+            $memberModel->update((int) $id, ['trainer_id' => (int) $trainerId]);
         }
 
         $this->logActivity('member_renewed', "Renewed membership for member #$id ({$package['name']})");
@@ -521,6 +547,8 @@ final class MemberAdminController extends AdminController
         if ($promotion) {
             (new Promotion())->recordUsage((int) $promotion['promo']['id'], $memberId, null, $subscriptionId);
         }
+
+        (new Member())->ensureMoneyReceivedNo($memberId);
     }
 
     /** @return array{promo:array,discount:float}|null */
@@ -540,7 +568,7 @@ final class MemberAdminController extends AdminController
     }
 
     /** Creates a renewal subscription + payment record for one member. Returns false only when an explicitly-supplied coupon code was invalid. */
-    private function renewMember(int $memberId, array $package, string $startDate, float $pricePaid, string $paymentMethod, ?string $couponCode, ?string $referenceNo = null): bool
+    private function renewMember(int $memberId, array $package, string $startDate, float $pricePaid, string $paymentMethod, ?string $couponCode, ?string $referenceNo = null, ?int $durationDaysOverride = null, ?float $discountAmount = null, ?string $notes = null): bool
     {
         $promotion = $this->applyMembershipCoupon($couponCode, $memberId, $pricePaid);
         if ($couponCode && !$promotion) {
@@ -549,14 +577,18 @@ final class MemberAdminController extends AdminController
         if ($promotion) {
             $pricePaid = max(0, round($pricePaid - $promotion['discount'], 2));
         }
+        if ($discountAmount) {
+            $pricePaid = max(0, round($pricePaid - $discountAmount, 2));
+        }
 
         $settingModel = new Setting();
         if ($settingModel->getBool('tax_applies_to_membership', false)) {
             $pricePaid = round($pricePaid * (1 + $settingModel->getFloat('tax_percent') / 100), 2);
         }
 
+        $durationDays = $durationDaysOverride ?? (int) $package['duration_days'];
         $endDate = (new DateTimeImmutable($startDate))
-            ->modify('+' . (int) $package['duration_days'] . ' days')
+            ->modify("+$durationDays days")
             ->format('Y-m-d');
 
         $subscriptionModel = new MemberSubscription();
@@ -566,6 +598,8 @@ final class MemberAdminController extends AdminController
             'start_date' => $startDate,
             'end_date' => $endDate,
             'price_paid' => $pricePaid,
+            'discount_amount' => $discountAmount,
+            'notes' => $notes,
             'created_by' => (int) Auth::user()['id'],
         ]);
 
@@ -583,7 +617,9 @@ final class MemberAdminController extends AdminController
             (new Promotion())->recordUsage((int) $promotion['promo']['id'], $memberId, null, $subscriptionId);
         }
 
-        (new Member())->update($memberId, ['status' => 'active']);
+        $memberModel = new Member();
+        $memberModel->ensureMoneyReceivedNo($memberId);
+        $memberModel->recomputeStatus($memberId);
 
         return true;
     }
@@ -602,7 +638,6 @@ final class MemberAdminController extends AdminController
             'medical_notes' => $this->rawInput('medical_notes') ?: null,
             'join_date' => $this->input('join_date') ?: date('Y-m-d'),
             'locker_number' => $this->input('locker_number') ?: null,
-            'status' => $this->input('status', 'active'),
         ];
 
         // Only touch trainer_id when the trainer module is enabled — the field isn't

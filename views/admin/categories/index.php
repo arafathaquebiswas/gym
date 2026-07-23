@@ -13,14 +13,35 @@ $topLevel = array_filter($categories, fn ($c) => !$c['parent_id']);
 
   <div class="table-responsive">
     <table class="admin-table">
-      <thead><tr><th>Name</th><th>Parent</th><th>Slug</th><th>Products</th><th></th></tr></thead>
+      <thead><tr><th></th><th>Name</th><th>Parent</th><th>Slug</th><th>Products</th><th>Status</th><th>Order</th><th></th></tr></thead>
       <tbody>
         <?php foreach ($categories as $cat): ?>
         <tr>
+          <td><?= media_tile($cat['image'], $cat['name'], 'bi-tags', 'thumb') ?></td>
           <td><?= $cat['parent_id'] ? '— ' : '' ?><?= e($cat['name']) ?></td>
           <td><?= e($cat['parent_name'] ?? '—') ?></td>
           <td><code><?= e($cat['slug']) ?></code></td>
           <td><?= (int) $cat['product_count'] ?></td>
+          <td>
+            <form method="post" action="<?= url('/admin/categories/' . $cat['id'] . '/toggle-status') ?>">
+              <?= Security::csrfField() ?>
+              <button type="submit" class="badge text-bg-<?= $cat['status'] === 'active' ? 'success' : 'secondary' ?> border-0">
+                <?= $cat['status'] === 'active' ? 'Active' : 'Hidden' ?>
+              </button>
+            </form>
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <form method="post" action="<?= url('/admin/categories/' . $cat['id'] . '/move-up') ?>">
+                <?= Security::csrfField() ?>
+                <button type="submit" class="btn btn-ps-outline btn-sm" title="Move Up"><i class="bi bi-arrow-up"></i></button>
+              </form>
+              <form method="post" action="<?= url('/admin/categories/' . $cat['id'] . '/move-down') ?>">
+                <?= Security::csrfField() ?>
+                <button type="submit" class="btn btn-ps-outline btn-sm" title="Move Down"><i class="bi bi-arrow-down"></i></button>
+              </form>
+            </div>
+          </td>
           <td>
             <div class="d-flex gap-2">
               <button type="button" class="btn btn-ps-outline btn-sm" data-bs-toggle="modal" data-bs-target="#editCategoryModal<?= $cat['id'] ?>"><i class="bi bi-pencil"></i></button>
@@ -33,7 +54,7 @@ $topLevel = array_filter($categories, fn ($c) => !$c['parent_id']);
             <div class="modal fade" id="editCategoryModal<?= $cat['id'] ?>" tabindex="-1">
               <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content bg-dark">
-                  <form method="post" action="<?= url('/admin/categories/' . $cat['id']) ?>">
+                  <form method="post" action="<?= url('/admin/categories/' . $cat['id']) ?>" enctype="multipart/form-data">
                     <?= Security::csrfField() ?>
                     <div class="modal-header"><h6 class="modal-title">Edit Category</h6></div>
                     <div class="modal-body">
@@ -48,6 +69,16 @@ $topLevel = array_filter($categories, fn ($c) => !$c['parent_id']);
                       </select>
                       <label>Description</label>
                       <input type="text" name="description" class="form-control mb-2" value="<?= e($cat['description'] ?? '') ?>">
+                      <label>Status</label>
+                      <select name="status" class="form-select mb-2">
+                        <option value="active" <?= $cat['status'] === 'active' ? 'selected' : '' ?>>Active (visible in store)</option>
+                        <option value="hidden" <?= $cat['status'] === 'hidden' ? 'selected' : '' ?>>Hidden</option>
+                      </select>
+                      <label>Category Image</label>
+                      <?php if (!empty($cat['image'])): ?>
+                        <div class="mb-2"><?= media_tile($cat['image'], $cat['name'], 'bi-tags', '', null) ?></div>
+                      <?php endif; ?>
+                      <input type="file" name="image" class="form-control mb-2" accept="image/jpeg,image/png,image/webp">
                       <hr>
                       <h6 class="small text-white-50">Category Offer</h6>
                       <div class="row g-2">
@@ -91,7 +122,7 @@ $topLevel = array_filter($categories, fn ($c) => !$c['parent_id']);
 <div class="modal fade" id="addCategoryModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content bg-dark">
-      <form method="post" action="<?= url('/admin/categories') ?>">
+      <form method="post" action="<?= url('/admin/categories') ?>" enctype="multipart/form-data">
         <?= Security::csrfField() ?>
         <div class="modal-header"><h6 class="modal-title">Add Category</h6></div>
         <div class="modal-body">
@@ -105,7 +136,14 @@ $topLevel = array_filter($categories, fn ($c) => !$c['parent_id']);
             <?php endforeach; ?>
           </select>
           <label>Description</label>
-          <input type="text" name="description" class="form-control">
+          <input type="text" name="description" class="form-control mb-2">
+          <label>Status</label>
+          <select name="status" class="form-select mb-2">
+            <option value="active">Active (visible in store)</option>
+            <option value="hidden">Hidden</option>
+          </select>
+          <label>Category Image</label>
+          <input type="file" name="image" class="form-control" accept="image/jpeg,image/png,image/webp">
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-ps-outline btn-sm" data-bs-dismiss="modal">Cancel</button>

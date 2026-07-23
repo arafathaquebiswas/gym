@@ -34,6 +34,7 @@
 <div class="admin-card">
   <h6 class="mb-2">Renewed / Purchased in Range</h6>
   <?php include __DIR__ . '/_filter.php'; ?>
+  <?php include __DIR__ . '/_export_buttons.php'; ?>
 
   <?php if (empty($renewed)): ?>
     <p class="text-white-50 text-center py-4 mb-0">No renewals in this date range.</p>

@@ -19,8 +19,9 @@ final class SettingsAdminController extends AdminController
         'shipping_enabled', 'tax_enabled', 'tax_applies_to_membership', 'tax_applies_to_trainer_fee',
         'free_trial_enabled', 'free_trial_title', 'free_trial_subtitle', 'free_trial_button_text',
         'free_trial_button_link', 'free_trial_start_date', 'free_trial_end_date', 'free_trial_max_registrations',
-        'feature_delivery', 'feature_pickup',
+        'feature_delivery', 'feature_pickup', 'delivery_fee_per_order',
         'discount_stacking_enabled',
+        'auto_email_notifications', 'auto_low_stock_alerts',
     ];
 
     public function index(): void

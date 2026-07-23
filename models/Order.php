@@ -41,9 +41,11 @@ final class Order extends Model
                 if ((int) $product['stock_qty'] >= $qty) {
                     $productModel->decrementStockIfAvailable((int) $product['id'], $qty);
                     $stockChanges[] = ['product_id' => (int) $product['id'], 'qty' => $qty, 'note' => 'Order placed'];
+                    LowStockAlerter::checkAndNotify($product, (int) $product['stock_qty'] - $qty);
                 } elseif ((int) $product['allow_preorder'] === 1 && Feature::on('preorder')) {
                     $productModel->adjustStock((int) $product['id'], -$qty); // may go negative — backorder demand
                     $stockChanges[] = ['product_id' => (int) $product['id'], 'qty' => $qty, 'note' => 'Pre-order / backorder'];
+                    LowStockAlerter::checkAndNotify($product, (int) $product['stock_qty'] - $qty);
                 } else {
                     throw new RuntimeException("Not enough stock for {$product['name']} (only {$product['stock_qty']} left).");
                 }
@@ -63,6 +65,7 @@ final class Order extends Model
                     'had_offer' => (bool) $product['offer_is_live'],
                     'regular_price' => (float) $product['selling_price'],
                     'bogo_enabled' => (bool) $product['bogo_enabled'],
+                    'discount_source' => $product['offer_is_live'] ? $product['discount_source'] : null,
                 ];
                 $subtotal += $unitPrice * $qty;
             }
@@ -100,6 +103,7 @@ final class Order extends Model
                     if ($lineMeta[$i]['had_offer']) {
                         $rl['unit_price'] = $lineMeta[$i]['regular_price'];
                         $rl['subtotal'] = round($lineMeta[$i]['regular_price'] * $rl['qty'], 2);
+                        $lineMeta[$i]['discount_source'] = null; // reverted to regular price — the coupon is what actually discounted this order.
                     }
                     $subtotal += $rl['subtotal'];
                 }
@@ -197,11 +201,11 @@ final class Order extends Model
             $orderId = (int) $this->db->lastInsertId();
 
             $itemStmt = $this->db->prepare(
-                'INSERT INTO order_items (order_id, product_id, product_name, sku, qty, unit_price, subtotal)
-                 VALUES (:order_id, :product_id, :product_name, :sku, :qty, :unit_price, :subtotal)'
+                'INSERT INTO order_items (order_id, product_id, product_name, sku, qty, unit_price, subtotal, discount_source)
+                 VALUES (:order_id, :product_id, :product_name, :sku, :qty, :unit_price, :subtotal, :discount_source)'
             );
-            foreach ($resolvedLines as $line) {
-                $itemStmt->execute(array_merge(['order_id' => $orderId], $line));
+            foreach ($resolvedLines as $i => $line) {
+                $itemStmt->execute(array_merge(['order_id' => $orderId, 'discount_source' => $lineMeta[$i]['discount_source']], $line));
             }
 
             $stockMovementModel = new StockMovement();
@@ -269,6 +273,79 @@ final class Order extends Model
         );
         $stmt->execute(['delivery_person_id' => $deliveryPersonId]);
         return $stmt->fetchAll();
+    }
+
+    /** Completed (delivered/returned) deliveries for this driver — the Delivery History page, separate from their active worklist. */
+    public function forDeliveryPersonHistory(int $deliveryPersonId, int $page = 1, int $perPage = 20): array
+    {
+        $countStmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM orders WHERE delivery_person_id = :delivery_person_id AND status IN ('delivered', 'returned')"
+        );
+        $countStmt->execute(['delivery_person_id' => $deliveryPersonId]);
+        $total = (int) $countStmt->fetchColumn();
+
+        $page = max(1, $page);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+        $page = min($page, $totalPages);
+        $offset = ($page - 1) * $perPage;
+
+        $stmt = $this->db->prepare(
+            self::BASE_SELECT . " WHERE o.delivery_person_id = :delivery_person_id
+             AND o.status IN ('delivered', 'returned')
+             ORDER BY o.updated_at DESC LIMIT :limit OFFSET :offset"
+        );
+        $stmt->bindValue(':delivery_person_id', $deliveryPersonId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $orders = $stmt->fetchAll();
+
+        // Attach the note recorded at the moment this order reached its current (terminal) status.
+        foreach ($orders as &$order) {
+            $order['delivery_note'] = null;
+            foreach (array_reverse($this->statusHistory((int) $order['id'])) as $entry) {
+                if ($entry['status'] === $order['status']) {
+                    $order['delivery_note'] = $entry['note'];
+                    break;
+                }
+            }
+        }
+        unset($order);
+
+        return ['items' => $orders, 'total' => $total, 'page' => $page, 'perPage' => $perPage, 'totalPages' => $totalPages];
+    }
+
+    /** Today's workload snapshot for a driver's dashboard: how many new orders came in for them today, and how many they've completed today. */
+    public function todaysStatsForDeliveryPerson(int $deliveryPersonId): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT COUNT(*) FROM orders WHERE delivery_person_id = :id AND DATE(created_at) = CURDATE()'
+        );
+        $stmt->execute(['id' => $deliveryPersonId]);
+        $assignedToday = (int) $stmt->fetchColumn();
+
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) FROM order_status_history h
+             JOIN orders o ON o.id = h.order_id
+             WHERE o.delivery_person_id = :id AND h.status = 'delivered' AND h.changed_by = :id2 AND DATE(h.created_at) = CURDATE()"
+        );
+        $stmt->execute(['id' => $deliveryPersonId, 'id2' => $deliveryPersonId]);
+        $deliveredToday = (int) $stmt->fetchColumn();
+
+        return ['assignedToday' => $assignedToday, 'deliveredToday' => $deliveredToday];
+    }
+
+    /** Completed deliveries within [start, end] (inclusive) by this driver — used for the optional earnings estimate. */
+    public function completedCountForDeliveryPersonInRange(int $deliveryPersonId, string $start, string $end): int
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(DISTINCT h.order_id) FROM order_status_history h
+             JOIN orders o ON o.id = h.order_id
+             WHERE o.delivery_person_id = :id AND h.status = 'delivered' AND h.changed_by = :id2
+               AND DATE(h.created_at) BETWEEN :start AND :end"
+        );
+        $stmt->execute(['id' => $deliveryPersonId, 'id2' => $deliveryPersonId, 'start' => $start, 'end' => $end]);
+        return (int) $stmt->fetchColumn();
     }
 
     public function assignDeliveryPerson(int $id, ?int $deliveryPersonId): void
@@ -366,7 +443,7 @@ final class Order extends Model
                 $productModel->adjustStock($productId, $qty);
                 $stockMovementModel->record($productId, $qty, $movementType, $id, $note, $changedBy);
 
-                if ($before && (int) $before['stock_qty'] <= 0) {
+                if ($before && (int) $before['stock_qty'] <= 0 && (new Setting())->getBool('auto_email_notifications')) {
                     StockNotifier::notifyBackInStock($before);
                 }
             }

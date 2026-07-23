@@ -11,6 +11,7 @@
     <a href="<?= url('/admin/reports') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> All Reports</a>
   </div>
   <?php include __DIR__ . '/_filter.php'; ?>
+  <?php include __DIR__ . '/_export_buttons.php'; ?>
   <div class="mb-3">
     <a href="?from=<?= e($from) ?>&to=<?= e($to) ?>&group=daily" class="btn btn-ps-outline btn-sm <?= $group === 'daily' ? 'active' : '' ?>">Daily</a>
     <a href="?from=<?= e($from) ?>&to=<?= e($to) ?>&group=monthly" class="btn btn-ps-outline btn-sm <?= $group === 'monthly' ? 'active' : '' ?>">Monthly</a>
