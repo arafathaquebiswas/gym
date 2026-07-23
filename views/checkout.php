@@ -7,6 +7,9 @@ $pageTitle = 'Checkout';
 /** @var float $freeShippingMin */
 /** @var array $savedAddresses */
 /** @var array|null $member */
+/** @var string $gymName */
+/** @var string|null $gymAddress */
+/** @var string|null $gymPhone */
 $isMember = Auth::hasRole('member');
 $currentUser = Auth::user();
 ?>
@@ -19,25 +22,69 @@ $currentUser = Auth::user();
       <div class="row g-4">
         <div class="col-lg-7">
           <div class="glass-card p-4 mb-4">
-            <h6 class="mb-3">Delivery Details</h6>
-            <?php if (!empty($savedAddresses)): ?>
-            <div class="mb-3">
-              <label>Use a saved address</label>
-              <select id="savedAddressPicker" class="form-select">
-                <option value="">— Enter new address —</option>
-                <?php foreach ($savedAddresses as $addr): ?>
-                  <option value="<?= (int) $addr['id'] ?>"
-                    data-name="<?= e($addr['full_name']) ?>" data-phone="<?= e($addr['phone']) ?>"
-                    data-address="<?= e($addr['address']) ?>" data-city="<?= e($addr['city']) ?>"
-                    data-area="<?= e($addr['area']) ?>" data-postal="<?= e($addr['postal_code']) ?>">
-                    <?= e($addr['label']) ?> — <?= e($addr['address']) ?>
-                  </option>
-                <?php endforeach; ?>
-              </select>
+            <h6 class="mb-3">Delivery or Pickup</h6>
+            <div class="d-flex gap-4 mb-3">
+              <div class="form-check">
+                <input type="radio" name="fulfillment_method" value="delivery" class="form-check-input fulfillment-radio" id="fmDelivery" checked>
+                <label class="form-check-label" for="fmDelivery">Home Delivery</label>
+              </div>
+              <div class="form-check">
+                <input type="radio" name="fulfillment_method" value="pickup" class="form-check-input fulfillment-radio" id="fmPickup">
+                <label class="form-check-label" for="fmPickup">Store Pickup</label>
+              </div>
             </div>
-            <?php endif; ?>
 
-            <div class="row g-3">
+            <div id="pickupInfo" class="glass-card p-3 mb-3 d-none" style="background:rgba(255,255,255,.03)">
+              <p class="mb-1"><i class="bi bi-geo-alt text-orange"></i> Pick up at <strong><?= e($gymName) ?></strong></p>
+              <?php if ($gymAddress): ?><p class="text-white-50 small mb-1"><?= e($gymAddress) ?></p><?php endif; ?>
+              <?php if ($gymPhone): ?><p class="text-white-50 small mb-0">Phone: <?= e($gymPhone) ?></p><?php endif; ?>
+            </div>
+
+            <div id="deliveryFields">
+              <?php if (!empty($savedAddresses)): ?>
+              <div class="mb-3">
+                <label>Use a saved address</label>
+                <select id="savedAddressPicker" class="form-select">
+                  <option value="">— Enter new address —</option>
+                  <?php foreach ($savedAddresses as $addr): ?>
+                    <option value="<?= (int) $addr['id'] ?>"
+                      data-name="<?= e($addr['full_name']) ?>" data-phone="<?= e($addr['phone']) ?>"
+                      data-address="<?= e($addr['address']) ?>" data-city="<?= e($addr['city']) ?>"
+                      data-area="<?= e($addr['area']) ?>" data-postal="<?= e($addr['postal_code']) ?>">
+                      <?= e($addr['label']) ?> — <?= e($addr['address']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+              <?php endif; ?>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label>City *</label>
+                  <input type="text" name="delivery_city" id="fCity" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                  <label>Area</label>
+                  <input type="text" name="delivery_area" id="fArea" class="form-control">
+                </div>
+                <div class="col-md-6">
+                  <label>Postal Code</label>
+                  <input type="text" name="delivery_postal_code" id="fPostal" class="form-control">
+                </div>
+                <div class="col-12">
+                  <label>Delivery Address *</label>
+                  <input type="text" name="delivery_address" id="fAddress" class="form-control" required>
+                </div>
+                <?php if ($isMember): ?>
+                <div class="col-12 form-check">
+                  <input type="checkbox" name="save_address" value="1" class="form-check-input" id="saveAddress" checked>
+                  <label class="form-check-label small" for="saveAddress">Save this address for next time</label>
+                </div>
+                <?php endif; ?>
+              </div>
+            </div>
+
+            <div class="row g-3 mt-1">
               <div class="col-md-6">
                 <label>Full Name *</label>
                 <input type="text" name="full_name" id="fFullName" class="form-control" value="<?= e($currentUser['name'] ?? '') ?>" required>
@@ -50,32 +97,10 @@ $currentUser = Auth::user();
                 <label>Email *</label>
                 <input type="email" name="email" class="form-control" value="<?= e($currentUser['email'] ?? '') ?>" required>
               </div>
-              <div class="col-md-6">
-                <label>City *</label>
-                <input type="text" name="delivery_city" id="fCity" class="form-control" required>
-              </div>
-              <div class="col-md-6">
-                <label>Area</label>
-                <input type="text" name="delivery_area" id="fArea" class="form-control">
-              </div>
-              <div class="col-md-6">
-                <label>Postal Code</label>
-                <input type="text" name="delivery_postal_code" id="fPostal" class="form-control">
-              </div>
-              <div class="col-12">
-                <label>Delivery Address *</label>
-                <input type="text" name="delivery_address" id="fAddress" class="form-control" required>
-              </div>
               <div class="col-12">
                 <label>Order Notes</label>
                 <textarea name="order_notes" class="form-control" rows="2" placeholder="Any special instructions..."></textarea>
               </div>
-              <?php if ($isMember): ?>
-              <div class="col-12 form-check">
-                <input type="checkbox" name="save_address" value="1" class="form-check-input" id="saveAddress" checked>
-                <label class="form-check-label small" for="saveAddress">Save this address for next time</label>
-              </div>
-              <?php endif; ?>
             </div>
           </div>
 
@@ -96,19 +121,21 @@ $currentUser = Auth::user();
             <h6 class="mb-3">Payment Method</h6>
             <?php foreach (['cod' => 'Cash on Delivery', 'bkash' => 'bKash', 'nagad' => 'Nagad', 'rocket' => 'Rocket', 'bank_transfer' => 'Bank Transfer'] as $val => $label): ?>
             <div class="form-check">
-              <input type="radio" name="payment_method" value="<?= $val ?>" class="form-check-input payment-method-radio" id="pm_<?= $val ?>" <?= $val === 'cod' ? 'checked' : '' ?>>
+              <input type="radio" name="payment_method" value="<?= $val ?>" class="form-check-input payment-method-radio" id="pm_<?= $val ?>" required>
               <label class="form-check-label" for="pm_<?= $val ?>"><?= $label ?></label>
             </div>
             <?php endforeach; ?>
             <div id="referenceNoField" class="mt-2 d-none">
               <label>Transaction / Reference ID</label>
-              <input type="text" name="reference_no" class="form-control" placeholder="e.g. bKash transaction ID">
+              <input type="text" name="reference_no" id="referenceNoInput" class="form-control" placeholder="e.g. bKash transaction ID">
               <p class="text-white-50 small mt-1">Enter the transaction ID from your payment app — our team will verify it.</p>
             </div>
+            <?php if (Feature::on('coupons')): ?>
             <div class="mt-3">
               <label>Coupon Code</label>
               <input type="text" name="coupon_code" class="form-control" placeholder="Optional">
             </div>
+            <?php endif; ?>
           </div>
         </div>
 
@@ -125,14 +152,14 @@ $currentUser = Auth::user();
             <div class="d-flex justify-content-between"><span class="text-white-50">Subtotal</span><span>৳<?= number_format($subtotal) ?></span></div>
             <div class="d-flex justify-content-between">
               <span class="text-white-50">Shipping</span>
-              <span><?= $estimatedShipping > 0 ? '৳' . number_format($estimatedShipping) : 'Free' ?></span>
+              <span id="summaryShipping"><?= $estimatedShipping > 0 ? '৳' . number_format($estimatedShipping) : 'Free' ?></span>
             </div>
             <?php if ($estimatedTax > 0): ?>
             <div class="d-flex justify-content-between"><span class="text-white-50">Tax</span><span>৳<?= number_format($estimatedTax) ?></span></div>
             <?php endif; ?>
             <hr>
-            <div class="d-flex justify-content-between fw-bold fs-5"><span>Estimated Total</span><span class="text-orange">৳<?= number_format($subtotal + $estimatedShipping + $estimatedTax) ?></span></div>
-            <p class="text-white-50 small mt-2">
+            <div class="d-flex justify-content-between fw-bold fs-5"><span>Estimated Total</span><span class="text-orange" id="summaryTotal">৳<?= number_format($subtotal + $estimatedShipping + $estimatedTax) ?></span></div>
+            <p class="text-white-50 small mt-2" id="freeShippingHint">
               Coupon discount (if any) is applied when the order is placed.
               <?php if ($freeShippingMin > 0 && $subtotal < $freeShippingMin): ?>
                 Spend ৳<?= number_format($freeShippingMin - $subtotal) ?> more for free shipping!
@@ -149,9 +176,43 @@ $currentUser = Auth::user();
 <script>
 document.querySelectorAll('.payment-method-radio').forEach(function (radio) {
   radio.addEventListener('change', function () {
-    document.getElementById('referenceNoField').classList.toggle('d-none', this.value === 'cod');
+    var needsReference = this.value !== 'cod';
+    document.getElementById('referenceNoField').classList.toggle('d-none', !needsReference);
+    document.getElementById('referenceNoInput').required = needsReference;
   });
 });
+
+(function () {
+  var subtotal = <?= (float) $subtotal ?>;
+  var deliveryShipping = <?= (float) $estimatedShipping ?>;
+  var tax = <?= (float) $estimatedTax ?>;
+  var money = function (n) { return '৳' + Math.round(n).toLocaleString('en-US'); };
+
+  var deliveryFields = document.getElementById('deliveryFields');
+  var pickupInfo = document.getElementById('pickupInfo');
+  var cityInput = document.getElementById('fCity');
+  var addressInput = document.getElementById('fAddress');
+  var summaryShipping = document.getElementById('summaryShipping');
+  var summaryTotal = document.getElementById('summaryTotal');
+  var freeShippingHint = document.getElementById('freeShippingHint');
+
+  function applyFulfillment(method) {
+    var isPickup = method === 'pickup';
+    deliveryFields.classList.toggle('d-none', isPickup);
+    pickupInfo.classList.toggle('d-none', !isPickup);
+    cityInput.required = !isPickup;
+    addressInput.required = !isPickup;
+    freeShippingHint.classList.toggle('d-none', isPickup);
+
+    var shipping = isPickup ? 0 : deliveryShipping;
+    summaryShipping.textContent = shipping > 0 ? money(shipping) : 'Free';
+    summaryTotal.textContent = money(subtotal + shipping + tax);
+  }
+
+  document.querySelectorAll('.fulfillment-radio').forEach(function (radio) {
+    radio.addEventListener('change', function () { applyFulfillment(this.value); });
+  });
+})();
 
 var picker = document.getElementById('savedAddressPicker');
 if (picker) {

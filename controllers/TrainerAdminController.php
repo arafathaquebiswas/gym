@@ -53,6 +53,13 @@ final class TrainerAdminController extends AdminController
         }
 
         $trainerModel = new Trainer();
+
+        $offerError = $trainerModel->validateOfferPrice($data['monthly_pt_price'], $data['offer_price']);
+        if ($offerError !== null) {
+            flash('danger', $offerError);
+            redirect('admin/trainers/create');
+        }
+
         $data['slug'] = $this->uniqueSlug($trainerModel, $data['name']);
 
         $photoPath = Upload::handle($_FILES['photo'] ?? [], 'trainers');
@@ -106,6 +113,12 @@ final class TrainerAdminController extends AdminController
 
         if ($validator->fails()) {
             flash('danger', $validator->firstError());
+            redirect('admin/trainers/' . $id . '/edit');
+        }
+
+        $offerError = $trainerModel->validateOfferPrice($data['monthly_pt_price'], $data['offer_price']);
+        if ($offerError !== null) {
+            flash('danger', $offerError);
             redirect('admin/trainers/' . $id . '/edit');
         }
 
@@ -439,6 +452,10 @@ final class TrainerAdminController extends AdminController
             'bio' => $this->rawInput('bio'),
             'monthly_pt_price' => $this->input('monthly_pt_price') !== '' ? (float) $this->input('monthly_pt_price') : null,
             'hourly_rate' => $this->input('hourly_rate') !== '' ? (float) $this->input('hourly_rate') : null,
+            'offer_price' => $this->input('offer_price') !== '' ? (float) $this->input('offer_price') : null,
+            'offer_enabled' => $this->input('offer_enabled') === '1' ? 1 : 0,
+            'offer_start_date' => $this->input('offer_start_date') ?: null,
+            'offer_end_date' => $this->input('offer_end_date') ?: null,
             'max_members' => $this->input('max_members') !== '' ? (int) $this->input('max_members') : null,
             'availability_status' => $this->input('availability_status', 'available'),
             'facebook_url' => $this->input('facebook_url'),

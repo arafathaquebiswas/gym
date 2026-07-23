@@ -22,6 +22,31 @@ final class HomeController extends Controller
             'promotions' => $promotionModel->active(),
             'faqs' => $faqModel->allActive(),
             'settings' => $settingModel->all(),
+            'showFreeTrial' => $this->freeTrialAvailable($settingModel),
         ]);
+    }
+
+    private function freeTrialAvailable(Setting $settingModel): bool
+    {
+        if (!$settingModel->getBool('free_trial_enabled')) {
+            return false;
+        }
+
+        $today = date('Y-m-d');
+        $startDate = $settingModel->get('free_trial_start_date');
+        $endDate = $settingModel->get('free_trial_end_date');
+        if ($startDate && $today < $startDate) {
+            return false;
+        }
+        if ($endDate && $today > $endDate) {
+            return false;
+        }
+
+        $max = $settingModel->getInt('free_trial_max_registrations', 0);
+        if ($max > 0 && (new FreeTrialRegistration())->count() >= $max) {
+            return false;
+        }
+
+        return true;
     }
 }

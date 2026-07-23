@@ -2,6 +2,27 @@
 
 final class MemberAdminController extends AdminController
 {
+    private const ALLOWED_PAYMENT_METHODS = ['cash', 'card', 'bkash', 'nagad', 'rocket', 'bank_transfer'];
+    private const NO_REFERENCE_METHODS = ['cash', 'card'];
+
+    /** Validates a mandatory payment method + (when required) a transaction/reference ID. Flashes + redirects on failure. */
+    private function requirePaymentMethod(string $redirectTo): array
+    {
+        $method = $this->input('payment_method', '');
+        if (!in_array($method, self::ALLOWED_PAYMENT_METHODS, true)) {
+            flash('danger', 'Please select a payment method.');
+            redirect($redirectTo);
+        }
+
+        $referenceNo = $this->input('reference_no') ?: null;
+        if (!in_array($method, self::NO_REFERENCE_METHODS, true) && !$referenceNo) {
+            flash('danger', 'Please enter the transaction/reference ID for the selected payment method.');
+            redirect($redirectTo);
+        }
+
+        return [$method, $referenceNo];
+    }
+
     public function index(): void
     {
         $memberModel = new Member();
@@ -59,6 +80,12 @@ final class MemberAdminController extends AdminController
         if ($userModel->emailExists($email)) {
             flash('danger', 'An account with this email already exists.');
             redirect('admin/members/create');
+        }
+
+        // Validate the payment method up front (before the account/member rows exist) only
+        // when a package is actually being assigned — the "Initial Package" section is optional.
+        if ((int) $this->input('package_id') > 0) {
+            $this->requirePaymentMethod('admin/members/create');
         }
 
         if ($password === '') {
@@ -169,6 +196,15 @@ final class MemberAdminController extends AdminController
         }
 
         $attendanceModel = new Attendance();
+        $settingModel = new Setting();
+
+        $trainerFeeDefault = $settingModel->getFloat('default_trainer_fee');
+        if (!empty($member['trainer_id'])) {
+            $trainer = (new Trainer())->find((int) $member['trainer_id']);
+            if ($trainer) {
+                $trainerFeeDefault = (float) $trainer['display_price'];
+            }
+        }
 
         $this->adminView('members/show', [
             'pageTitle' => $member['name'],
@@ -177,6 +213,8 @@ final class MemberAdminController extends AdminController
             'attendanceLog' => $attendanceModel->recentForMember((int) $id),
             'openSession' => $attendanceModel->openSessionForMember((int) $id),
             'packages' => (new Package())->allForAdmin(),
+            'trainerFeeDefault' => $trainerFeeDefault,
+            'lockerFineDefault' => $settingModel->getFloat('lost_locker_fine'),
         ]);
     }
 
@@ -197,12 +235,13 @@ final class MemberAdminController extends AdminController
             redirect('admin/members/' . $id);
         }
 
+        [$paymentMethod, $referenceNo] = $this->requirePaymentMethod('admin/members/' . $id);
+
         $startDate = $this->input('start_date') ?: date('Y-m-d');
         $pricePaid = (float) $this->input('price_paid', (string) $package['regular_price']);
-        $paymentMethod = $this->input('payment_method', 'cash');
         $couponCode = $this->input('coupon_code') ?: null;
 
-        $result = $this->renewMember((int) $id, $package, $startDate, $pricePaid, $paymentMethod, $couponCode);
+        $result = $this->renewMember((int) $id, $package, $startDate, $pricePaid, $paymentMethod, $couponCode, $referenceNo);
         if ($result === false) {
             flash('danger', 'That coupon code is invalid, expired, or no longer applicable.');
             redirect('admin/members/' . $id);
@@ -251,15 +290,15 @@ final class MemberAdminController extends AdminController
                     flash('danger', 'Please select a valid package.');
                     redirect('admin/members');
                 }
+                [$paymentMethod, $referenceNo] = $this->requirePaymentMethod('admin/members');
                 $startDate = $this->input('start_date') ?: date('Y-m-d');
-                $paymentMethod = $this->input('payment_method', 'cash');
                 $couponCode = $this->input('coupon_code') ?: null;
                 foreach ($ids as $id) {
                     if (!$memberModel->find($id)) {
                         continue;
                     }
                     $pricePaid = (float) $package['regular_price'];
-                    if ($this->renewMember($id, $package, $startDate, $pricePaid, $paymentMethod, $couponCode) !== false) {
+                    if ($this->renewMember($id, $package, $startDate, $pricePaid, $paymentMethod, $couponCode, $referenceNo) !== false) {
                         $count++;
                     }
                 }
@@ -268,6 +307,10 @@ final class MemberAdminController extends AdminController
                 break;
 
             case 'assign_trainer':
+                if (!Feature::trainerModuleOn()) {
+                    flash('danger', 'The trainer module is currently disabled.');
+                    redirect('admin/members');
+                }
                 $trainerId = (int) $this->input('trainer_id');
                 if (!$trainerId || !(new Trainer())->find($trainerId)) {
                     flash('danger', 'Please select a valid trainer.');
@@ -361,6 +404,82 @@ final class MemberAdminController extends AdminController
         redirect('admin/members/' . $id);
     }
 
+    public function chargeTrainerFee(string $id): void
+    {
+        Security::requireCsrf();
+
+        if (!Feature::trainerFeeOn()) {
+            $this->abort404();
+        }
+
+        $memberModel = new Member();
+        $member = $memberModel->find((int) $id);
+        if (!$member) {
+            $this->abort404();
+        }
+
+        $amount = (float) $this->input('amount', '0');
+        if ($amount <= 0) {
+            flash('danger', 'Amount must be greater than zero.');
+            redirect('admin/members/' . $id);
+        }
+
+        $settingModel = new Setting();
+        if ($settingModel->getBool('tax_applies_to_trainer_fee', false)) {
+            $amount = round($amount * (1 + $settingModel->getFloat('tax_percent') / 100), 2);
+        }
+
+        [$paymentMethod, $referenceNo] = $this->requirePaymentMethod('admin/members/' . $id);
+
+        $trainerId = !empty($member['trainer_id']) ? (int) $member['trainer_id'] : null;
+
+        (new Payment())->record([
+            'member_id' => (int) $id,
+            'trainer_id' => $trainerId,
+            'type' => 'trainer_fee',
+            'amount' => $amount,
+            'method' => $paymentMethod,
+            'reference_no' => $referenceNo,
+            'recorded_by' => (int) Auth::user()['id'],
+        ]);
+
+        $this->logActivity('trainer_fee_charged', "Charged trainer fee of {$amount} to member #$id");
+        flash('success', 'Trainer fee recorded successfully.');
+        redirect('admin/members/' . $id);
+    }
+
+    public function chargeLockerFine(string $id): void
+    {
+        Security::requireCsrf();
+
+        $memberModel = new Member();
+        $member = $memberModel->find((int) $id);
+        if (!$member) {
+            $this->abort404();
+        }
+
+        $amount = (float) $this->input('amount', '0');
+        if ($amount <= 0) {
+            flash('danger', 'Amount must be greater than zero.');
+            redirect('admin/members/' . $id);
+        }
+
+        [$paymentMethod, $referenceNo] = $this->requirePaymentMethod('admin/members/' . $id);
+
+        (new Payment())->record([
+            'member_id' => (int) $id,
+            'type' => 'locker_fine',
+            'amount' => $amount,
+            'method' => $paymentMethod,
+            'reference_no' => $referenceNo,
+            'recorded_by' => (int) Auth::user()['id'],
+        ]);
+
+        $this->logActivity('locker_fine_charged', "Charged locker fine of {$amount} to member #$id");
+        flash('success', 'Locker fine recorded successfully.');
+        redirect('admin/members/' . $id);
+    }
+
     private function createInitialSubscription(int $memberId, int $packageId): void
     {
         $package = (new Package())->find($packageId);
@@ -389,15 +508,13 @@ final class MemberAdminController extends AdminController
             'created_by' => (int) Auth::user()['id'],
         ]);
 
-        $stmt = Database::connection()->prepare(
-            'INSERT INTO payments (member_id, subscription_id, type, amount, method, status, paid_at, recorded_by)
-             VALUES (:member_id, :subscription_id, "membership", :amount, :method, "completed", NOW(), :recorded_by)'
-        );
-        $stmt->execute([
+        (new Payment())->record([
             'member_id' => $memberId,
             'subscription_id' => $subscriptionId,
+            'type' => 'membership',
             'amount' => $pricePaid,
             'method' => $this->input('payment_method', 'cash'),
+            'reference_no' => $this->input('reference_no') ?: null,
             'recorded_by' => (int) Auth::user()['id'],
         ]);
 
@@ -423,7 +540,7 @@ final class MemberAdminController extends AdminController
     }
 
     /** Creates a renewal subscription + payment record for one member. Returns false only when an explicitly-supplied coupon code was invalid. */
-    private function renewMember(int $memberId, array $package, string $startDate, float $pricePaid, string $paymentMethod, ?string $couponCode): bool
+    private function renewMember(int $memberId, array $package, string $startDate, float $pricePaid, string $paymentMethod, ?string $couponCode, ?string $referenceNo = null): bool
     {
         $promotion = $this->applyMembershipCoupon($couponCode, $memberId, $pricePaid);
         if ($couponCode && !$promotion) {
@@ -431,6 +548,11 @@ final class MemberAdminController extends AdminController
         }
         if ($promotion) {
             $pricePaid = max(0, round($pricePaid - $promotion['discount'], 2));
+        }
+
+        $settingModel = new Setting();
+        if ($settingModel->getBool('tax_applies_to_membership', false)) {
+            $pricePaid = round($pricePaid * (1 + $settingModel->getFloat('tax_percent') / 100), 2);
         }
 
         $endDate = (new DateTimeImmutable($startDate))
@@ -447,15 +569,13 @@ final class MemberAdminController extends AdminController
             'created_by' => (int) Auth::user()['id'],
         ]);
 
-        $stmt = Database::connection()->prepare(
-            'INSERT INTO payments (member_id, subscription_id, type, amount, method, status, paid_at, recorded_by)
-             VALUES (:member_id, :subscription_id, "membership", :amount, :method, "completed", NOW(), :recorded_by)'
-        );
-        $stmt->execute([
+        (new Payment())->record([
             'member_id' => $memberId,
             'subscription_id' => $subscriptionId,
+            'type' => 'membership',
             'amount' => $pricePaid,
             'method' => $paymentMethod,
+            'reference_no' => $referenceNo,
             'recorded_by' => (int) Auth::user()['id'],
         ]);
 
@@ -470,7 +590,7 @@ final class MemberAdminController extends AdminController
 
     private function collectMemberData(): array
     {
-        return [
+        $data = [
             'dob' => $this->input('dob') ?: null,
             'gender' => $this->input('gender') ?: null,
             'blood_group' => $this->input('blood_group') ?: null,
@@ -481,9 +601,16 @@ final class MemberAdminController extends AdminController
             'fitness_goal' => $this->input('fitness_goal') ?: null,
             'medical_notes' => $this->rawInput('medical_notes') ?: null,
             'join_date' => $this->input('join_date') ?: date('Y-m-d'),
-            'trainer_id' => $this->input('trainer_id') !== '' ? (int) $this->input('trainer_id') : null,
             'locker_number' => $this->input('locker_number') ?: null,
             'status' => $this->input('status', 'active'),
         ];
+
+        // Only touch trainer_id when the trainer module is enabled — the field isn't
+        // rendered in the form when disabled, so never null out an existing assignment.
+        if (Feature::trainerModuleOn()) {
+            $data['trainer_id'] = $this->input('trainer_id') !== '' ? (int) $this->input('trainer_id') : null;
+        }
+
+        return $data;
     }
 }

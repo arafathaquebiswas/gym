@@ -60,7 +60,7 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
 
   <div class="table-responsive">
     <table class="admin-table">
-      <thead><tr><th><input type="checkbox" id="selectAllOrders"></th><th>Order #</th><th>Customer</th><th>Date</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th><input type="checkbox" id="selectAllOrders"></th><th>Order #</th><th>Customer</th><th>Date</th><th>Fulfillment</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead>
       <tbody>
         <?php foreach ($orders as $order): ?>
         <tr>
@@ -68,6 +68,7 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
           <td><?= e($order['order_no']) ?></td>
           <td><?= e($order['customer_name']) ?></td>
           <td><?= format_date($order['created_at'], 'd M Y, h:i A') ?></td>
+          <td><span class="badge text-bg-<?= $order['fulfillment_method'] === 'pickup' ? 'info' : 'secondary' ?>"><i class="bi <?= $order['fulfillment_method'] === 'pickup' ? 'bi-shop' : 'bi-truck' ?>"></i> <?= $order['fulfillment_method'] === 'pickup' ? 'Pickup' : 'Delivery' ?></span></td>
           <td>৳<?= number_format((float) $order['total']) ?></td>
           <td><span class="badge text-bg-<?= $order['payment_status'] === 'paid' ? 'success' : 'secondary' ?>"><?= e(ucfirst($order['payment_status'])) ?></span></td>
           <td><span class="badge text-bg-<?= $statusColors[$order['status']] ?? 'secondary' ?>"><?= e(ucfirst(str_replace('_', ' ', $order['status']))) ?></span></td>

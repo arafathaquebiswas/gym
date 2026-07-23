@@ -1,6 +1,7 @@
 <?php
 /** @var array|null $product */
 /** @var array $categories */
+/** @var array $brands */
 /** @var array $gallery */
 $gallery ??= [];
 $isEdit = $product !== null;
@@ -32,7 +33,13 @@ $checked = fn ($key) => !empty($product[$key]) ? 'checked' : '';
         </div>
         <div class="col-md-3">
           <label>Brand</label>
-          <input type="text" name="brand" class="form-control" value="<?= $v('brand') ?>">
+          <select name="brand_id" class="form-select">
+            <option value="">— None —</option>
+            <?php foreach ($brands as $brand): ?>
+              <option value="<?= (int) $brand['id'] ?>" <?= (string) ($product['brand_id'] ?? '') === (string) $brand['id'] ? 'selected' : '' ?>><?= e($brand['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <a href="<?= url('/admin/brands') ?>" class="text-white-50 small" target="_blank">+ Manage Brands</a>
         </div>
         <div class="col-md-4">
           <label>SKU *</label>
@@ -102,6 +109,10 @@ $checked = fn ($key) => !empty($product[$key]) ? 'checked' : '';
           <input type="checkbox" name="offer_enabled" value="1" class="form-check-input" id="offerEnabled" <?= $checked('offer_enabled') ?>>
           <label class="form-check-label" for="offerEnabled">Offer Enabled</label>
         </div>
+        <div class="col-md-4">
+          <label>Shipping Charge Override (৳) <small class="text-white-50">(leave blank to use the site-wide flat rate)</small></label>
+          <input type="number" step="0.01" min="0" name="shipping_charge" class="form-control" value="<?= $v('shipping_charge') ?>">
+        </div>
       </div>
     </div>
 
@@ -122,11 +133,16 @@ $checked = fn ($key) => !empty($product[$key]) ? 'checked' : '';
         <h6 class="mb-0">Visibility &amp; Availability</h6>
       </div>
       <div class="row g-3 mt-1">
-        <div class="col-md-4 form-check">
-          <input type="checkbox" name="is_active" value="1" class="form-check-input" id="isActive" <?= $isEdit ? $checked('is_active') : 'checked' ?>>
-          <label class="form-check-label" for="isActive">Visible in Store</label>
+        <div class="col-md-4">
+          <label>Status</label>
+          <?php $currentStatus = $product['status'] ?? 'published'; ?>
+          <select name="status" class="form-select">
+            <option value="draft" <?= $currentStatus === 'draft' ? 'selected' : '' ?>>Draft — not shown publicly, still being prepared</option>
+            <option value="published" <?= $currentStatus === 'published' ? 'selected' : '' ?>>Published — live in the store</option>
+            <option value="hidden" <?= $currentStatus === 'hidden' ? 'selected' : '' ?>>Hidden — finished but deliberately not shown</option>
+          </select>
         </div>
-        <div class="col-md-4 form-check">
+        <div class="col-md-4 form-check align-self-end mb-2">
           <input type="checkbox" name="allow_preorder" value="1" class="form-check-input" id="allowPreorder" <?= $checked('allow_preorder') ?>>
           <label class="form-check-label" for="allowPreorder">Allow Pre-Order when out of stock</label>
         </div>

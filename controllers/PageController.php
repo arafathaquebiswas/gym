@@ -40,6 +40,11 @@ final class PageController extends Controller
 
     public function personalTraining(): void
     {
+        if (!Feature::trainerModuleOn()) {
+            flash('danger', 'Personal training is not currently available.');
+            redirect('');
+        }
+
         $trainerModel = new Trainer();
         $galleryModel = new GalleryItem();
         $this->view('personal-training', [

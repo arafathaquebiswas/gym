@@ -6,6 +6,7 @@ $pageTitle = $product['name'];
 /** @var array $ratingSummary */
 /** @var bool $canReview */
 /** @var array $relatedProducts */
+/** @var array $frequentlyBoughtWith */
 /** @var bool $inWishlist */
 /** @var bool $isBestSeller */
 /** @var bool $isPopular */
@@ -17,6 +18,7 @@ $discountPercent = $product['offer_is_live'] && $product['selling_price'] > 0
     ? round((($product['selling_price'] - $product['offer_price']) / $product['selling_price']) * 100)
     : 0;
 $isOutOfStock = $product['stock_qty'] <= 0;
+$extraScripts = ['js/pricing-countdown.js'];
 ?>
 
 <section class="section">
@@ -48,9 +50,9 @@ $isOutOfStock = $product['stock_qty'] <= 0;
         <?php if ($isBestSeller): ?><span class="badge bg-primary">Best Seller</span><?php endif; ?>
         <?php if ($isPopular): ?><span class="badge" style="background:#ff6a1a">Popular</span><?php endif; ?>
         <h1 class="mt-2 mb-1"><?= e($product['name']) ?></h1>
-        <?php if ($product['brand']): ?><p class="text-white-50 mb-2"><?= e($product['brand']) ?></p><?php endif; ?>
+        <?php if (!empty($product['brand_name'])): ?><p class="mb-2"><a href="<?= url('/store?brand=' . urlencode($product['brand_slug'])) ?>" class="text-white-50">by <?= e($product['brand_name']) ?></a></p><?php endif; ?>
 
-        <?php if ($ratingSummary['count'] > 0): ?>
+        <?php if (Feature::on('reviews') && $ratingSummary['count'] > 0): ?>
         <div class="mb-3">
           <?php for ($s = 1; $s <= 5; $s++): ?>
             <i class="bi <?= $s <= round($ratingSummary['average']) ? 'bi-star-fill text-orange' : 'bi-star text-white-50' ?>"></i>
@@ -59,11 +61,27 @@ $isOutOfStock = $product['stock_qty'] <= 0;
         </div>
         <?php endif; ?>
 
-        <div class="d-flex align-items-baseline gap-2 mb-2">
+        <div class="mb-2" data-pkg-card>
           <?php if ($product['offer_is_live']): ?>
-            <div class="pkg-price">৳<?= number_format((float) $product['offer_price']) ?></div>
-            <div class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></div>
-            <span class="badge bg-danger"><?= $discountPercent ?>% OFF</span>
+            <div class="offer-only">
+              <div class="d-flex align-items-baseline gap-2">
+                <div class="pkg-price">৳<?= number_format((float) $product['offer_price']) ?></div>
+                <div class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></div>
+                <span class="badge bg-danger"><?= $discountPercent ?>% OFF</span>
+              </div>
+              <span class="pkg-savings small">Save ৳<?= number_format((float) $product['selling_price'] - (float) $product['offer_price']) ?> (<?= $discountPercent ?>% OFF)</span>
+              <?php if ($product['offer_end_date']): ?>
+              <div class="offer-countdown-label mt-2 small">Offer Ends In</div>
+              <div class="offer-countdown" data-offer-countdown="<?= e($product['offer_end_date']) ?>">
+                <div class="offer-countdown-unit"><div class="num js-days">00</div><div class="label">Days</div></div>
+                <div class="offer-countdown-unit"><div class="num js-hours">00</div><div class="label">Hrs</div></div>
+                <div class="offer-countdown-unit"><div class="num js-minutes">00</div><div class="label">Min</div></div>
+              </div>
+              <?php endif; ?>
+            </div>
+            <div class="offer-expired-fallback d-none">
+              <div class="pkg-price">৳<?= number_format((float) $product['selling_price']) ?></div>
+            </div>
           <?php else: ?>
             <div class="pkg-price">৳<?= number_format((float) $product['selling_price']) ?></div>
           <?php endif; ?>
@@ -78,13 +96,13 @@ $isOutOfStock = $product['stock_qty'] <= 0;
 
         <?php if (!$isOutOfStock): ?>
           <span class="badge bg-success mb-3">In Stock (<?= (int) $product['stock_qty'] ?>)</span>
-        <?php elseif ($product['allow_preorder']): ?>
+        <?php elseif ($product['allow_preorder'] && Feature::on('preorder')): ?>
           <span class="badge bg-warning text-dark mb-3">Pre-Order Available</span>
         <?php else: ?>
           <span class="badge bg-danger mb-3">Out of Stock</span>
         <?php endif; ?>
 
-        <?php if (!$isOutOfStock || $product['allow_preorder']): ?>
+        <?php if (!$isOutOfStock || ($product['allow_preorder'] && Feature::on('preorder'))): ?>
         <form method="post" action="<?= url('/cart/add') ?>" class="d-flex gap-2 align-items-center mb-3">
           <?= Security::csrfField() ?>
           <input type="hidden" name="product_id" value="<?= (int) $product['id'] ?>">
@@ -98,7 +116,7 @@ $isOutOfStock = $product['stock_qty'] <= 0;
           <p class="text-white-50 small">This item is currently unavailable for online purchase.</p>
         <?php endif; ?>
 
-        <?php if (Auth::hasRole('member')): ?>
+        <?php if (Auth::hasRole('member') && Feature::on('wishlist')): ?>
         <form method="post" action="<?= url('/store/' . $product['slug'] . '/wishlist') ?>">
           <?= Security::csrfField() ?>
           <button type="submit" class="btn btn-link text-white-50 p-0">
@@ -122,6 +140,7 @@ $isOutOfStock = $product['stock_qty'] <= 0;
       </div>
     </div>
 
+    <?php if (Feature::on('reviews')): ?>
     <div class="row mt-5">
       <div class="col-lg-8">
         <h4 class="mb-3">Reviews (<?= (int) $ratingSummary['count'] ?>)</h4>
@@ -175,6 +194,26 @@ $isOutOfStock = $product['stock_qty'] <= 0;
         <?php endif; ?>
       </div>
     </div>
+    <?php endif; ?>
+
+    <?php if (!empty($frequentlyBoughtWith)): ?>
+    <div class="mt-5">
+      <h4 class="mb-3">Frequently Bought Together</h4>
+      <div class="row g-4">
+        <?php foreach ($frequentlyBoughtWith as $fbt): ?>
+        <div class="col-6 col-lg-3">
+          <a href="<?= url('/store/' . $fbt['slug']) ?>" class="text-decoration-none">
+            <div class="glass-card product-card">
+              <div class="product-thumb"><?= media_tile($fbt['image'], $fbt['name'], 'bi-box-seam') ?></div>
+              <h6 class="mb-1 text-white"><?= e($fbt['name']) ?></h6>
+              <div class="price">৳<?= number_format((float) $fbt['display_price']) ?></div>
+            </div>
+          </a>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
 
     <?php if (!empty($relatedProducts)): ?>
     <div class="mt-5">

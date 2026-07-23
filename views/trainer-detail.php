@@ -79,9 +79,32 @@ $coverSrc = $trainer['cover_photo']
             </div>
           </div>
           <div class="col-6 col-md-3">
-            <div class="glass-card p-3 text-center">
-              <div class="stat-num text-orange fs-4 fw-bold">৳<?= number_format((float) $trainer['monthly_pt_price']) ?></div>
-              <small class="text-white-50">Personal Training / Month</small>
+            <div class="glass-card p-3 text-center" data-pkg-card>
+              <?php if ($trainer['offer_is_live']): ?>
+                <div class="offer-only">
+                  <div class="stat-num text-orange fs-4 fw-bold">
+                    ৳<?= number_format((float) $trainer['offer_price']) ?>
+                    <small class="text-white-50 text-decoration-line-through fs-6">৳<?= number_format((float) $trainer['monthly_pt_price']) ?></small>
+                  </div>
+                  <small class="text-white-50">Personal Training / Month</small>
+                  <div class="pkg-savings small mt-1">Save ৳<?= number_format((float) $trainer['savings_amount']) ?> (<?= (int) $trainer['savings_percentage'] ?>% OFF)</div>
+                  <?php if ($trainer['offer_end_date']): ?>
+                  <div class="offer-countdown-label mt-2 small">Offer Ends In</div>
+                  <div class="offer-countdown" data-offer-countdown="<?= e($trainer['offer_end_date']) ?>">
+                    <div class="offer-countdown-unit"><div class="num js-days">00</div><div class="label">Days</div></div>
+                    <div class="offer-countdown-unit"><div class="num js-hours">00</div><div class="label">Hrs</div></div>
+                    <div class="offer-countdown-unit"><div class="num js-minutes">00</div><div class="label">Min</div></div>
+                  </div>
+                  <?php endif; ?>
+                </div>
+                <div class="offer-expired-fallback d-none">
+                  <div class="stat-num text-orange fs-4 fw-bold">৳<?= number_format((float) $trainer['monthly_pt_price']) ?></div>
+                  <small class="text-white-50">Personal Training / Month</small>
+                </div>
+              <?php else: ?>
+                <div class="stat-num text-orange fs-4 fw-bold">৳<?= number_format((float) $trainer['monthly_pt_price']) ?></div>
+                <small class="text-white-50">Personal Training / Month</small>
+              <?php endif; ?>
             </div>
           </div>
           <?php if ($trainer['hourly_rate']): ?>
@@ -223,4 +246,4 @@ $coverSrc = $trainer['cover_photo']
   </div>
 </section>
 
-<?php $extraScripts = ['js/trainer-booking.js']; ?>
+<?php $extraScripts = ['js/trainer-booking.js', 'js/pricing-countdown.js']; ?>

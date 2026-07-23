@@ -8,6 +8,7 @@ $pageTitle = 'Home';
 /** @var array $promotions */
 /** @var array $faqs */
 /** @var array $settings */
+/** @var bool $showFreeTrial */
 ?>
 
 <!-- HERO -->
@@ -34,12 +35,49 @@ $pageTitle = 'Home';
 </section>
 
 <!-- CALL TO ACTION -->
-<section class="py-4" style="background: linear-gradient(135deg, var(--ps-orange), var(--ps-orange-dark));">
+<?php if ($showFreeTrial):
+  $ftBg = $settings['free_trial_background_image'] ?? '';
+  $ftBgSrc = $ftBg ? (str_starts_with($ftBg, 'uploads/') ? url($ftBg) : asset('images/' . $ftBg)) : '';
+  $ftStyle = $ftBgSrc
+      ? "background-image:url('" . e($ftBgSrc) . "');background-size:cover;background-position:center;"
+      : "background: linear-gradient(135deg, var(--ps-orange), var(--ps-orange-dark));";
+  $ftLink = $settings['free_trial_button_link'] ?? '';
+?>
+<section class="py-4" style="<?= $ftStyle ?>">
   <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 text-white">
-    <h4 class="mb-0"><i class="bi bi-calendar-check"></i> Free trial session this week — no commitment required.</h4>
-    <a href="<?= url('/contact') ?>" class="btn btn-light fw-bold">Book Your Free Session</a>
+    <h4 class="mb-0"><i class="bi bi-calendar-check"></i> <?= e($settings['free_trial_title'] ?: 'Free Trial Session') ?><?php if (!empty($settings['free_trial_subtitle'])): ?> — <?= e($settings['free_trial_subtitle']) ?><?php endif; ?></h4>
+    <?php if ($ftLink): ?>
+      <a href="<?= str_starts_with($ftLink, 'http') || str_starts_with($ftLink, '/') ? e($ftLink) : url($ftLink) ?>" class="btn btn-light fw-bold"><?= e($settings['free_trial_button_text'] ?: 'Book Your Free Session') ?></a>
+    <?php else: ?>
+      <button type="button" class="btn btn-light fw-bold" data-bs-toggle="modal" data-bs-target="#freeTrialModal"><?= e($settings['free_trial_button_text'] ?: 'Book Your Free Session') ?></button>
+    <?php endif; ?>
   </div>
 </section>
+
+<?php if (!$ftLink): ?>
+<div class="modal fade" id="freeTrialModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title">Claim Your Free Trial Session</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="<?= url('/free-trial/register') ?>">
+        <?= Security::csrfField() ?>
+        <div class="modal-body">
+          <div class="mb-3"><label>Name</label><input type="text" name="name" class="form-control" required></div>
+          <div class="mb-3"><label>Phone</label><input type="text" name="phone" class="form-control" required></div>
+          <div class="mb-3"><label>Email <small class="text-white-50">(optional)</small></label><input type="email" name="email" class="form-control"></div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="submit" class="btn btn-ps">Submit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+<?php endif; ?>
 
 <!-- MEMBERSHIP PLANS -->
 <section class="section" id="plans">
@@ -84,6 +122,7 @@ $pageTitle = 'Home';
 </section>
 
 <!-- TRAINERS -->
+<?php if (Feature::trainerDisplayOn()): ?>
 <section class="section">
   <div class="container text-center">
     <h2 class="section-title">Meet Our Trainers</h2>
@@ -97,8 +136,10 @@ $pageTitle = 'Home';
     </div>
   </div>
 </section>
+<?php endif; ?>
 
 <!-- TRANSFORMATION GALLERY -->
+<?php if (Feature::on('gallery')): ?>
 <section class="section bg-ps-black">
   <div class="container text-center">
     <h2 class="section-title">Transformation Gallery</h2>
@@ -116,6 +157,7 @@ $pageTitle = 'Home';
     <a href="<?= url('/gallery') ?>" class="btn btn-ps-outline mt-4">View Full Gallery</a>
   </div>
 </section>
+<?php endif; ?>
 
 <!-- CUSTOMER REVIEWS -->
 <section class="section">
@@ -136,6 +178,7 @@ $pageTitle = 'Home';
 </section>
 
 <!-- PRODUCTS -->
+<?php if (Feature::on('store')): ?>
 <section class="section bg-ps-black">
   <div class="container text-center">
     <h2 class="section-title">From the Store</h2>
@@ -146,7 +189,7 @@ $pageTitle = 'Home';
         <div class="glass-card product-card text-start">
           <a href="<?= url('/store/' . $product['slug']) ?>" class="text-decoration-none">
             <div class="product-thumb"><?= media_tile($product['image'], $product['name'], 'bi-box-seam') ?></div>
-            <div class="cat-tag"><?= e($product['brand'] ?? '') ?></div>
+            <div class="cat-tag"><?= e($product['brand_name'] ?? '') ?></div>
             <h6 class="mb-1 text-white"><?= e($product['name']) ?></h6>
             <?php if (!empty($product['offer_is_live'])): ?>
               <div class="price">৳<?= number_format((float) $product['offer_price']) ?> <small class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></small></div>
@@ -154,7 +197,7 @@ $pageTitle = 'Home';
               <div class="price">৳<?= number_format((float) $product['selling_price']) ?></div>
             <?php endif; ?>
           </a>
-          <?php if ((int) $product['stock_qty'] > 0 || $product['allow_preorder']): ?>
+          <?php if ((int) $product['stock_qty'] > 0 || ($product['allow_preorder'] && Feature::on('preorder'))): ?>
           <form method="post" action="<?= url('/cart/add') ?>" class="mt-2">
             <?= Security::csrfField() ?>
             <input type="hidden" name="product_id" value="<?= (int) $product['id'] ?>">
@@ -171,9 +214,10 @@ $pageTitle = 'Home';
     <a href="<?= url('/store') ?>" class="btn btn-ps mt-4">Visit Store</a>
   </div>
 </section>
+<?php endif; ?>
 
 <!-- LATEST OFFERS -->
-<?php if (!empty($promotions)): ?>
+<?php if (Feature::on('offers') && !empty($promotions)): ?>
 <section class="section">
   <div class="container text-center">
     <h2 class="section-title">Latest Offers</h2>
@@ -359,6 +403,7 @@ $pageTitle = 'Home';
         </div>
       </div>
       <?php endif; ?>
+      <?php if (Feature::on('contact_form')): ?>
       <div class="col-lg-6">
         <div class="glass-card p-4">
           <h5 class="mb-3">Send Us a Message</h5>
@@ -385,6 +430,7 @@ $pageTitle = 'Home';
           </form>
         </div>
       </div>
+      <?php endif; ?>
     </div>
   </div>
 </section>

@@ -26,7 +26,7 @@
           <span>Payment Method</span><span><?= e(strtoupper(str_replace('_', ' ', $order['payment_method']))) ?></span>
         </div>
         <div class="d-flex justify-content-between small text-white-50">
-          <span>Delivering to</span><span><?= e($order['delivery_address'] . ', ' . $order['delivery_city']) ?></span>
+          <span><?= $order['fulfillment_method'] === 'pickup' ? 'Pickup at' : 'Delivering to' ?></span><span><?= e(order_delivery_label($order)) ?></span>
         </div>
       </div>
 

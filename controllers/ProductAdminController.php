@@ -9,6 +9,8 @@ final class ProductAdminController extends AdminController
         $filters = [
             'search' => $this->input('search'),
             'category_id' => $this->input('category_id'),
+            'brand_id' => $this->input('brand_id'),
+            'status' => $this->input('status'),
             'low_stock' => $this->input('low_stock'),
             'sort' => $this->input('sort'),
         ];
@@ -24,6 +26,7 @@ final class ProductAdminController extends AdminController
             'totalPages' => $result['totalPages'],
             'filters' => $filters,
             'categories' => (new ProductCategory())->allWithParent(),
+            'brands' => (new Brand())->all(),
             'stats' => $productModel->adminStatistics(),
         ]);
     }
@@ -34,6 +37,7 @@ final class ProductAdminController extends AdminController
             'pageTitle' => 'Add Product',
             'product' => null,
             'categories' => (new ProductCategory())->allWithParent(),
+            'brands' => (new Brand())->all(),
         ]);
     }
 
@@ -76,6 +80,7 @@ final class ProductAdminController extends AdminController
             'pageTitle' => 'Edit Product',
             'product' => $product,
             'categories' => (new ProductCategory())->allWithParent(),
+            'brands' => (new Brand())->all(),
             'gallery' => (new ProductImage())->forProduct((int) $id),
         ]);
     }
@@ -205,11 +210,15 @@ final class ProductAdminController extends AdminController
         $count = 0;
 
         switch ($action) {
-            case 'enable':
-            case 'disable':
+            case 'set_status':
+                $status = $this->input('bulk_status');
+                if (!in_array($status, Product::STATUSES, true)) {
+                    flash('danger', 'Invalid status.');
+                    redirect('admin/products');
+                }
                 foreach ($ids as $id) {
                     if ($productModel->find($id)) {
-                        $productModel->update($id, ['is_active' => $action === 'enable' ? 1 : 0]);
+                        $productModel->setStatus($id, $status);
                         $count++;
                     }
                 }
@@ -269,7 +278,7 @@ final class ProductAdminController extends AdminController
         redirect('admin/products');
     }
 
-    public function toggleActive(string $id): void
+    public function setStatus(string $id): void
     {
         Security::requireCsrf();
 
@@ -278,10 +287,16 @@ final class ProductAdminController extends AdminController
             $this->abort404();
         }
 
-        $productModel->toggleActive((int) $id);
-        $this->logActivity('product_active_toggled', "Toggled active/visible for product #$id");
+        $status = $this->input('status');
+        if (!in_array($status, Product::STATUSES, true)) {
+            flash('danger', 'Invalid status.');
+            redirect('admin/products');
+        }
 
-        flash('success', 'Visibility updated.');
+        $productModel->setStatus((int) $id, $status);
+        $this->logActivity('product_status_changed', "Set product #$id status to $status");
+
+        flash('success', 'Status updated.');
         redirect('admin/products');
     }
 
@@ -353,10 +368,10 @@ final class ProductAdminController extends AdminController
     {
         return [
             'category_id' => (int) $this->input('category_id'),
+            'brand_id' => $this->input('brand_id') !== '' ? (int) $this->input('brand_id') : null,
             'sku' => $this->input('sku'),
             'barcode' => $this->input('barcode') ?: null,
             'name' => $this->input('name'),
-            'brand' => $this->input('brand'),
             'description' => $this->rawInput('description'),
             'buying_price' => (float) $this->input('buying_price', '0'),
             'selling_price' => (float) $this->input('selling_price', '0'),
@@ -367,10 +382,11 @@ final class ProductAdminController extends AdminController
             'offer_enabled' => $this->input('offer_enabled') === '1' ? 1 : 0,
             'offer_start_date' => $this->input('offer_start_date') ?: null,
             'offer_end_date' => $this->input('offer_end_date') ?: null,
+            'shipping_charge' => $this->input('shipping_charge') !== '' ? (float) $this->input('shipping_charge') : null,
             'ingredients' => $this->rawInput('ingredients') ?: null,
             'nutrition_facts' => $this->rawInput('nutrition_facts') ?: null,
             'allow_preorder' => $this->input('allow_preorder') === '1' ? 1 : 0,
-            'is_active' => $this->input('is_active') === '1' ? 1 : 0,
+            'status' => in_array($this->input('status'), Product::STATUSES, true) ? $this->input('status') : 'draft',
         ];
     }
 

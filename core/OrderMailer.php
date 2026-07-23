@@ -48,7 +48,7 @@ final class OrderMailer
             <p style="text-align:right;margin:4px 0;">Tax: ' . money((float) $order['tax']) . '</p>
             <p style="text-align:right;margin:4px 0;font-size:18px;font-weight:bold;color:#ff6a1a;">Total: ' . money((float) $order['total']) . '</p>
             <p>Payment Method: <strong>' . e(strtoupper(str_replace('_', ' ', $order['payment_method']))) . '</strong></p>
-            <p>Delivering to: ' . e($order['delivery_address'] . ', ' . $order['delivery_city']) . '</p>
+            <p>' . ($order['fulfillment_method'] === 'pickup' ? 'Pickup at' : 'Delivering to') . ': ' . e(order_delivery_label($order)) . '</p>
             <p style="margin-top:24px;">
                 <a href="' . e($trackingLink) . '" style="background:#ff6a1a;color:#fff;padding:10px 20px;text-decoration:none;border-radius:6px;">Track Your Order</a>
             </p>

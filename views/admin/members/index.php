@@ -38,12 +38,14 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
         <option value="<?= e($value) ?>" <?= $filters['status'] === $value ? 'selected' : '' ?>><?= e($label) ?></option>
       <?php endforeach; ?>
     </select>
+    <?php if (Feature::trainerModuleOn()): ?>
     <select name="trainer_id" class="form-select form-select-sm">
       <option value="">All Trainers</option>
       <?php foreach ($trainers as $trainer): ?>
         <option value="<?= (int) $trainer['id'] ?>" <?= (string) $filters['trainer_id'] === (string) $trainer['id'] ? 'selected' : '' ?>><?= e($trainer['name']) ?></option>
       <?php endforeach; ?>
     </select>
+    <?php endif; ?>
     <select name="sort" class="form-select form-select-sm">
       <option value="">Newest First</option>
       <option value="name" <?= $filters['sort'] === 'name' ? 'selected' : '' ?>>Name (A-Z)</option>
@@ -67,7 +69,7 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
     <span class="text-white-50 small"><span id="bulkCount">0</span> selected</span>
     <select id="bulkActionSelect" class="form-select form-select-sm" style="max-width:180px">
       <option value="renew">Renew Membership</option>
-      <option value="assign_trainer">Assign Trainer</option>
+      <?php if (Feature::trainerModuleOn()): ?><option value="assign_trainer">Assign Trainer</option><?php endif; ?>
       <option value="assign_locker">Assign Locker</option>
       <option value="notify">Send Notification</option>
       <option value="delete">Delete</option>
@@ -79,20 +81,25 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
       <?php endforeach; ?>
     </select>
     <input type="date" id="bulkStartDate" class="form-control form-control-sm bulk-extra" style="max-width:160px" value="<?= date('Y-m-d') ?>">
-    <select id="bulkPaymentMethod" class="form-select form-select-sm bulk-extra" style="max-width:150px">
+    <select id="bulkPaymentMethod" class="form-select form-select-sm bulk-extra payment-method-select" style="max-width:150px">
+      <option value="" disabled selected>Select Payment Method</option>
       <option value="cash">Cash</option>
       <option value="card">Card</option>
       <option value="bkash">bKash</option>
       <option value="nagad">Nagad</option>
+      <option value="rocket">Rocket</option>
       <option value="bank_transfer">Bank Transfer</option>
     </select>
+    <input type="text" id="bulkReferenceNo" class="form-control form-control-sm bulk-extra reference-no-input d-none" style="max-width:170px" placeholder="Transaction/Reference ID">
     <input type="text" id="bulkCouponCode" class="form-control form-control-sm bulk-extra" style="max-width:150px" placeholder="Coupon (optional)">
 
+    <?php if (Feature::trainerModuleOn()): ?>
     <select id="bulkTrainerSelect" class="form-select form-select-sm bulk-extra" style="max-width:200px">
       <?php foreach ($trainers as $trainer): ?>
         <option value="<?= (int) $trainer['id'] ?>"><?= e($trainer['name']) ?></option>
       <?php endforeach; ?>
     </select>
+    <?php endif; ?>
 
     <input type="text" id="bulkNotifySubject" class="form-control form-control-sm bulk-extra" style="max-width:200px" placeholder="Subject">
     <input type="text" id="bulkNotifyMessage" class="form-control form-control-sm bulk-extra" style="max-width:260px" placeholder="Message">
@@ -176,12 +183,24 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
   var form = document.getElementById('bulkForm');
 
   var fieldsByAction = {
-    renew: ['bulkPackageSelect', 'bulkStartDate', 'bulkPaymentMethod', 'bulkCouponCode'],
+    renew: ['bulkPackageSelect', 'bulkStartDate', 'bulkPaymentMethod', 'bulkReferenceNo', 'bulkCouponCode'],
     assign_trainer: ['bulkTrainerSelect'],
     notify: ['bulkNotifySubject', 'bulkNotifyMessage'],
     delete: [],
     assign_locker: [],
   };
+  var NO_REFERENCE_METHODS = ['cash', 'card'];
+  var bulkPaymentMethod = document.getElementById('bulkPaymentMethod');
+  var bulkReferenceNo = document.getElementById('bulkReferenceNo');
+
+  function updateBulkReferenceVisibility() {
+    if (!bulkPaymentMethod || !bulkReferenceNo) return;
+    var needsReference = bulkPaymentMethod.value !== '' && NO_REFERENCE_METHODS.indexOf(bulkPaymentMethod.value) === -1;
+    bulkReferenceNo.classList.toggle('d-none', !needsReference);
+  }
+  if (bulkPaymentMethod) {
+    bulkPaymentMethod.addEventListener('change', updateBulkReferenceVisibility);
+  }
 
   function checked() {
     return Array.prototype.slice.call(document.querySelectorAll('.row-check:checked'));
@@ -202,6 +221,9 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
       var el = document.getElementById(id);
       if (el) el.classList.remove('d-none');
     });
+    if (action === 'renew') {
+      updateBulkReferenceVisibility();
+    }
     if (action === 'assign_locker' && checked().length > 0) {
       buildLockerInputs();
       lockerPanel.classList.remove('d-none');
@@ -266,11 +288,19 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
       if (!confirm('Delete ' + n + ' selected member(s)? This removes their login, subscriptions, and attendance history.')) return;
       submitBulk('delete');
     } else if (action === 'renew') {
+      var method = document.getElementById('bulkPaymentMethod').value;
+      if (!method) { alert('Please select a payment method.'); return; }
+      var reference = document.getElementById('bulkReferenceNo').value.trim();
+      if (NO_REFERENCE_METHODS.indexOf(method) === -1 && !reference) {
+        alert('Please enter the transaction/reference ID for the selected payment method.');
+        return;
+      }
       if (!confirm('Renew membership for ' + n + ' selected member(s)?')) return;
       submitBulk('renew', [
         ['package_id', document.getElementById('bulkPackageSelect').value],
         ['start_date', document.getElementById('bulkStartDate').value],
-        ['payment_method', document.getElementById('bulkPaymentMethod').value],
+        ['payment_method', method],
+        ['reference_no', reference],
         ['coupon_code', document.getElementById('bulkCouponCode').value],
       ]);
     } else if (action === 'assign_trainer') {

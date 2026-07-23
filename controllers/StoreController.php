@@ -4,16 +4,21 @@ final class StoreController extends Controller
 {
     public function index(): void
     {
+        if (!Feature::on('store')) {
+            $this->abort404();
+        }
+
         $productModel = new Product();
         $categoryModel = new ProductCategory();
 
         $page = max(1, (int) $this->input('page', '1'));
         $category = $this->input('category') ?: null;
+        $brand = $this->input('brand') ?: null;
         $search = $this->input('q') ?: null;
         $inStockOnly = $this->input('in_stock') === '1';
         $sort = $this->input('sort') ?: null;
 
-        $result = $productModel->paginate($page, 12, $category, $search, $inStockOnly, $sort);
+        $result = $productModel->paginate($page, 12, $category, $search, $inStockOnly, $sort, $brand);
 
         $this->view('store', [
             'products' => $result['items'],
@@ -22,7 +27,9 @@ final class StoreController extends Controller
             'perPage' => $result['per_page'],
             'totalPages' => (int) ceil($result['total'] / $result['per_page']),
             'categories' => $categoryModel->all(),
+            'brands' => (new Brand())->all(),
             'activeCategory' => $category,
+            'activeBrand' => $brand,
             'search' => $search,
             'inStockOnly' => $inStockOnly,
             'sort' => $sort,
@@ -33,6 +40,10 @@ final class StoreController extends Controller
 
     public function show(string $slug): void
     {
+        if (!Feature::on('store')) {
+            $this->abort404();
+        }
+
         $productModel = new Product();
         $product = $productModel->findBySlug($slug);
 
@@ -55,6 +66,7 @@ final class StoreController extends Controller
             'ratingSummary' => $reviewModel->averageRating((int) $product['id']),
             'canReview' => $canReview,
             'relatedProducts' => $productModel->relatedProducts((int) $product['id'], (int) $product['category_id']),
+            'frequentlyBoughtWith' => $productModel->frequentlyBoughtWith((int) $product['id']),
             'inWishlist' => Auth::hasRole('member') ? (new Wishlist())->has((int) Auth::user()['id'], (int) $product['id']) : false,
             'isBestSeller' => in_array((int) $product['id'], $productModel->bestSellerIds(20), true),
             'isPopular' => in_array((int) $product['id'], $productModel->popularIds(20), true),
@@ -65,6 +77,10 @@ final class StoreController extends Controller
     {
         Security::requireCsrf();
         Auth::requireRole('member');
+
+        if (!Feature::on('reviews')) {
+            $this->abort404();
+        }
 
         $product = (new Product())->findBySlug($slug);
         if (!$product) {
@@ -110,6 +126,10 @@ final class StoreController extends Controller
     {
         Security::requireCsrf();
         Auth::requireRole('member');
+
+        if (!Feature::on('wishlist')) {
+            $this->abort404();
+        }
 
         $product = (new Product())->findBySlug($slug);
         if (!$product) {

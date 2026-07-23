@@ -26,6 +26,7 @@ $router->get('/blog', [BlogController::class, 'index']);
 $router->get('/blog/{slug}', [BlogController::class, 'show']);
 $router->get('/faq', [PageController::class, 'faq']);
 $router->get('/contact', [ContactController::class, 'index']);
+$router->post('/free-trial/register', [FreeTrialController::class, 'register']);
 $router->get('/trainers/{slug}', [TrainerController::class, 'show']);
 $router->post('/trainers/{slug}/book', [TrainerController::class, 'book']);
 $router->post('/trainers/{slug}/review', [TrainerController::class, 'submitReview']);
@@ -124,6 +125,8 @@ $router->get('/admin/members/{id}', [MemberAdminController::class, 'show']);
 $router->post('/admin/members/{id}/renew', [MemberAdminController::class, 'renew']);
 $router->post('/admin/members/{id}/checkin', [MemberAdminController::class, 'checkIn']);
 $router->post('/admin/members/{id}/checkout', [MemberAdminController::class, 'checkOut']);
+$router->post('/admin/members/{id}/charge-trainer-fee', [MemberAdminController::class, 'chargeTrainerFee']);
+$router->post('/admin/members/{id}/charge-locker-fine', [MemberAdminController::class, 'chargeLockerFine']);
 
 // ---- Admin: Store (Products & Categories) ------------------------------------------
 $router->get('/admin/products', [ProductAdminController::class, 'index']);
@@ -133,7 +136,7 @@ $router->post('/admin/products/bulk', [ProductAdminController::class, 'bulkActio
 $router->get('/admin/products/{id}/edit', [ProductAdminController::class, 'edit']);
 $router->post('/admin/products/{id}', [ProductAdminController::class, 'update']);
 $router->post('/admin/products/{id}/delete', [ProductAdminController::class, 'destroy']);
-$router->post('/admin/products/{id}/toggle-active', [ProductAdminController::class, 'toggleActive']);
+$router->post('/admin/products/{id}/status', [ProductAdminController::class, 'setStatus']);
 $router->post('/admin/products/{id}/adjust-stock', [ProductAdminController::class, 'adjustStock']);
 $router->post('/admin/products/{id}/gallery', [ProductAdminController::class, 'galleryUpload']);
 $router->post('/admin/products/{id}/gallery/{imageId}/delete', [ProductAdminController::class, 'galleryDelete']);
@@ -142,6 +145,28 @@ $router->get('/admin/categories', [ProductCategoryAdminController::class, 'index
 $router->post('/admin/categories', [ProductCategoryAdminController::class, 'store']);
 $router->post('/admin/categories/{id}', [ProductCategoryAdminController::class, 'update']);
 $router->post('/admin/categories/{id}/delete', [ProductCategoryAdminController::class, 'destroy']);
+
+$router->get('/admin/brands', [BrandAdminController::class, 'index']);
+$router->post('/admin/brands', [BrandAdminController::class, 'store']);
+$router->post('/admin/brands/{id}', [BrandAdminController::class, 'update']);
+$router->post('/admin/brands/{id}/delete', [BrandAdminController::class, 'destroy']);
+
+$router->get('/admin/delivery-zones', [DeliveryZoneAdminController::class, 'index']);
+$router->post('/admin/delivery-zones', [DeliveryZoneAdminController::class, 'store']);
+$router->post('/admin/delivery-zones/{id}', [DeliveryZoneAdminController::class, 'update']);
+$router->post('/admin/delivery-zones/{id}/delete', [DeliveryZoneAdminController::class, 'destroy']);
+
+$router->get('/admin/delivery-time-slots', [DeliveryTimeSlotAdminController::class, 'index']);
+$router->post('/admin/delivery-time-slots', [DeliveryTimeSlotAdminController::class, 'store']);
+$router->post('/admin/delivery-time-slots/{id}', [DeliveryTimeSlotAdminController::class, 'update']);
+$router->post('/admin/delivery-time-slots/{id}/delete', [DeliveryTimeSlotAdminController::class, 'destroy']);
+
+$router->get('/admin/delivery-staff', [DeliveryStaffAdminController::class, 'index']);
+$router->get('/admin/delivery-staff/create', [DeliveryStaffAdminController::class, 'create']);
+$router->post('/admin/delivery-staff', [DeliveryStaffAdminController::class, 'store']);
+$router->get('/admin/delivery-staff/{id}/edit', [DeliveryStaffAdminController::class, 'edit']);
+$router->post('/admin/delivery-staff/{id}', [DeliveryStaffAdminController::class, 'update']);
+$router->post('/admin/delivery-staff/{id}/delete', [DeliveryStaffAdminController::class, 'destroy']);
 
 $router->get('/admin/products/sales', [ProductAdminController::class, 'sales']);
 
@@ -177,6 +202,7 @@ $router->get('/admin/reports/stock', [ReportController::class, 'stock']);
 // ---- Admin: Settings ---------------------------------------------------------------
 $router->get('/admin/settings', [SettingsAdminController::class, 'index']);
 $router->post('/admin/settings', [SettingsAdminController::class, 'update']);
+$router->get('/admin/settings/free-trial-registrations', [SettingsAdminController::class, 'freeTrialRegistrations']);
 $router->get('/admin/settings/backup', [SettingsAdminController::class, 'backup']);
 $router->post('/admin/settings/restore', [SettingsAdminController::class, 'restore']);
 

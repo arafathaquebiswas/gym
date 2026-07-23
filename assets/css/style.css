@@ -433,3 +433,13 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
   .section { padding: 3.5rem 0; }
   .hero { padding: 6rem 0 3rem; }
 }
+
+/* ---------- Password show/hide toggle ---------- */
+.password-toggle-wrap { position: relative; }
+.password-toggle-input { padding-right: 2.75rem !important; }
+.password-toggle-btn {
+  position: absolute; top: 50%; right: .5rem; transform: translateY(-50%);
+  background: none; border: none; padding: .25rem .4rem;
+  color: var(--ps-text-muted, #9aa0a6); line-height: 1; cursor: pointer;
+}
+.password-toggle-btn:hover { color: var(--ps-orange, #ff6a1a); }

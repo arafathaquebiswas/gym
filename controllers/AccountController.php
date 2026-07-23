@@ -250,6 +250,9 @@ final class AccountController extends Controller
     public function wishlist(): void
     {
         Auth::requireRole('member');
+        if (!Feature::on('wishlist')) {
+            $this->abort404();
+        }
         $this->view('account/wishlist', [
             'pageTitle' => 'My Wishlist',
             'items' => (new Wishlist())->forUser((int) Auth::user()['id']),
@@ -260,6 +263,10 @@ final class AccountController extends Controller
     {
         Security::requireCsrf();
         Auth::requireRole('member');
+
+        if (!Feature::on('wishlist')) {
+            $this->abort404();
+        }
 
         (new Wishlist())->remove((int) Auth::user()['id'], (int) $this->input('product_id'));
         flash('success', 'Removed from wishlist.');

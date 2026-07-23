@@ -51,12 +51,16 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
           <div class="text-white-50 small mt-2">Payment: <?= e(ucfirst($order['payment_status'])) ?> (<?= e(strtoupper(str_replace('_', ' ', $order['payment_method']))) ?>)</div>
         </div>
         <div class="glass-card p-4">
-          <h6 class="mb-2">Delivery Address</h6>
+          <h6 class="mb-2"><?= $order['fulfillment_method'] === 'pickup' ? 'Store Pickup' : 'Delivery Address' ?></h6>
+          <?php if ($order['fulfillment_method'] === 'pickup'): ?>
+          <p class="text-white-50 small mb-0"><?= e(order_delivery_label($order)) ?></p>
+          <?php else: ?>
           <p class="text-white-50 small mb-0">
             <?= e($order['delivery_address']) ?><br>
             <?= e($order['delivery_city']) ?><?= $order['delivery_area'] ? ', ' . e($order['delivery_area']) : '' ?><br>
             <?= $order['delivery_postal_code'] ? e($order['delivery_postal_code']) : '' ?>
           </p>
+          <?php endif; ?>
         </div>
       </div>
     </div>

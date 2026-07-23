@@ -216,7 +216,7 @@ final class ReportController extends AdminController
         $stmt = Database::connection()->query(
             "SELECT p.*, c.name AS category_name FROM products p
              JOIN product_categories c ON c.id = p.category_id
-             WHERE p.is_active = 1
+             WHERE p.status != 'draft'
              ORDER BY (p.stock_qty <= p.min_stock) DESC, p.stock_qty ASC"
         );
         $products = $stmt->fetchAll();

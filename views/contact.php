@@ -40,6 +40,7 @@
         <?php endif; ?>
       </div>
       <div class="col-lg-8">
+        <?php if (Feature::on('contact_form')): ?>
         <div class="glass-card p-4 mb-4">
           <h5 class="mb-3">Send Us a Message</h5>
           <div id="contactAlert" class="alert d-none"></div>
@@ -72,6 +73,7 @@
             </div>
           </form>
         </div>
+        <?php endif; ?>
         <?php if (!empty($settings['google_map_embed'])): ?>
         <div class="map-frame">
           <iframe src="<?= e($settings['google_map_embed']) ?>" width="100%" height="350" style="border:0;" loading="lazy"></iframe>

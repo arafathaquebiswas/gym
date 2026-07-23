@@ -11,6 +11,15 @@ final class SettingsAdminController extends AdminController
         'membership_grace_days', 'auto_expire_memberships',
         'shipping_flat_rate', 'free_shipping_min_amount', 'tax_percent', 'delivery_estimate_text',
         'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from_email', 'smtp_from_name',
+        // Feature flags — every one of these gates a whole module/section; see core/Feature.php.
+        'feature_trainer_module', 'feature_trainer_fee', 'feature_trainer_booking', 'feature_trainer_display',
+        'feature_store', 'feature_blog', 'feature_gallery', 'feature_wishlist', 'feature_reviews',
+        'feature_coupons', 'feature_guest_checkout', 'feature_preorder', 'feature_offers',
+        'feature_contact_form', 'feature_membership_sales',
+        'shipping_enabled', 'tax_enabled', 'tax_applies_to_membership', 'tax_applies_to_trainer_fee',
+        'free_trial_enabled', 'free_trial_title', 'free_trial_subtitle', 'free_trial_button_text',
+        'free_trial_button_link', 'free_trial_start_date', 'free_trial_end_date', 'free_trial_max_registrations',
+        'feature_delivery', 'feature_pickup',
     ];
 
     public function index(): void
@@ -20,6 +29,8 @@ final class SettingsAdminController extends AdminController
         foreach (self::KEYS as $key) {
             $settings[$key] = $settingModel->get($key);
         }
+        $settings['gym_logo'] = $settingModel->get('gym_logo');
+        $settings['free_trial_background_image'] = $settingModel->get('free_trial_background_image');
 
         $this->adminView('settings/index', [
             'pageTitle' => 'Settings',
@@ -45,6 +56,11 @@ final class SettingsAdminController extends AdminController
             $pairs['gym_logo'] = $logoPath;
         }
 
+        $freeTrialBgPath = Upload::handle($_FILES['free_trial_background_image'] ?? [], 'settings');
+        if ($freeTrialBgPath) {
+            $pairs['free_trial_background_image'] = $freeTrialBgPath;
+        }
+
         // The public footer (views/partials/footer.php) reads one combined "business_hours"
         // string — the two-field form above is friendlier to edit, so combine on save.
         $weekday = $pairs['business_hours_weekday'] ?? '';
@@ -58,6 +74,20 @@ final class SettingsAdminController extends AdminController
 
         flash('success', 'Settings saved successfully.');
         redirect('admin/settings');
+    }
+
+    public function freeTrialRegistrations(): void
+    {
+        $page = max(1, (int) $this->input('page', '1'));
+        $result = (new FreeTrialRegistration())->paginateForAdmin($page);
+
+        $this->adminView('settings/free-trial-registrations', [
+            'pageTitle' => 'Free Trial Registrations',
+            'registrations' => $result['items'],
+            'total' => $result['total'],
+            'page' => $result['page'],
+            'totalPages' => $result['totalPages'],
+        ]);
     }
 
     public function backup(): void

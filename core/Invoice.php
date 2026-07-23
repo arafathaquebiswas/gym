@@ -34,7 +34,7 @@ final class Invoice
         $customerName = $order['account_name'] ?? $order['guest_name'] ?? '—';
         $pdf->text(50, $y, 'Customer: ' . $customerName, 10);
         $y += 14;
-        $pdf->text(50, $y, 'Delivery Address: ' . $order['delivery_address'] . ', ' . $order['delivery_city'], 10);
+        $pdf->text(50, $y, ($order['fulfillment_method'] === 'pickup' ? 'Pickup at: ' : 'Delivery Address: ') . order_delivery_label($order), 10);
         $y += 14;
         $pdf->text(50, $y, 'Order Status: ' . ucfirst(str_replace('_', ' ', $order['status'])), 10);
         $y += 20;

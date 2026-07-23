@@ -96,6 +96,7 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
             <?php endforeach; ?>
           </select>
         </div>
+        <?php if (Feature::trainerModuleOn()): ?>
         <div class="col-md-3">
           <label>Assigned Trainer</label>
           <select name="trainer_id" class="form-select">
@@ -105,6 +106,7 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
             <?php endforeach; ?>
           </select>
         </div>
+        <?php endif; ?>
         <div class="col-md-3">
           <label>Locker Number</label>
           <input type="text" name="locker_number" class="form-control" value="<?= $v('locker_number') ?>">
@@ -118,7 +120,7 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
       <div class="row g-3">
         <div class="col-md-4">
           <label>Package</label>
-          <select name="package_id" class="form-select">
+          <select name="package_id" id="initialPackageSelect" class="form-select">
             <option value="">— None —</option>
             <?php foreach ($packages as $package): ?>
               <option value="<?= (int) $package['id'] ?>"><?= e($package['name']) ?> (৳<?= number_format((float) $package['display_price']) ?>)</option>
@@ -130,8 +132,9 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
           <input type="number" step="0.01" min="0" name="price_paid" class="form-control" placeholder="Defaults to package price">
         </div>
         <div class="col-md-4">
-          <label>Payment Method</label>
-          <select name="payment_method" class="form-select">
+          <label>Payment Method <small class="text-white-50">(required if a package is selected)</small></label>
+          <select name="payment_method" id="initialPaymentMethodSelect" class="form-select payment-method-select">
+            <option value="" selected>— Select —</option>
             <option value="cash">Cash</option>
             <option value="card">Card</option>
             <option value="bkash">bKash</option>
@@ -140,12 +143,26 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
             <option value="bank_transfer">Bank Transfer</option>
           </select>
         </div>
+        <div class="col-md-4 reference-no-wrap d-none">
+          <label>Transaction / Reference ID</label>
+          <input type="text" name="reference_no" class="form-control reference-no-input" placeholder="e.g. bKash transaction ID">
+        </div>
         <div class="col-md-4">
           <label>Coupon Code <small class="text-white-50">(optional)</small></label>
           <input type="text" name="coupon_code" class="form-control text-uppercase" placeholder="e.g. SAVE10">
         </div>
       </div>
     </div>
+    <script>
+    (function () {
+      var pkg = document.getElementById('initialPackageSelect');
+      var method = document.getElementById('initialPaymentMethodSelect');
+      if (!pkg || !method) return;
+      pkg.addEventListener('change', function () {
+        method.required = pkg.value !== '';
+      });
+    })();
+    </script>
     <?php endif; ?>
 
     <div class="admin-form-section">

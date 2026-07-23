@@ -3,26 +3,32 @@
 final class Product extends Model
 {
     private const WRITABLE_FIELDS = [
-        'category_id', 'supplier_id', 'sku', 'barcode', 'name', 'slug', 'brand', 'description',
+        'category_id', 'brand_id', 'supplier_id', 'sku', 'barcode', 'name', 'slug', 'description',
         'buying_price', 'selling_price', 'stock_qty', 'min_stock', 'expiry_date', 'image',
-        'offer_price', 'offer_enabled', 'offer_start_date', 'offer_end_date', 'is_active',
-        'ingredients', 'nutrition_facts', 'allow_preorder',
+        'offer_price', 'offer_enabled', 'offer_start_date', 'offer_end_date', 'status',
+        'ingredients', 'nutrition_facts', 'allow_preorder', 'shipping_charge',
     ];
 
-    public function paginate(int $page, int $perPage, ?string $categorySlug = null, ?string $search = null, bool $inStockOnly = false, ?string $sort = null): array
+    public const STATUSES = ['draft', 'published', 'hidden'];
+
+    public function paginate(int $page, int $perPage, ?string $categorySlug = null, ?string $search = null, bool $inStockOnly = false, ?string $sort = null, ?string $brandSlug = null): array
     {
         $page = max(1, $page);
         $offset = ($page - 1) * $perPage;
 
-        $where = ['p.is_active = 1'];
+        $where = ["p.status = 'published'"];
         $params = [];
 
         if ($categorySlug) {
             $where[] = 'c.slug = :category_slug';
             $params['category_slug'] = $categorySlug;
         }
+        if ($brandSlug) {
+            $where[] = 'b.slug = :brand_slug';
+            $params['brand_slug'] = $brandSlug;
+        }
         if ($search) {
-            $where[] = '(p.name LIKE :search_name OR p.brand LIKE :search_brand)';
+            $where[] = '(p.name LIKE :search_name OR b.name LIKE :search_brand)';
             $params['search_name'] = '%' . $search . '%';
             $params['search_brand'] = '%' . $search . '%';
         }
@@ -30,9 +36,10 @@ final class Product extends Model
             $where[] = 'p.stock_qty > 0';
         }
         $whereSql = implode(' AND ', $where);
+        $joinSql = 'JOIN product_categories c ON c.id = p.category_id LEFT JOIN brands b ON b.id = p.brand_id';
 
         $countStmt = $this->db->prepare(
-            "SELECT COUNT(*) FROM products p JOIN product_categories c ON c.id = p.category_id WHERE $whereSql"
+            "SELECT COUNT(*) FROM products p $joinSql WHERE $whereSql"
         );
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
@@ -45,8 +52,8 @@ final class Product extends Model
         $orderBy = $sortMap[$sort ?? ''] ?? 'p.created_at DESC';
 
         $stmt = $this->db->prepare(
-            "SELECT p.*, c.name AS category_name, c.slug AS category_slug
-             FROM products p JOIN product_categories c ON c.id = p.category_id
+            "SELECT p.*, c.name AS category_name, c.slug AS category_slug, b.name AS brand_name, b.slug AS brand_slug
+             FROM products p $joinSql
              WHERE $whereSql
              ORDER BY $orderBy
              LIMIT :limit OFFSET :offset"
@@ -64,9 +71,9 @@ final class Product extends Model
     public function findBySlug(string $slug): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT p.*, c.name AS category_name, c.slug AS category_slug
-             FROM products p JOIN product_categories c ON c.id = p.category_id
-             WHERE p.slug = :slug AND p.is_active = 1 LIMIT 1'
+            "SELECT p.*, c.name AS category_name, c.slug AS category_slug, b.name AS brand_name, b.slug AS brand_slug
+             FROM products p JOIN product_categories c ON c.id = p.category_id LEFT JOIN brands b ON b.id = p.brand_id
+             WHERE p.slug = :slug AND p.status = 'published' LIMIT 1"
         );
         $stmt->execute(['slug' => $slug]);
         $product = $stmt->fetch();
@@ -76,22 +83,24 @@ final class Product extends Model
     public function featured(int $limit = 8): array
     {
         $stmt = $this->db->prepare(
-            'SELECT * FROM products WHERE is_active = 1 ORDER BY created_at DESC LIMIT :limit'
+            "SELECT p.*, b.name AS brand_name, b.slug AS brand_slug FROM products p
+             LEFT JOIN brands b ON b.id = p.brand_id
+             WHERE p.status = 'published' ORDER BY p.created_at DESC LIMIT :limit"
         );
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
     }
 
-    /** All sellable products for the POS screen's client-side search/cart. */
+    /** All sellable products for the POS screen's client-side search/cart — published or hidden (staff can still sell in person), never draft. */
     public function allActiveInStock(): array
     {
         $stmt = $this->db->query(
-            'SELECT p.id, p.name, p.sku, p.barcode, p.selling_price, p.offer_price, p.offer_enabled,
+            "SELECT p.id, p.name, p.sku, p.barcode, p.selling_price, p.offer_price, p.offer_enabled,
                     p.offer_start_date, p.offer_end_date, p.stock_qty, c.name AS category_name
              FROM products p JOIN product_categories c ON c.id = p.category_id
-             WHERE p.is_active = 1 AND p.stock_qty > 0
-             ORDER BY p.name ASC'
+             WHERE p.status != 'draft' AND p.stock_qty > 0
+             ORDER BY p.name ASC"
         );
         return array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
     }
@@ -151,9 +160,9 @@ final class Product extends Model
     public function relatedProducts(int $productId, int $categoryId, int $limit = 4): array
     {
         $stmt = $this->db->prepare(
-            'SELECT * FROM products
-             WHERE category_id = :category_id AND id != :product_id AND is_active = 1
-             ORDER BY RAND() LIMIT :limit'
+            "SELECT * FROM products
+             WHERE category_id = :category_id AND id != :product_id AND status = 'published'
+             ORDER BY RAND() LIMIT :limit"
         );
         $stmt->bindValue(':category_id', $categoryId, PDO::PARAM_INT);
         $stmt->bindValue(':product_id', $productId, PDO::PARAM_INT);
@@ -162,11 +171,36 @@ final class Product extends Model
         return array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
     }
 
+    /** Products frequently purchased alongside this one, computed from real order/sale co-occurrence — never hardcoded. */
+    public function frequentlyBoughtWith(int $productId, int $limit = 4): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT p.*, COUNT(*) AS cnt FROM (
+                SELECT oi2.product_id FROM order_items oi1
+                JOIN order_items oi2 ON oi2.order_id = oi1.order_id AND oi2.product_id != oi1.product_id
+                WHERE oi1.product_id = :pid1
+                UNION ALL
+                SELECT si2.product_id FROM sale_items si1
+                JOIN sale_items si2 ON si2.sale_id = si1.sale_id AND si2.product_id != si1.product_id
+                WHERE si1.product_id = :pid2
+            ) co
+            JOIN products p ON p.id = co.product_id AND p.status = 'published'
+            GROUP BY p.id
+            ORDER BY cnt DESC LIMIT :limit"
+        );
+        $stmt->bindValue(':pid1', $productId, PDO::PARAM_INT);
+        $stmt->bindValue(':pid2', $productId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
+    }
+
     public function find(int $id): ?array
     {
         $stmt = $this->db->prepare(
-            'SELECT p.*, c.name AS category_name FROM products p
+            'SELECT p.*, c.name AS category_name, b.name AS brand_name, b.slug AS brand_slug FROM products p
              JOIN product_categories c ON c.id = p.category_id
+             LEFT JOIN brands b ON b.id = p.brand_id
              WHERE p.id = :id LIMIT 1'
         );
         $stmt->execute(['id' => $id]);
@@ -181,9 +215,10 @@ final class Product extends Model
     {
         [$where, $params] = $this->buildFilterClause($filters);
         $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
+        $joinSql = ' JOIN product_categories c ON c.id = p.category_id LEFT JOIN brands b ON b.id = p.brand_id';
 
         $countStmt = $this->db->prepare(
-            'SELECT COUNT(*) FROM products p JOIN product_categories c ON c.id = p.category_id' . $whereSql
+            'SELECT COUNT(*) FROM products p' . $joinSql . $whereSql
         );
         $countStmt->execute($params);
         $total = (int) $countStmt->fetchColumn();
@@ -193,8 +228,7 @@ final class Product extends Model
         $page = min($page, $totalPages);
         $offset = ($page - 1) * $perPage;
 
-        $sql = 'SELECT p.*, c.name AS category_name FROM products p
-                JOIN product_categories c ON c.id = p.category_id' . $whereSql
+        $sql = 'SELECT p.*, c.name AS category_name, b.name AS brand_name FROM products p' . $joinSql . $whereSql
             . ' ORDER BY ' . $this->sortClause($filters['sort'] ?? '')
             . ' LIMIT :limit OFFSET :offset';
         $stmt = $this->db->prepare($sql);
@@ -220,7 +254,7 @@ final class Product extends Model
             "SELECT COUNT(*) AS total,
                     SUM(stock_qty <= min_stock) AS low_stock,
                     SUM(stock_qty * buying_price) AS stock_value
-             FROM products WHERE is_active = 1"
+             FROM products WHERE status != 'draft'"
         );
         $row = $stmt->fetch();
         return [
@@ -233,10 +267,10 @@ final class Product extends Model
     public function lowStock(): array
     {
         $stmt = $this->db->query(
-            'SELECT p.*, c.name AS category_name FROM products p
+            "SELECT p.*, c.name AS category_name FROM products p
              JOIN product_categories c ON c.id = p.category_id
-             WHERE p.stock_qty <= p.min_stock AND p.is_active = 1
-             ORDER BY p.stock_qty ASC'
+             WHERE p.stock_qty <= p.min_stock AND p.status != 'draft'
+             ORDER BY p.stock_qty ASC"
         );
         return $stmt->fetchAll();
     }
@@ -313,9 +347,12 @@ final class Product extends Model
         $this->db->prepare('DELETE FROM products WHERE id = :id')->execute(['id' => $id]);
     }
 
-    public function toggleActive(int $id): void
+    public function setStatus(int $id, string $status): void
     {
-        $this->db->prepare('UPDATE products SET is_active = NOT is_active WHERE id = :id')->execute(['id' => $id]);
+        if (!in_array($status, self::STATUSES, true)) {
+            return;
+        }
+        $this->db->prepare('UPDATE products SET status = :status WHERE id = :id')->execute(['status' => $status, 'id' => $id]);
     }
 
     /** Manual stock correction (damage, stock-take, etc) — sales/purchases adjust stock via DB triggers instead. */
@@ -365,6 +402,14 @@ final class Product extends Model
         if (!empty($filters['category_id'])) {
             $where[] = 'p.category_id = :category_id';
             $params['category_id'] = $filters['category_id'];
+        }
+        if (!empty($filters['brand_id'])) {
+            $where[] = 'p.brand_id = :brand_id';
+            $params['brand_id'] = $filters['brand_id'];
+        }
+        if (!empty($filters['status']) && in_array($filters['status'], self::STATUSES, true)) {
+            $where[] = 'p.status = :status';
+            $params['status'] = $filters['status'];
         }
         if (!empty($filters['low_stock'])) {
             $where[] = 'p.stock_qty <= p.min_stock';

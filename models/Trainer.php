@@ -6,7 +6,8 @@ final class Trainer extends Model
     private const WRITABLE_FIELDS = [
         'name', 'slug', 'job_title', 'gender', 'phone', 'email', 'dob', 'joining_date',
         'specialization', 'experience_years', 'certifications', 'achievements', 'languages_spoken',
-        'monthly_pt_price', 'hourly_rate', 'max_members', 'availability_status', 'bio',
+        'monthly_pt_price', 'hourly_rate', 'offer_price', 'offer_enabled', 'offer_start_date', 'offer_end_date',
+        'max_members', 'availability_status', 'bio',
         'photo', 'cover_photo', 'facebook_url', 'instagram_url', 'linkedin_url',
         'display_order', 'is_featured', 'is_active',
     ];
@@ -16,7 +17,7 @@ final class Trainer extends Model
         $stmt = $this->db->query(
             "SELECT * FROM trainers WHERE is_active = 1 ORDER BY display_order ASC, name ASC"
         );
-        return $stmt->fetchAll();
+        return array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
     }
 
     public function findBySlug(string $slug): ?array
@@ -24,7 +25,7 @@ final class Trainer extends Model
         $stmt = $this->db->prepare('SELECT * FROM trainers WHERE slug = :slug AND is_active = 1 LIMIT 1');
         $stmt->execute(['slug' => $slug]);
         $trainer = $stmt->fetch();
-        return $trainer ?: null;
+        return $trainer ? $this->withComputedOffer($trainer) : null;
     }
 
     public function find(int $id): ?array
@@ -32,7 +33,34 @@ final class Trainer extends Model
         $stmt = $this->db->prepare('SELECT * FROM trainers WHERE id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
         $trainer = $stmt->fetch();
-        return $trainer ?: null;
+        return $trainer ? $this->withComputedOffer($trainer) : null;
+    }
+
+    /**
+     * Ported from Product::withComputedOffer() — same live-offer-window logic.
+     * Unlike Package, Trainer has no separate discount_amount/discount_percentage columns,
+     * so savings are derived directly from monthly_pt_price vs offer_price.
+     */
+    public function withComputedOffer(array $trainer): array
+    {
+        $now = new DateTimeImmutable();
+        $startOk = empty($trainer['offer_start_date']) || new DateTimeImmutable($trainer['offer_start_date']) <= $now;
+        $endOk = empty($trainer['offer_end_date']) || new DateTimeImmutable($trainer['offer_end_date']) > $now;
+
+        $isLive = (bool) $trainer['offer_enabled'] && !empty($trainer['offer_price']) && $startOk && $endOk;
+
+        $trainer['offer_is_live'] = $isLive;
+        $trainer['display_price'] = $isLive ? $trainer['offer_price'] : $trainer['monthly_pt_price'];
+
+        if ($isLive && (float) $trainer['monthly_pt_price'] > 0) {
+            $trainer['savings_amount'] = round((float) $trainer['monthly_pt_price'] - (float) $trainer['offer_price'], 2);
+            $trainer['savings_percentage'] = round(100 * $trainer['savings_amount'] / (float) $trainer['monthly_pt_price']);
+        } else {
+            $trainer['savings_amount'] = null;
+            $trainer['savings_percentage'] = null;
+        }
+
+        return $trainer;
     }
 
     /**
@@ -50,7 +78,7 @@ final class Trainer extends Model
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll();
+        return array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
     }
 
     /**
@@ -83,7 +111,7 @@ final class Trainer extends Model
         $stmt->execute();
 
         return [
-            'items' => $stmt->fetchAll(),
+            'items' => array_map([$this, 'withComputedOffer'], $stmt->fetchAll()),
             'total' => $total,
             'page' => $page,
             'perPage' => $perPage,
@@ -235,6 +263,21 @@ final class Trainer extends Model
             ->execute(['order' => $neighbor['display_order'], 'id' => $trainer['id']]);
         $this->db->prepare('UPDATE trainers SET display_order = :order WHERE id = :id')
             ->execute(['order' => $trainer['display_order'], 'id' => $neighbor['id']]);
+    }
+
+    /** Ported from Product::validateOfferPrice() — same rule, different table. */
+    public function validateOfferPrice(?float $regularPrice, ?float $offerPrice): ?string
+    {
+        if ($offerPrice === null) {
+            return null;
+        }
+        if ($regularPrice === null || $offerPrice >= $regularPrice) {
+            return 'Offer price must be lower than the monthly price.';
+        }
+        if ($offerPrice <= 0) {
+            return 'Offer price must be greater than zero.';
+        }
+        return null;
     }
 
     /** Distinct members with a confirmed, upcoming booking for this trainer. */

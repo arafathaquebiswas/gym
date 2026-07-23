@@ -29,7 +29,7 @@ $customerName = $order['account_name'] ?? $order['guest_name'];
     <span><?= format_date($order['created_at'], 'd M Y, h:i A') ?></span>
   </div>
   <div class="small mb-1">Customer: <?= e($customerName) ?></div>
-  <div class="small mb-3">Delivering to: <?= e($order['delivery_address'] . ', ' . $order['delivery_city']) ?></div>
+  <div class="small mb-3"><?= $order['fulfillment_method'] === 'pickup' ? 'Pickup at' : 'Delivering to' ?>: <?= e(order_delivery_label($order)) ?></div>
 
   <hr>
 

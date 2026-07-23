@@ -22,6 +22,23 @@ final class Setting extends Model
         return $this->all()[$key] ?? $default;
     }
 
+    public function getBool(string $key, bool $default = true): bool
+    {
+        return $this->get($key, $default ? '1' : '0') === '1';
+    }
+
+    public function getFloat(string $key, float $default = 0.0): float
+    {
+        $value = $this->get($key, '');
+        return $value === '' ? $default : (float) $value;
+    }
+
+    public function getInt(string $key, int $default = 0): int
+    {
+        $value = $this->get($key, '');
+        return $value === '' ? $default : (int) $value;
+    }
+
     public function set(string $key, string $value): void
     {
         $stmt = $this->db->prepare(

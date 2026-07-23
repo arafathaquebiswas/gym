@@ -4,6 +4,10 @@ final class GalleryController extends Controller
 {
     public function index(): void
     {
+        if (!Feature::on('gallery')) {
+            $this->abort404();
+        }
+
         $galleryModel = new GalleryItem();
         $category = $this->input('category') ?: null;
 

@@ -99,6 +99,26 @@ $dayLabels = TrainerSchedule::DAY_LABELS;
           <label>Maximum Members</label>
           <input type="number" min="0" name="max_members" class="form-control" value="<?= $v('max_members') ?>">
         </div>
+      </div>
+      <div class="row g-3 align-items-end mt-1">
+        <div class="col-md-3">
+          <label>Offer Price (৳)</label>
+          <input type="number" step="0.01" min="0" name="offer_price" class="form-control" value="<?= $v('offer_price') ?>">
+        </div>
+        <div class="col-md-3">
+          <label>Offer Start</label>
+          <input type="date" name="offer_start_date" class="form-control" value="<?= $v('offer_start_date') ?>">
+        </div>
+        <div class="col-md-3">
+          <label>Offer End</label>
+          <input type="date" name="offer_end_date" class="form-control" value="<?= $v('offer_end_date') ?>">
+        </div>
+        <div class="col-md-3 form-check mb-2">
+          <input type="checkbox" name="offer_enabled" value="1" class="form-check-input" id="offerEnabled" <?= $checked('offer_enabled') ?>>
+          <label class="form-check-label" for="offerEnabled">Offer Enabled</label>
+        </div>
+      </div>
+      <div class="row g-3">
         <div class="col-md-3">
           <label>Availability Status</label>
           <select name="availability_status" class="form-select">

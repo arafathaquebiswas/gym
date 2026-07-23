@@ -56,8 +56,11 @@ $deliveryEstimate = (new Setting())->get('delivery_estimate_text', '3–5 busine
           <div class="d-flex justify-content-between small text-white-50">
             <span>Payment Status</span><span><?= e(ucfirst($order['payment_status'])) ?></span>
           </div>
+          <div class="d-flex justify-content-between small text-white-50 mt-2">
+            <span><?= $order['fulfillment_method'] === 'pickup' ? 'Pickup at' : 'Delivering to' ?></span><span><?= e(order_delivery_label($order)) ?></span>
+          </div>
 
-          <?php if (!in_array($order['status'], ['delivered', 'cancelled', 'returned'], true)): ?>
+          <?php if ($order['fulfillment_method'] !== 'pickup' && !in_array($order['status'], ['delivered', 'cancelled', 'returned'], true)): ?>
           <div class="d-flex justify-content-between small text-white-50 mt-2">
             <span>Estimated Delivery</span><span><?= e($deliveryEstimate) ?></span>
           </div>

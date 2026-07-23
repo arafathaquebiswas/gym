@@ -135,6 +135,10 @@ CREATE TABLE trainers (
     salary              DECIMAL(10,2) NULL,
     monthly_pt_price    DECIMAL(10,2) NULL,
     hourly_rate         DECIMAL(10,2) NULL,
+    offer_price         DECIMAL(10,2) NULL,
+    offer_enabled       TINYINT(1) NOT NULL DEFAULT 0,
+    offer_start_date    DATE NULL,
+    offer_end_date      DATE NULL,
     max_members         SMALLINT UNSIGNED NULL,
     availability_status ENUM('available','busy','on_leave','offline') NOT NULL DEFAULT 'available',
     bio                 TEXT NULL,
@@ -316,15 +320,24 @@ CREATE TABLE suppliers (
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE brands (
+    id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name            VARCHAR(100) NOT NULL,
+    slug            VARCHAR(120) NOT NULL UNIQUE,
+    logo            VARCHAR(255) NULL,
+    description     TEXT NULL,
+    created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 CREATE TABLE products (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     category_id     INT UNSIGNED NOT NULL,
+    brand_id        INT UNSIGNED NULL,
     supplier_id     INT UNSIGNED NULL,
     sku             VARCHAR(50) NOT NULL UNIQUE,
     barcode         VARCHAR(50) NULL UNIQUE,
     name            VARCHAR(150) NOT NULL,
     slug            VARCHAR(180) NOT NULL UNIQUE,
-    brand           VARCHAR(100) NULL,
     description     TEXT NULL,
     buying_price    DECIMAL(10,2) NOT NULL DEFAULT 0,
     selling_price   DECIMAL(10,2) NOT NULL,
@@ -332,20 +345,23 @@ CREATE TABLE products (
     min_stock       INT NOT NULL DEFAULT 5,
     expiry_date     DATE NULL,
     image           VARCHAR(255) NULL,
+    status          ENUM('draft','published','hidden') NOT NULL DEFAULT 'published',
     offer_price     DECIMAL(10,2) NULL,
     offer_enabled   TINYINT(1) NOT NULL DEFAULT 0,
     offer_start_date DATE NULL,
     offer_end_date  DATE NULL,
+    shipping_charge DECIMAL(10,2) NULL,
     ingredients     TEXT NULL,
     nutrition_facts TEXT NULL,
     allow_preorder  TINYINT(1) NOT NULL DEFAULT 0,
-    is_active       TINYINT(1) NOT NULL DEFAULT 1,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES product_categories(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_products_brand FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE SET NULL,
     CONSTRAINT fk_products_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL,
     INDEX idx_products_category (category_id),
-    INDEX idx_products_active (is_active),
+    INDEX idx_products_brand (brand_id),
+    INDEX idx_products_status (status),
     INDEX idx_products_stock (stock_qty)
 ) ENGINE=InnoDB;
 
@@ -426,7 +442,7 @@ CREATE TABLE payments (
     subscription_id INT UNSIGNED NULL,
     sale_id         INT UNSIGNED NULL,
     trainer_id      INT UNSIGNED NULL,
-    type            ENUM('admission','membership','store_sale','trainer_fee','expense','income','refund') NOT NULL,
+    type            ENUM('admission','membership','store_sale','trainer_fee','expense','income','refund','locker_fine') NOT NULL,
     amount          DECIMAL(10,2) NOT NULL,
     method          ENUM('cash','card','bkash','nagad','rocket','bank_transfer') NOT NULL DEFAULT 'cash',
     reference_no    VARCHAR(100) NULL,
@@ -508,11 +524,12 @@ CREATE TABLE orders (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     order_no            VARCHAR(30) NOT NULL UNIQUE,
     user_id             INT UNSIGNED NULL,
+    fulfillment_method  ENUM('delivery','pickup') NOT NULL DEFAULT 'delivery',
     guest_name          VARCHAR(120) NULL,
     guest_email         VARCHAR(150) NULL,
     guest_phone         VARCHAR(30) NULL,
-    delivery_address    VARCHAR(255) NOT NULL,
-    delivery_city       VARCHAR(100) NOT NULL,
+    delivery_address    VARCHAR(255) NULL,
+    delivery_city       VARCHAR(100) NULL,
     delivery_area       VARCHAR(100) NULL,
     delivery_postal_code VARCHAR(20) NULL,
     order_notes         TEXT NULL,
@@ -722,6 +739,14 @@ CREATE TABLE settings (
     id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     setting_key  VARCHAR(100) NOT NULL UNIQUE,
     setting_value TEXT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE free_trial_registrations (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name        VARCHAR(120) NOT NULL,
+    phone       VARCHAR(30) NOT NULL,
+    email       VARCHAR(150) NULL,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 SET FOREIGN_KEY_CHECKS = 1;

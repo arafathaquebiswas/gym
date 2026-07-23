@@ -2,7 +2,9 @@
 $pageTitle = 'Store';
 /** @var array $products */
 /** @var array $categories */
+/** @var array $brands */
 /** @var string|null $activeCategory */
+/** @var string|null $activeBrand */
 /** @var string|null $search */
 /** @var bool $inStockOnly */
 /** @var string|null $sort */
@@ -30,6 +32,7 @@ $pageTitle = 'Store';
               <button class="btn btn-ps" type="submit"><i class="bi bi-search"></i></button>
             </div>
             <?php if ($activeCategory): ?><input type="hidden" name="category" value="<?= e($activeCategory) ?>"><?php endif; ?>
+            <?php if ($activeBrand): ?><input type="hidden" name="brand" value="<?= e($activeBrand) ?>"><?php endif; ?>
             <label>Sort By</label>
             <select name="sort" class="form-select form-select-sm mb-3" onchange="this.form.submit()">
               <option value="">Newest</option>
@@ -43,15 +46,28 @@ $pageTitle = 'Store';
           </form>
           <h6 class="mt-3 mb-2">Categories</h6>
           <ul class="list-unstyled mb-0">
-            <li class="mb-2"><a href="<?= url('/store') ?>" class="<?= !$activeCategory ? 'text-orange fw-semibold' : '' ?>">All Products</a></li>
+            <li class="mb-2"><a href="<?= url('/store' . ($activeBrand ? '?brand=' . urlencode($activeBrand) : '')) ?>" class="<?= !$activeCategory ? 'text-orange fw-semibold' : '' ?>">All Products</a></li>
             <?php foreach ($categories as $cat): ?>
             <li class="mb-2">
-              <a href="<?= url('/store?category=' . urlencode($cat['slug'])) ?>" class="<?= $activeCategory === $cat['slug'] ? 'text-orange fw-semibold' : '' ?>">
+              <a href="<?= url('/store?' . http_build_query(array_filter(['category' => $cat['slug'], 'brand' => $activeBrand]))) ?>" class="<?= $activeCategory === $cat['slug'] ? 'text-orange fw-semibold' : '' ?>">
                 <?= e($cat['name']) ?>
               </a>
             </li>
             <?php endforeach; ?>
           </ul>
+          <?php if (!empty($brands)): ?>
+          <h6 class="mt-3 mb-2">Brands</h6>
+          <ul class="list-unstyled mb-0">
+            <li class="mb-2"><a href="<?= url('/store' . ($activeCategory ? '?category=' . urlencode($activeCategory) : '')) ?>" class="<?= !$activeBrand ? 'text-orange fw-semibold' : '' ?>">All Brands</a></li>
+            <?php foreach ($brands as $brand): ?>
+            <li class="mb-2">
+              <a href="<?= url('/store?' . http_build_query(array_filter(['brand' => $brand['slug'], 'category' => $activeCategory]))) ?>" class="<?= $activeBrand === $brand['slug'] ? 'text-orange fw-semibold' : '' ?>">
+                <?= e($brand['name']) ?>
+              </a>
+            </li>
+            <?php endforeach; ?>
+          </ul>
+          <?php endif; ?>
         </div>
       </div>
       <div class="col-lg-9">
@@ -66,6 +82,7 @@ $pageTitle = 'Store';
                 <div class="product-thumb"><?= media_tile($product['image'], $product['name'], 'bi-box-seam') ?></div>
                 <div class="d-flex gap-1 flex-wrap mb-1">
                   <div class="cat-tag"><?= e($product['category_name']) ?></div>
+                  <?php if (!empty($product['brand_name'])): ?><div class="cat-tag"><?= e($product['brand_name']) ?></div><?php endif; ?>
                   <?php if (strtotime($product['created_at']) >= strtotime('-14 days')): ?><span class="badge bg-info text-dark">New Arrival</span><?php endif; ?>
                   <?php if (in_array((int) $product['id'], $bestSellerIds, true)): ?><span class="badge bg-primary">Best Seller</span><?php endif; ?>
                   <?php if (in_array((int) $product['id'], $popularIds, true)): ?><span class="badge" style="background:#ff6a1a">Popular</span><?php endif; ?>
@@ -77,7 +94,7 @@ $pageTitle = 'Store';
                   <div class="price">৳<?= number_format((float) $product['selling_price']) ?></div>
                 <?php endif; ?>
                 <?php if ($product['stock_qty'] <= 0): ?>
-                  <span class="badge bg-danger mt-2"><?= $product['allow_preorder'] ? 'Pre-Order' : 'Out of Stock' ?></span>
+                  <span class="badge bg-danger mt-2"><?= ($product['allow_preorder'] && Feature::on('preorder')) ? 'Pre-Order' : 'Out of Stock' ?></span>
                 <?php elseif ($product['stock_qty'] <= $product['min_stock']): ?>
                   <span class="badge bg-warning text-dark mt-2">Low Stock</span>
                 <?php endif; ?>
@@ -92,7 +109,7 @@ $pageTitle = 'Store';
             <?php for ($p = 1; $p <= $totalPages; $p++): ?>
               <li class="page-item <?= $p === $page ? 'active' : '' ?>">
                 <a class="page-link" href="<?= url('/store?' . http_build_query(array_filter([
-                  'page' => $p, 'category' => $activeCategory, 'q' => $search, 'sort' => $sort, 'in_stock' => $inStockOnly ? '1' : null,
+                  'page' => $p, 'category' => $activeCategory, 'brand' => $activeBrand, 'q' => $search, 'sort' => $sort, 'in_stock' => $inStockOnly ? '1' : null,
                 ]))) ?>"><?= $p ?></a>
               </li>
             <?php endfor; ?>

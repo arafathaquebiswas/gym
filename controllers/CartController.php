@@ -4,6 +4,10 @@ final class CartController extends Controller
 {
     public function index(): void
     {
+        if (!Feature::on('store')) {
+            $this->abort404();
+        }
+
         [$userId, $cartToken] = $this->identity();
         $productModel = new Product();
         $lines = array_map([$productModel, 'withComputedOffer'], (new Cart())->forIdentity($userId, $cartToken));
@@ -24,11 +28,15 @@ final class CartController extends Controller
     {
         Security::requireCsrf();
 
+        if (!Feature::on('store')) {
+            $this->abort404();
+        }
+
         $productId = (int) $this->input('product_id');
         $qty = max(1, (int) $this->input('qty', '1'));
         $product = (new Product())->find($productId);
 
-        if (!$product || !$product['is_active']) {
+        if (!$product || $product['status'] !== 'published') {
             flash('danger', 'That product is not available.');
             redirect('store');
         }
@@ -42,7 +50,7 @@ final class CartController extends Controller
             }
         }
 
-        if (($existingQty + $qty) > $product['stock_qty'] && !$product['allow_preorder']) {
+        if (($existingQty + $qty) > $product['stock_qty'] && !($product['allow_preorder'] && Feature::on('preorder'))) {
             flash('danger', "Only {$product['stock_qty']} of {$product['name']} available.");
             redirect('store/' . $product['slug']);
         }
@@ -69,7 +77,7 @@ final class CartController extends Controller
             (new Cart())->remove($userId, $cartToken, $productId);
         } else {
             $product = (new Product())->find($productId);
-            if ($product && $qty > $product['stock_qty'] && !$product['allow_preorder']) {
+            if ($product && $qty > $product['stock_qty'] && !($product['allow_preorder'] && Feature::on('preorder'))) {
                 flash('danger', "Only {$product['stock_qty']} of {$product['name']} available.");
                 redirect('cart');
             }

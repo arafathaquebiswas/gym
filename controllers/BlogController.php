@@ -4,6 +4,10 @@ final class BlogController extends Controller
 {
     public function index(): void
     {
+        if (!Feature::on('blog')) {
+            $this->abort404();
+        }
+
         $blogModel = new BlogPost();
         $page = max(1, (int) $this->input('page', '1'));
         $category = $this->input('category') ?: null;
@@ -22,6 +26,10 @@ final class BlogController extends Controller
 
     public function show(string $slug): void
     {
+        if (!Feature::on('blog')) {
+            $this->abort404();
+        }
+
         $blogModel = new BlogPost();
         $post = $blogModel->findBySlug($slug);
 

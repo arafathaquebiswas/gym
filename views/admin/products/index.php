@@ -5,7 +5,10 @@
 /** @var int $totalPages */
 /** @var array $filters */
 /** @var array $categories */
+/** @var array $brands */
 /** @var array $stats */
+$statusLabels = ['draft' => 'Draft', 'published' => 'Published', 'hidden' => 'Hidden'];
+$statusColors = ['draft' => 'secondary', 'published' => 'success', 'hidden' => 'dark'];
 ?>
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
@@ -20,6 +23,7 @@
   <div class="col-6 col-md-3">
     <div class="admin-card d-flex flex-column justify-content-center">
       <a href="<?= url('/admin/categories') ?>" class="btn btn-ps-outline btn-sm mb-1"><i class="bi bi-tags"></i> Categories</a>
+      <a href="<?= url('/admin/brands') ?>" class="btn btn-ps-outline btn-sm mb-1"><i class="bi bi-award"></i> Brands</a>
       <a href="<?= url('/admin/products/sales') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-receipt"></i> View Sales</a>
     </div>
   </div>
@@ -41,6 +45,18 @@
         </option>
       <?php endforeach; ?>
     </select>
+    <select name="brand_id" class="form-select form-select-sm">
+      <option value="">All Brands</option>
+      <?php foreach ($brands as $brand): ?>
+        <option value="<?= (int) $brand['id'] ?>" <?= (string) $filters['brand_id'] === (string) $brand['id'] ? 'selected' : '' ?>><?= e($brand['name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <select name="status" class="form-select form-select-sm">
+      <option value="">All Statuses</option>
+      <?php foreach ($statusLabels as $val => $label): ?>
+        <option value="<?= $val ?>" <?= $filters['status'] === $val ? 'selected' : '' ?>><?= $label ?></option>
+      <?php endforeach; ?>
+    </select>
     <select name="sort" class="form-select form-select-sm">
       <option value="">Newest First</option>
       <option value="name" <?= $filters['sort'] === 'name' ? 'selected' : '' ?>>Name (A-Z)</option>
@@ -52,7 +68,7 @@
       <label class="form-check-label small" for="lowStockFilter">Low stock only</label>
     </div>
     <button type="submit" class="btn btn-ps-outline btn-sm">Filter</button>
-    <?php if ($filters['search'] || $filters['category_id'] || $filters['low_stock'] || $filters['sort']): ?>
+    <?php if ($filters['search'] || $filters['category_id'] || $filters['brand_id'] || $filters['status'] || $filters['low_stock'] || $filters['sort']): ?>
       <a href="<?= url('/admin/products') ?>" class="btn btn-link btn-sm text-white-50">Clear</a>
     <?php endif; ?>
   </form>
@@ -66,15 +82,20 @@
     <input type="hidden" name="bulk_action" id="bulkActionField">
     <input type="hidden" name="bulk_category_id" id="bulkCategoryField">
     <input type="hidden" name="bulk_discount_percent" id="bulkDiscountField">
+    <input type="hidden" name="bulk_status" id="bulkStatusField">
   </form>
   <div id="bulkToolbar" class="d-none mb-3 d-flex gap-2 align-items-center flex-wrap">
     <span class="text-white-50 small"><span id="bulkCount">0</span> selected</span>
     <select id="bulkActionSelect" class="form-select form-select-sm" style="max-width:180px">
-      <option value="enable">Enable</option>
-      <option value="disable">Disable</option>
+      <option value="set_status">Set Status</option>
       <option value="change_category">Change Category</option>
       <option value="apply_discount">Apply Discount</option>
       <option value="delete">Delete</option>
+    </select>
+    <select id="bulkStatusSelect" class="form-select form-select-sm d-none" style="max-width:160px">
+      <?php foreach ($statusLabels as $val => $label): ?>
+        <option value="<?= $val ?>"><?= $label ?></option>
+      <?php endforeach; ?>
     </select>
     <select id="bulkCategorySelect" class="form-select form-select-sm d-none" style="max-width:200px">
       <?php foreach ($categories as $cat): ?>
@@ -91,7 +112,7 @@
         <tr>
           <th><input type="checkbox" id="selectAllProducts"></th>
           <th>Photo</th><th>Name</th><th>SKU</th><th>Category</th><th>Price</th><th>Offer</th>
-          <th>Stock</th><th>Visible</th><th></th>
+          <th>Stock</th><th>Status</th><th></th>
         </tr>
       </thead>
       <tbody>
@@ -101,7 +122,7 @@
           <td><?= media_tile($product['image'], $product['name'], 'bi-box-seam', 'thumb') ?></td>
           <td>
             <a href="<?= url('/admin/products/' . $product['id'] . '/edit') ?>" class="text-white fw-semibold text-decoration-none"><?= e($product['name']) ?></a>
-            <?php if ($product['brand']): ?><div class="text-white-50 small"><?= e($product['brand']) ?></div><?php endif; ?>
+            <?php if (!empty($product['brand_name'])): ?><div class="text-white-50 small"><?= e($product['brand_name']) ?></div><?php endif; ?>
           </td>
           <td><?= e($product['sku']) ?></td>
           <td><?= e($product['category_name']) ?></td>
@@ -112,11 +133,13 @@
             <?php if ($product['stock_qty'] <= $product['min_stock']): ?><i class="bi bi-exclamation-triangle-fill text-danger" title="Low stock"></i><?php endif; ?>
           </td>
           <td>
-            <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/toggle-active') ?>">
+            <form method="post" action="<?= url('/admin/products/' . $product['id'] . '/status') ?>" class="product-status-form">
               <?= Security::csrfField() ?>
-              <button type="submit" class="btn btn-link p-0" title="Show/hide in store">
-                <i class="bi <?= $product['is_active'] ? 'bi-eye-fill text-orange' : 'bi-eye-slash text-white-50' ?>"></i>
-              </button>
+              <select name="status" class="form-select form-select-sm status-select text-bg-<?= $statusColors[$product['status']] ?? 'secondary' ?>" onchange="this.form.submit()">
+                <?php foreach ($statusLabels as $val => $label): ?>
+                  <option value="<?= $val ?>" <?= $product['status'] === $val ? 'selected' : '' ?>><?= $label ?></option>
+                <?php endforeach; ?>
+              </select>
             </form>
           </td>
           <td>
@@ -180,6 +203,7 @@
   var actionSelect = document.getElementById('bulkActionSelect');
   var categorySelect = document.getElementById('bulkCategorySelect');
   var discountInput = document.getElementById('bulkDiscountInput');
+  var statusSelect = document.getElementById('bulkStatusSelect');
 
   function update() {
     var checked = document.querySelectorAll('.row-check:checked');
@@ -189,6 +213,7 @@
   function updateExtraFields() {
     categorySelect.classList.toggle('d-none', actionSelect.value !== 'change_category');
     discountInput.classList.toggle('d-none', actionSelect.value !== 'apply_discount');
+    statusSelect.classList.toggle('d-none', actionSelect.value !== 'set_status');
   }
   checks.forEach(function (c) { c.addEventListener('change', update); });
   actionSelect.addEventListener('change', updateExtraFields);
@@ -216,6 +241,7 @@
     document.getElementById('bulkActionField').value = action;
     document.getElementById('bulkCategoryField').value = categorySelect.value;
     document.getElementById('bulkDiscountField').value = discountInput.value;
+    document.getElementById('bulkStatusField').value = statusSelect.value;
     form.submit();
   });
 })();

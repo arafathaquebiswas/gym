@@ -1,13 +1,21 @@
 <?php
 /** @var array $settings */
 $v = fn ($key, $default = '') => e($settings[$key] ?? $default);
+$yn = function (string $key, string $default = '1') use ($settings) {
+    $val = $settings[$key] ?? $default;
+    return '<option value="1" ' . ($val === '1' ? 'selected' : '') . '>Enabled</option>'
+         . '<option value="0" ' . ($val === '0' ? 'selected' : '') . '>Disabled</option>';
+};
 ?>
 <ul class="nav nav-tabs mb-4" id="settingsTabs">
   <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-gym">Gym Info</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-hours">Business Hours</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-currency">Currency &amp; Fines</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-shipping">Shipping &amp; Tax</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-delivery-pickup">Delivery &amp; Pickup</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-membership">Membership</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-features">Feature Flags</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-free-trial">Free Trial</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-smtp">SMTP</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-backup">Backup &amp; Restore</a></li>
 </ul>
@@ -120,6 +128,14 @@ $v = fn ($key, $default = '') => e($settings[$key] ?? $default);
         <h6 class="mb-3">Shipping &amp; Tax</h6>
         <p class="text-white-50 small">Applies to online store orders (checkout) — not in-store POS sales.</p>
         <div class="row g-3">
+          <div class="col-md-6">
+            <label>Shipping</label>
+            <select name="shipping_enabled" class="form-select"><?= $yn('shipping_enabled') ?></select>
+          </div>
+          <div class="col-md-6">
+            <label>Tax</label>
+            <select name="tax_enabled" class="form-select"><?= $yn('tax_enabled') ?></select>
+          </div>
           <div class="col-md-4">
             <label>Shipping Rate (৳)</label>
             <input type="number" step="0.01" min="0" name="shipping_flat_rate" class="form-control" value="<?= $v('shipping_flat_rate', '60') ?>">
@@ -136,6 +152,40 @@ $v = fn ($key, $default = '') => e($settings[$key] ?? $default);
             <label>Estimated Delivery Text <small class="text-white-50">(shown on order tracking page)</small></label>
             <input type="text" name="delivery_estimate_text" class="form-control" value="<?= $v('delivery_estimate_text', '3–5 business days') ?>">
           </div>
+          <div class="col-md-6">
+            <label>Apply Tax to Membership Payments</label>
+            <select name="tax_applies_to_membership" class="form-select"><?= $yn('tax_applies_to_membership', '0') ?></select>
+          </div>
+          <div class="col-md-6">
+            <label>Apply Tax to Trainer Fee Payments</label>
+            <select name="tax_applies_to_trainer_fee" class="form-select"><?= $yn('tax_applies_to_trainer_fee', '0') ?></select>
+          </div>
+          <div class="col-12">
+            <p class="text-white-50 small mb-0">Product-specific shipping can be set per-product on the product's edit page (overrides the flat rate above for that item).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-delivery-pickup">
+      <div class="admin-card">
+        <h6 class="mb-3">Delivery &amp; Pickup</h6>
+        <p class="text-white-50 small">If both are disabled, the store is hidden site-wide with a "temporarily unavailable" message — there would be no way to fulfill an order.</p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label>Home Delivery</label>
+            <select name="feature_delivery" class="form-select"><?= $yn('feature_delivery') ?></select>
+          </div>
+          <div class="col-md-6">
+            <label>Store Pickup</label>
+            <select name="feature_pickup" class="form-select"><?= $yn('feature_pickup') ?></select>
+          </div>
+        </div>
+        <hr>
+        <div class="d-flex flex-wrap gap-2">
+          <a href="<?= url('/admin/delivery-zones') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-geo-alt"></i> Manage Delivery Zones</a>
+          <a href="<?= url('/admin/delivery-time-slots') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-clock"></i> Manage Time Slots</a>
+          <a href="<?= url('/admin/delivery-staff') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-person-badge"></i> Manage Delivery Staff</a>
         </div>
       </div>
     </div>
@@ -154,6 +204,125 @@ $v = fn ($key, $default = '') => e($settings[$key] ?? $default);
               <option value="1" <?= ($settings['auto_expire_memberships'] ?? '1') === '1' ? 'selected' : '' ?>>Yes</option>
               <option value="0" <?= ($settings['auto_expire_memberships'] ?? '1') === '0' ? 'selected' : '' ?>>No</option>
             </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-features">
+      <div class="admin-card">
+        <h6 class="mb-3">Feature Flags</h6>
+        <p class="text-white-50 small">Turn whole modules on or off without touching any code. Disabling a module hides it everywhere on the public site (and, where noted, in the admin panel) — existing data is never deleted.</p>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label>Trainer Module <small class="text-white-50 d-block">Master switch — turns off booking, fee, display, and admin trainer management together</small></label>
+            <select name="feature_trainer_module" class="form-select"><?= $yn('feature_trainer_module') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Trainer Fee</label>
+            <select name="feature_trainer_fee" class="form-select"><?= $yn('feature_trainer_fee') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Trainer Booking</label>
+            <select name="feature_trainer_booking" class="form-select"><?= $yn('feature_trainer_booking') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Show Trainers Section on Homepage</label>
+            <select name="feature_trainer_display" class="form-select"><?= $yn('feature_trainer_display') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Membership Sales</label>
+            <select name="feature_membership_sales" class="form-select"><?= $yn('feature_membership_sales') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Store</label>
+            <select name="feature_store" class="form-select"><?= $yn('feature_store') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Offers Section (Homepage)</label>
+            <select name="feature_offers" class="form-select"><?= $yn('feature_offers') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Coupons</label>
+            <select name="feature_coupons" class="form-select"><?= $yn('feature_coupons') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Product Reviews</label>
+            <select name="feature_reviews" class="form-select"><?= $yn('feature_reviews') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Guest Checkout</label>
+            <select name="feature_guest_checkout" class="form-select"><?= $yn('feature_guest_checkout') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Pre-Order</label>
+            <select name="feature_preorder" class="form-select"><?= $yn('feature_preorder') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Wishlist</label>
+            <select name="feature_wishlist" class="form-select"><?= $yn('feature_wishlist') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Blog</label>
+            <select name="feature_blog" class="form-select"><?= $yn('feature_blog') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Gallery</label>
+            <select name="feature_gallery" class="form-select"><?= $yn('feature_gallery') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Contact Form</label>
+            <select name="feature_contact_form" class="form-select"><?= $yn('feature_contact_form') ?></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-free-trial">
+      <div class="admin-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="mb-0">Free Trial Section</h6>
+          <a href="<?= url('/admin/settings/free-trial-registrations') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-people"></i> View Registrations</a>
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label>Free Trial Section</label>
+            <select name="free_trial_enabled" class="form-select"><?= $yn('free_trial_enabled') ?></select>
+          </div>
+          <div class="col-md-4">
+            <label>Start Date <small class="text-white-50">(optional)</small></label>
+            <input type="date" name="free_trial_start_date" class="form-control" value="<?= $v('free_trial_start_date') ?>">
+          </div>
+          <div class="col-md-4">
+            <label>End Date <small class="text-white-50">(optional)</small></label>
+            <input type="date" name="free_trial_end_date" class="form-control" value="<?= $v('free_trial_end_date') ?>">
+          </div>
+          <div class="col-md-6">
+            <label>Title</label>
+            <input type="text" name="free_trial_title" class="form-control" value="<?= $v('free_trial_title', 'Free Trial Session') ?>">
+          </div>
+          <div class="col-md-6">
+            <label>Subtitle</label>
+            <input type="text" name="free_trial_subtitle" class="form-control" value="<?= $v('free_trial_subtitle', 'Free trial session this week — no commitment required.') ?>">
+          </div>
+          <div class="col-md-6">
+            <label>Button Text</label>
+            <input type="text" name="free_trial_button_text" class="form-control" value="<?= $v('free_trial_button_text', 'Claim Your Free Session') ?>">
+          </div>
+          <div class="col-md-6">
+            <label>Button Link <small class="text-white-50">(leave blank to use the built-in registration form)</small></label>
+            <input type="text" name="free_trial_button_link" class="form-control" value="<?= $v('free_trial_button_link') ?>" placeholder="e.g. /contact or a WhatsApp link">
+          </div>
+          <div class="col-md-6">
+            <label>Maximum Registrations <small class="text-white-50">(0 = unlimited)</small></label>
+            <input type="number" min="0" name="free_trial_max_registrations" class="form-control" value="<?= $v('free_trial_max_registrations', '0') ?>">
+          </div>
+          <div class="col-md-6">
+            <label>Background Image</label>
+            <?php if (!empty($settings['free_trial_background_image'])): ?>
+              <div class="mb-2"><?= media_tile($settings['free_trial_background_image'], 'Free Trial Background', 'bi-image', '', null) ?></div>
+            <?php endif; ?>
+            <input type="file" name="free_trial_background_image" class="form-control" accept="image/jpeg,image/png,image/webp">
           </div>
         </div>
       </div>

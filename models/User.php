@@ -26,6 +26,16 @@ final class User extends Model
         return $user ?: null;
     }
 
+    public function findByRole(string $roleSlug): array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT u.* FROM users u JOIN roles r ON r.id = u.role_id
+             WHERE r.slug = :role ORDER BY u.name ASC'
+        );
+        $stmt->execute(['role' => $roleSlug]);
+        return $stmt->fetchAll();
+    }
+
     public function emailExists(string $email): bool
     {
         $stmt = $this->db->prepare('SELECT COUNT(*) FROM users WHERE email = :email');

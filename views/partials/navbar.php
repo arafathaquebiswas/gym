@@ -4,13 +4,21 @@ $navItems = [
     'home' => ['Home', '/'],
     'about' => ['About', '/about'],
     'membership' => ['Membership Plans', '/membership'],
-    'personal-training' => ['Personal Training', '/personal-training'],
-    'store' => ['Store', '/store'],
-    'gallery' => ['Gallery', '/gallery'],
-    'blog' => ['Blog', '/blog'],
-    'faq' => ['FAQ', '/faq'],
-    'contact' => ['Contact', '/contact'],
 ];
+if (Feature::trainerModuleOn()) {
+    $navItems['personal-training'] = ['Personal Training', '/personal-training'];
+}
+if (Feature::on('store')) {
+    $navItems['store'] = ['Store', '/store'];
+}
+if (Feature::on('gallery')) {
+    $navItems['gallery'] = ['Gallery', '/gallery'];
+}
+if (Feature::on('blog')) {
+    $navItems['blog'] = ['Blog', '/blog'];
+}
+$navItems['faq'] = ['FAQ', '/faq'];
+$navItems['contact'] = ['Contact', '/contact'];
 $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/');
 if ($currentPath === '') { $currentPath = 'home'; }
 $cartIdentity = Cart::identity();
@@ -34,14 +42,17 @@ $cartCount = (new Cart())->count($cartIdentity['user_id'], $cartIdentity['cart_t
         <?php endforeach; ?>
       </ul>
       <div class="d-flex gap-2 align-items-center">
+        <?php if (Feature::on('store')): ?>
         <a href="<?= url('/cart') ?>" class="btn btn-ps-outline btn-sm position-relative">
           <i class="bi bi-cart3"></i>
           <?php if ($cartCount > 0): ?>
             <span class="badge-ps badge position-absolute top-0 start-100 translate-middle rounded-pill"><?= (int) $cartCount ?></span>
           <?php endif; ?>
         </a>
+        <?php endif; ?>
         <?php if ($currentUser): ?>
-          <a href="<?= url(Auth::isStaff() ? '/admin' : '/account') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-person-circle"></i> <?= e($currentUser['name']) ?></a>
+          <?php $accountHref = Auth::hasRole('delivery') ? '/delivery' : (Auth::isStaff() ? '/admin' : '/account'); ?>
+          <a href="<?= url($accountHref) ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-person-circle"></i> <?= e($currentUser['name']) ?></a>
           <a href="<?= url('/logout') ?>" class="btn btn-ps btn-sm">Logout</a>
         <?php else: ?>
           <a href="<?= url('/login') ?>" class="btn btn-ps-outline btn-sm">Login</a>

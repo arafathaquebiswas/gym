@@ -6,6 +6,10 @@ final class TrainerController extends Controller
 
     public function show(string $slug): void
     {
+        if (!Feature::trainerModuleOn()) {
+            $this->abort404();
+        }
+
         $trainerModel = new Trainer();
         $trainer = $trainerModel->findBySlug($slug);
 
@@ -41,6 +45,10 @@ final class TrainerController extends Controller
         Auth::requireRole('member');
         Security::requireCsrf();
 
+        if (!Feature::trainerModuleOn()) {
+            $this->abort404();
+        }
+
         $trainerModel = new Trainer();
         $trainer = $trainerModel->findBySlug($slug);
         if (!$trainer) {
@@ -72,6 +80,10 @@ final class TrainerController extends Controller
     {
         Auth::requireRole('member');
         Security::requireCsrf();
+
+        if (!Feature::trainerBookingOn()) {
+            $this->abort404();
+        }
 
         $trainerModel = new Trainer();
         $trainer = $trainerModel->findBySlug($slug);

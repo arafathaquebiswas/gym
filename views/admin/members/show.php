@@ -4,6 +4,8 @@
 /** @var array $attendanceLog */
 /** @var array|null $openSession */
 /** @var array $packages */
+/** @var float $trainerFeeDefault */
+/** @var float $lockerFineDefault */
 $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' => 'danger', 'frozen' => 'info', 'expired' => 'dark'];
 ?>
 <div class="row g-4">
@@ -64,7 +66,8 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
         </div>
         <div class="col-md-3">
           <label>Payment Method</label>
-          <select name="payment_method" class="form-select">
+          <select name="payment_method" class="form-select payment-method-select" required>
+            <option value="" disabled selected>Select Payment Method</option>
             <option value="cash">Cash</option>
             <option value="card">Card</option>
             <option value="bkash">bKash</option>
@@ -73,12 +76,78 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
             <option value="bank_transfer">Bank Transfer</option>
           </select>
         </div>
+        <div class="col-md-4 reference-no-wrap d-none">
+          <label>Transaction / Reference ID</label>
+          <input type="text" name="reference_no" class="form-control reference-no-input" placeholder="e.g. bKash transaction ID">
+        </div>
         <div class="col-md-4">
           <label>Coupon Code <small class="text-white-50">(optional)</small></label>
           <input type="text" name="coupon_code" class="form-control text-uppercase" placeholder="e.g. SAVE10">
         </div>
         <div class="col-12">
           <button type="submit" class="btn btn-ps btn-sm">Confirm Renewal</button>
+        </div>
+      </form>
+    </div>
+
+    <?php if (Feature::trainerFeeOn()): ?>
+    <div class="admin-card mb-4">
+      <h6 class="mb-3">Charge Trainer Fee</h6>
+      <form method="post" action="<?= url('/admin/members/' . $member['id'] . '/charge-trainer-fee') ?>" class="row g-3 admin-form">
+        <?= Security::csrfField() ?>
+        <div class="col-md-3">
+          <label>Amount (৳)</label>
+          <input type="number" step="0.01" min="0.01" name="amount" class="form-control" value="<?= $trainerFeeDefault > 0 ? e((string) $trainerFeeDefault) : '' ?>" required>
+        </div>
+        <div class="col-md-3">
+          <label>Payment Method</label>
+          <select name="payment_method" class="form-select payment-method-select" required>
+            <option value="" disabled selected>Select Payment Method</option>
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="bkash">bKash</option>
+            <option value="nagad">Nagad</option>
+            <option value="rocket">Rocket</option>
+            <option value="bank_transfer">Bank Transfer</option>
+          </select>
+        </div>
+        <div class="col-md-4 reference-no-wrap d-none">
+          <label>Transaction / Reference ID</label>
+          <input type="text" name="reference_no" class="form-control reference-no-input" placeholder="e.g. bKash transaction ID">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-ps-outline btn-sm">Charge Trainer Fee</button>
+        </div>
+      </form>
+    </div>
+    <?php endif; ?>
+
+    <div class="admin-card mb-4">
+      <h6 class="mb-3">Charge Locker Fine</h6>
+      <form method="post" action="<?= url('/admin/members/' . $member['id'] . '/charge-locker-fine') ?>" class="row g-3 admin-form">
+        <?= Security::csrfField() ?>
+        <div class="col-md-3">
+          <label>Amount (৳)</label>
+          <input type="number" step="0.01" min="0.01" name="amount" class="form-control" value="<?= $lockerFineDefault > 0 ? e((string) $lockerFineDefault) : '' ?>" required>
+        </div>
+        <div class="col-md-3">
+          <label>Payment Method</label>
+          <select name="payment_method" class="form-select payment-method-select" required>
+            <option value="" disabled selected>Select Payment Method</option>
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="bkash">bKash</option>
+            <option value="nagad">Nagad</option>
+            <option value="rocket">Rocket</option>
+            <option value="bank_transfer">Bank Transfer</option>
+          </select>
+        </div>
+        <div class="col-md-4 reference-no-wrap d-none">
+          <label>Transaction / Reference ID</label>
+          <input type="text" name="reference_no" class="form-control reference-no-input" placeholder="e.g. bKash transaction ID">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-outline-danger btn-sm">Charge Locker Fine</button>
         </div>
       </form>
     </div>

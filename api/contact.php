@@ -13,6 +13,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 Security::requireCsrf();
 
+if (!Feature::on('contact_form')) {
+    if (Security::wantsJson()) {
+        json_response(['success' => false, 'message' => 'The contact form is not currently available.'], 404);
+    }
+    flash('danger', 'The contact form is not currently available.');
+    redirect('contact');
+}
+
 $name = Security::sanitizeString($_POST['name'] ?? '');
 $email = Security::sanitizeString($_POST['email'] ?? '');
 $phone = Security::sanitizeString($_POST['phone'] ?? '');

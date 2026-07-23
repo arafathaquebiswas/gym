@@ -44,6 +44,7 @@ $currentUser = Auth::user();
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= asset('js/main.js') ?>"></script>
+<script src="<?= asset('js/password-toggle.js') ?>"></script>
 <?php if (!empty($extraScripts)): foreach ($extraScripts as $script): ?>
 <script src="<?= str_starts_with($script, 'http') ? e($script) : asset($script) ?>"></script>
 <?php endforeach; endif; ?>

@@ -20,7 +20,8 @@
   <div class="small text-white-50 mb-2">
     Customer: <?= e($order['account_name'] ?? $order['guest_name']) ?> &middot;
     Status: <?= e(ucfirst(str_replace('_', ' ', $order['status']))) ?> &middot;
-    Payment: <?= e(strtoupper(str_replace('_', ' ', $order['payment_method']))) ?> (<?= e(ucfirst($order['payment_status'])) ?>)
+    Payment: <?= e(strtoupper(str_replace('_', ' ', $order['payment_method']))) ?> (<?= e(ucfirst($order['payment_status'])) ?>) &middot;
+    <?= $order['fulfillment_method'] === 'pickup' ? 'Pickup at ' : 'Delivering to ' ?><?= e(order_delivery_label($order)) ?>
   </div>
   <div class="d-flex justify-content-between"><span>Subtotal</span><span><?= money((float) $order['subtotal']) ?></span></div>
   <div class="d-flex justify-content-between"><span>Discount</span><span><?= money((float) $order['discount']) ?></span></div>

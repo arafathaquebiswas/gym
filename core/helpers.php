@@ -69,6 +69,22 @@ function format_date(?string $date, string $format = 'd M Y'): string
 }
 
 /**
+ * The customer's delivery address, or the gym's own address when the order is a
+ * store pickup (fulfillment_method='pickup', so delivery_address/city are null).
+ * Returns raw (unescaped) text — HTML call sites should wrap with e().
+ */
+function order_delivery_label(array $order): string
+{
+    if (($order['fulfillment_method'] ?? 'delivery') === 'pickup') {
+        $settingModel = new Setting();
+        $gymName = $settingModel->get('gym_name', 'the gym');
+        $gymAddress = $settingModel->get('gym_address', '');
+        return $gymName . ($gymAddress ? ' — ' . $gymAddress : '');
+    }
+    return $order['delivery_address'] . ', ' . $order['delivery_city'];
+}
+
+/**
  * Renders a photo when available, falling back to a supplied placeholder
  * image (e.g. a default avatar) or, failing that, the dashed placeholder
  * tile used before any photo exists for that record.

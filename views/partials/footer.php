@@ -24,16 +24,18 @@
         <ul class="list-unstyled">
           <li><a href="<?= url('/about') ?>">About Us</a></li>
           <li><a href="<?= url('/membership') ?>">Membership Plans</a></li>
-          <li><a href="<?= url('/personal-training') ?>">Personal Training</a></li>
+          <?php if (Feature::trainerModuleOn()): ?><li><a href="<?= url('/personal-training') ?>">Personal Training</a></li><?php endif; ?>
         </ul>
       </div>
       <div class="col-6 col-lg-2">
         <h6>Company</h6>
         <ul class="list-unstyled">
+          <?php if (Feature::on('store')): ?>
           <li><a href="<?= url('/store') ?>">Store</a></li>
           <li><a href="<?= url('/track-order') ?>">Track Order</a></li>
-          <li><a href="<?= url('/gallery') ?>">Gallery</a></li>
-          <li><a href="<?= url('/blog') ?>">Blog</a></li>
+          <?php endif; ?>
+          <?php if (Feature::on('gallery')): ?><li><a href="<?= url('/gallery') ?>">Gallery</a></li><?php endif; ?>
+          <?php if (Feature::on('blog')): ?><li><a href="<?= url('/blog') ?>">Blog</a></li><?php endif; ?>
           <li><a href="<?= url('/faq') ?>">FAQ</a></li>
         </ul>
       </div>

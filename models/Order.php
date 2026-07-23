@@ -6,7 +6,7 @@ final class Order extends Model
 
     /**
      * @param array<int, array{product_id:int,qty:int}> $cartLines
-     * @param array{guest_name:?string,guest_email:?string,guest_phone:?string,delivery_address:string,delivery_city:string,delivery_area:?string,delivery_postal_code:?string,order_notes:?string} $customer
+     * @param array{fulfillment_method?:string,zone_id?:?int,time_slot_id?:?int,guest_name:?string,guest_email:?string,guest_phone:?string,delivery_address:?string,delivery_city:?string,delivery_area:?string,delivery_postal_code:?string,order_notes:?string} $customer
      * @param array{method:string,discount:float,couponCode:?string,reference_no:?string} $payment
      * @return array{id:int, order_no:string}
      */
@@ -21,20 +21,24 @@ final class Order extends Model
         try {
             $resolvedLines = [];
             $subtotal = 0.0;
+            $maxShippingOverride = null;
 
             foreach ($cartLines as $line) {
                 $product = $productModel->find((int) $line['product_id']);
-                if (!$product || !$product['is_active']) {
+                if (!$product || $product['status'] !== 'published') {
                     throw new RuntimeException('One of the items in your cart is no longer available.');
                 }
                 $qty = (int) $line['qty'];
                 if ($qty <= 0) {
                     continue;
                 }
+                if ($product['shipping_charge'] !== null && $product['shipping_charge'] !== '') {
+                    $maxShippingOverride = max($maxShippingOverride ?? 0.0, (float) $product['shipping_charge']);
+                }
 
                 if ((int) $product['stock_qty'] >= $qty) {
                     $productModel->decrementStockIfAvailable((int) $product['id'], $qty);
-                } elseif ((int) $product['allow_preorder'] === 1) {
+                } elseif ((int) $product['allow_preorder'] === 1 && Feature::on('preorder')) {
                     $productModel->adjustStock((int) $product['id'], -$qty); // may go negative — backorder demand
                 } else {
                     throw new RuntimeException("Not enough stock for {$product['name']} (only {$product['stock_qty']} left).");
@@ -77,34 +81,65 @@ final class Order extends Model
 
             $settingModel = new Setting();
             $netAfterDiscount = max(0, $subtotal - $discount);
-            $freeShippingMin = (float) $settingModel->get('free_shipping_min_amount', '0');
-            $shipping = ($freeShippingMin > 0 && $netAfterDiscount >= $freeShippingMin)
-                ? 0.0
-                : (float) $settingModel->get('shipping_flat_rate', '0');
-            $taxPercent = (float) $settingModel->get('tax_percent', '0');
-            $tax = round($netAfterDiscount * ($taxPercent / 100), 2);
+            $fulfillmentMethod = $customer['fulfillment_method'] ?? 'delivery';
+
+            $shipping = 0.0;
+            if ($fulfillmentMethod !== 'pickup' && $settingModel->getBool('shipping_enabled')) {
+                $freeShippingMin = (float) $settingModel->get('free_shipping_min_amount', '0');
+                if ($freeShippingMin > 0 && $netAfterDiscount >= $freeShippingMin) {
+                    $shipping = 0.0;
+                } else {
+                    // A selected delivery zone's charge takes priority over the flat rate; falls back
+                    // to the flat rate when no zone is selected (e.g. no zones configured yet).
+                    $baseRate = null;
+                    if (!empty($customer['zone_id'])) {
+                        $zone = (new DeliveryZone())->find((int) $customer['zone_id']);
+                        if ($zone && $zone['is_active']) {
+                            $baseRate = (float) $zone['charge'];
+                        }
+                    }
+                    if ($baseRate === null) {
+                        $baseRate = (float) $settingModel->get('shipping_flat_rate', '0');
+                    }
+                    $shipping = $maxShippingOverride !== null ? max($baseRate, $maxShippingOverride) : $baseRate;
+                }
+            }
+
+            $pickupPin = $fulfillmentMethod === 'pickup' ? str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT) : null;
+
+            $tax = 0.0;
+            if ($settingModel->getBool('tax_enabled')) {
+                $taxPercent = (float) $settingModel->get('tax_percent', '0');
+                $tax = round($netAfterDiscount * ($taxPercent / 100), 2);
+            }
 
             $total = max(0, round($netAfterDiscount + $shipping + $tax, 2));
             $orderNo = $this->generateOrderNo();
 
             $stmt = $this->db->prepare(
-                'INSERT INTO orders (order_no, user_id, guest_name, guest_email, guest_phone,
+                'INSERT INTO orders (order_no, user_id, fulfillment_method, zone_id, time_slot_id, pickup_pin,
+                    guest_name, guest_email, guest_phone,
                     delivery_address, delivery_city, delivery_area, delivery_postal_code, order_notes,
                     subtotal, discount, shipping_charge, tax, total, promotion_id, payment_method, payment_status, status)
-                 VALUES (:order_no, :user_id, :guest_name, :guest_email, :guest_phone,
+                 VALUES (:order_no, :user_id, :fulfillment_method, :zone_id, :time_slot_id, :pickup_pin,
+                    :guest_name, :guest_email, :guest_phone,
                     :delivery_address, :delivery_city, :delivery_area, :delivery_postal_code, :order_notes,
                     :subtotal, :discount, :shipping_charge, :tax, :total, :promotion_id, :payment_method, "pending", "pending")'
             );
             $stmt->execute([
                 'order_no' => $orderNo,
                 'user_id' => $userId,
+                'fulfillment_method' => $fulfillmentMethod,
+                'zone_id' => $fulfillmentMethod === 'delivery' ? ($customer['zone_id'] ?? null) : null,
+                'time_slot_id' => $customer['time_slot_id'] ?? null,
+                'pickup_pin' => $pickupPin,
                 'guest_name' => $customer['guest_name'] ?? null,
                 'guest_email' => $customer['guest_email'] ?? null,
                 'guest_phone' => $customer['guest_phone'] ?? null,
-                'delivery_address' => $customer['delivery_address'],
-                'delivery_city' => $customer['delivery_city'],
-                'delivery_area' => $customer['delivery_area'] ?? null,
-                'delivery_postal_code' => $customer['delivery_postal_code'] ?? null,
+                'delivery_address' => $fulfillmentMethod === 'pickup' ? null : $customer['delivery_address'],
+                'delivery_city' => $fulfillmentMethod === 'pickup' ? null : $customer['delivery_city'],
+                'delivery_area' => $fulfillmentMethod === 'pickup' ? null : ($customer['delivery_area'] ?? null),
+                'delivery_postal_code' => $fulfillmentMethod === 'pickup' ? null : ($customer['delivery_postal_code'] ?? null),
                 'order_notes' => $customer['order_notes'] ?? null,
                 'shipping_charge' => $shipping,
                 'tax' => $tax,
@@ -150,13 +185,17 @@ final class Order extends Model
         }
     }
 
+    private const BASE_SELECT = "SELECT o.*, u.name AS account_name, u.email AS account_email, u.phone AS account_phone,
+             z.name AS zone_name, ts.label AS time_slot_label, dp.name AS delivery_person_name, dp.phone AS delivery_person_phone
+             FROM orders o
+             LEFT JOIN users u ON u.id = o.user_id
+             LEFT JOIN delivery_zones z ON z.id = o.zone_id
+             LEFT JOIN delivery_time_slots ts ON ts.id = o.time_slot_id
+             LEFT JOIN users dp ON dp.id = o.delivery_person_id";
+
     public function find(int $id): ?array
     {
-        $stmt = $this->db->prepare(
-            'SELECT o.*, u.name AS account_name, u.email AS account_email, u.phone AS account_phone
-             FROM orders o LEFT JOIN users u ON u.id = o.user_id
-             WHERE o.id = :id LIMIT 1'
-        );
+        $stmt = $this->db->prepare(self::BASE_SELECT . ' WHERE o.id = :id LIMIT 1');
         $stmt->execute(['id' => $id]);
         $order = $stmt->fetch();
         return $order ?: null;
@@ -164,14 +203,34 @@ final class Order extends Model
 
     public function findByOrderNo(string $orderNo): ?array
     {
-        $stmt = $this->db->prepare(
-            'SELECT o.*, u.name AS account_name, u.email AS account_email, u.phone AS account_phone
-             FROM orders o LEFT JOIN users u ON u.id = o.user_id
-             WHERE o.order_no = :order_no LIMIT 1'
-        );
+        $stmt = $this->db->prepare(self::BASE_SELECT . ' WHERE o.order_no = :order_no LIMIT 1');
         $stmt->execute(['order_no' => $orderNo]);
         $order = $stmt->fetch();
         return $order ?: null;
+    }
+
+    /** Orders assigned to a given delivery person, for the Delivery Dashboard. */
+    public function forDeliveryPerson(int $deliveryPersonId): array
+    {
+        $stmt = $this->db->prepare(
+            self::BASE_SELECT . " WHERE o.delivery_person_id = :delivery_person_id
+             AND o.status NOT IN ('cancelled', 'returned')
+             ORDER BY (o.status = 'delivered') ASC, o.created_at ASC"
+        );
+        $stmt->execute(['delivery_person_id' => $deliveryPersonId]);
+        return $stmt->fetchAll();
+    }
+
+    public function assignDeliveryPerson(int $id, ?int $deliveryPersonId): void
+    {
+        $this->db->prepare('UPDATE orders SET delivery_person_id = :delivery_person_id WHERE id = :id')
+            ->execute(['delivery_person_id' => $deliveryPersonId, 'id' => $id]);
+    }
+
+    /** Verifies the customer-supplied PIN against the order's stored pickup_pin. Does not change status itself. */
+    public function pinMatches(array $order, string $pin): bool
+    {
+        return !empty($order['pickup_pin']) && hash_equals((string) $order['pickup_pin'], trim($pin));
     }
 
     public function updateAdminNotes(int $id, string $notes): void

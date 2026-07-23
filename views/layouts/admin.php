@@ -6,19 +6,29 @@ $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'
 
 $navItems = [
     ['dashboard', 'Dashboard', 'bi-speedometer2', url('/admin')],
-    ['trainers', 'Trainers', 'bi-person-badge', url('/admin/trainers')],
-    ['packages', 'Packages', 'bi-box-seam', url('/admin/packages')],
-    ['coupons', 'Coupons', 'bi-ticket-perforated', url('/admin/coupons')],
-    ['members', 'Members', 'bi-people', url('/admin/members')],
-    ['products', 'Store', 'bi-shop', url('/admin/products')],
-    ['pos', 'POS', 'bi-calculator', url('/admin/pos')],
-    ['orders', 'Orders', 'bi-bag-check', url('/admin/orders')],
-    ['reports', 'Reports', 'bi-bar-chart', url('/admin/reports')],
-    ['messages', 'Messages', 'bi-envelope', url('/admin/messages')],
-    ['reviews', 'Reviews', 'bi-star', url('/admin/reviews')],
-    ['audit-log', 'Audit Log', 'bi-clock-history', url('/admin/audit-log')],
-    ['settings', 'Settings', 'bi-gear', url('/admin/settings')],
 ];
+if (Feature::trainerModuleOn()) {
+    $navItems[] = ['trainers', 'Trainers', 'bi-person-badge', url('/admin/trainers')];
+}
+$navItems[] = ['packages', 'Packages', 'bi-box-seam', url('/admin/packages')];
+if (Feature::on('coupons')) {
+    $navItems[] = ['coupons', 'Coupons', 'bi-ticket-perforated', url('/admin/coupons')];
+}
+$navItems[] = ['members', 'Members', 'bi-people', url('/admin/members')];
+if (Feature::on('store')) {
+    $navItems[] = ['products', 'Store', 'bi-shop', url('/admin/products')];
+}
+$navItems[] = ['pos', 'POS', 'bi-calculator', url('/admin/pos')];
+if (Feature::on('store')) {
+    $navItems[] = ['orders', 'Orders', 'bi-bag-check', url('/admin/orders')];
+}
+$navItems[] = ['reports', 'Reports', 'bi-bar-chart', url('/admin/reports')];
+$navItems[] = ['messages', 'Messages', 'bi-envelope', url('/admin/messages')];
+if (Feature::on('reviews')) {
+    $navItems[] = ['reviews', 'Reviews', 'bi-star', url('/admin/reviews')];
+}
+$navItems[] = ['audit-log', 'Audit Log', 'bi-clock-history', url('/admin/audit-log')];
+$navItems[] = ['settings', 'Settings', 'bi-gear', url('/admin/settings')];
 $unreadMessageCount = (new ContactMessage())->newCount();
 $newOrderCount = (new Order())->statusCounts()['pending'] ?? 0;
 $pendingReviewCount = (new ProductReview())->pendingCount();
@@ -90,6 +100,8 @@ $pendingReviewCount = (new ProductReview())->pendingCount();
 
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= asset('js/payment-method-toggle.js') ?>"></script>
+<script src="<?= asset('js/password-toggle.js') ?>"></script>
 <?php if (!empty($extraScripts)): foreach ($extraScripts as $script): ?>
 <script src="<?= asset($script) ?>"></script>
 <?php endforeach; endif; ?>

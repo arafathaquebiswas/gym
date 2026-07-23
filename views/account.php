@@ -76,10 +76,12 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
           <?php endif; ?>
         </div>
         <div class="glass-card p-4">
+          <?php if (Feature::on('wishlist')): ?>
           <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="bi bi-heart text-orange"></i> Wishlist</h5>
             <a href="<?= url('/account/wishlist') ?>" class="btn btn-ps-outline btn-sm"><?= (int) $wishlistCount ?> item<?= $wishlistCount === 1 ? '' : 's' ?></a>
           </div>
+          <?php endif; ?>
           <p class="text-white-50 mt-2 mb-0"><a href="<?= url('/account/addresses') ?>" class="text-white-50">Manage saved addresses →</a></p>
         </div>
       </div>

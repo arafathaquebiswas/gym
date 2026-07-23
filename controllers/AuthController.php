@@ -120,6 +120,9 @@ final class AuthController extends Controller
 
     private function redirectToDashboard(): never
     {
+        if (Auth::hasRole('delivery')) {
+            redirect('delivery');
+        }
         redirect(Auth::isStaff() ? 'admin' : 'account');
     }
 }

@@ -92,12 +92,16 @@ $customerEmail = $order['account_email'] ?? $order['guest_email'];
       <?php if ($customerEmail): ?><p class="text-white-50 small mb-1"><?= e($customerEmail) ?></p><?php endif; ?>
       <p class="text-white-50 small mb-0"><?= e($order['guest_phone'] ?? '') ?></p>
       <hr>
-      <h6 class="mb-2">Delivery Address</h6>
+      <h6 class="mb-2"><?= $order['fulfillment_method'] === 'pickup' ? 'Store Pickup' : 'Delivery Address' ?></h6>
+      <?php if ($order['fulfillment_method'] === 'pickup'): ?>
+      <p class="text-white-50 small mb-0"><?= e(order_delivery_label($order)) ?></p>
+      <?php else: ?>
       <p class="text-white-50 small mb-0">
         <?= e($order['delivery_address']) ?><br>
         <?= e($order['delivery_city']) ?><?= $order['delivery_area'] ? ', ' . e($order['delivery_area']) : '' ?><br>
         <?= $order['delivery_postal_code'] ? e($order['delivery_postal_code']) : '' ?>
       </p>
+      <?php endif; ?>
       <?php if ($order['order_notes']): ?>
       <hr><h6 class="mb-2">Order Notes</h6>
       <p class="text-white-50 small mb-0"><?= nl2br(e($order['order_notes'])) ?></p>

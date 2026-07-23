@@ -63,7 +63,11 @@ $pageTitle = 'Membership Plans';
     <div class="row g-4 justify-content-center">
       <?php foreach ($packages as $pkg): ?>
       <div class="col-md-6 col-lg-4">
-        <?php $this->partial('partials/package-card', ['pkg' => $pkg]); ?>
+        <?php if (Feature::on('membership_sales')): ?>
+          <?php $this->partial('partials/package-card', ['pkg' => $pkg]); ?>
+        <?php else: ?>
+          <?php $this->partial('partials/package-card', ['pkg' => $pkg, 'ctaLabel' => 'Contact Us', 'ctaUrl' => url('/contact')]); ?>
+        <?php endif; ?>
       </div>
       <?php endforeach; ?>
     </div>

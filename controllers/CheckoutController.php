@@ -7,6 +7,15 @@ final class CheckoutController extends Controller
 
     public function show(): void
     {
+        if (!Feature::on('store')) {
+            $this->abort404();
+        }
+
+        if (!Auth::hasRole('member') && !Feature::on('guest_checkout')) {
+            flash('danger', 'Please log in to check out.');
+            redirect('login');
+        }
+
         [$userId, $cartToken] = $this->cartIdentity();
         $productModel = new Product();
         $lines = array_map([$productModel, 'withComputedOffer'], (new Cart())->forIdentity($userId, $cartToken));
@@ -20,8 +29,26 @@ final class CheckoutController extends Controller
 
         $settingModel = new Setting();
         $freeShippingMin = (float) $settingModel->get('free_shipping_min_amount', '0');
-        $shipping = ($freeShippingMin > 0 && $subtotal >= $freeShippingMin) ? 0.0 : (float) $settingModel->get('shipping_flat_rate', '0');
-        $tax = round($subtotal * ((float) $settingModel->get('tax_percent', '0') / 100), 2);
+
+        $shipping = 0.0;
+        if ($settingModel->getBool('shipping_enabled')) {
+            if ($freeShippingMin > 0 && $subtotal >= $freeShippingMin) {
+                $shipping = 0.0;
+            } else {
+                $flatRate = (float) $settingModel->get('shipping_flat_rate', '0');
+                $maxOverride = null;
+                foreach ($lines as $line) {
+                    if ($line['shipping_charge'] !== null && $line['shipping_charge'] !== '') {
+                        $maxOverride = max($maxOverride ?? 0.0, (float) $line['shipping_charge']);
+                    }
+                }
+                $shipping = $maxOverride !== null ? max($flatRate, $maxOverride) : $flatRate;
+            }
+        }
+
+        $tax = $settingModel->getBool('tax_enabled')
+            ? round($subtotal * ((float) $settingModel->get('tax_percent', '0') / 100), 2)
+            : 0.0;
 
         $savedAddresses = [];
         $member = null;
@@ -39,12 +66,25 @@ final class CheckoutController extends Controller
             'freeShippingMin' => $freeShippingMin,
             'savedAddresses' => $savedAddresses,
             'member' => $member,
+            'gymName' => $settingModel->get('gym_name', 'PowerSurge Gym'),
+            'gymAddress' => $settingModel->get('gym_address'),
+            'gymPhone' => $settingModel->get('gym_phone'),
         ]);
     }
 
     public function placeOrder(): void
     {
         Security::requireCsrf();
+
+        if (!Feature::on('store')) {
+            $this->abort404();
+        }
+
+        $isMember = Auth::hasRole('member');
+        if (!$isMember && !Feature::on('guest_checkout')) {
+            flash('danger', 'Please log in to check out.');
+            redirect('login');
+        }
 
         [$userId, $cartToken] = $this->cartIdentity();
         $cartModel = new Cart();
@@ -56,12 +96,17 @@ final class CheckoutController extends Controller
             redirect('cart');
         }
 
-        $isMember = Auth::hasRole('member');
         $createAccount = !$isMember && $this->input('create_account') === '1';
 
         $name = $this->input('full_name');
         $email = $this->input('email');
         $phone = $this->input('phone');
+
+        $fulfillmentMethod = $this->input('fulfillment_method', 'delivery');
+        if (!in_array($fulfillmentMethod, ['delivery', 'pickup'], true)) {
+            $fulfillmentMethod = 'delivery';
+        }
+        $isPickup = $fulfillmentMethod === 'pickup';
 
         $validator = new Validator([
             'full_name' => $name, 'email' => $email, 'phone' => $phone,
@@ -71,9 +116,12 @@ final class CheckoutController extends Controller
         ]);
         $validator->required('full_name', 'Full name')
             ->required('email', 'Email')->email('email')
-            ->phone('phone')
-            ->required('delivery_address', 'Delivery address')
-            ->required('delivery_city', 'City');
+            ->phone('phone');
+
+        if (!$isPickup) {
+            $validator->required('delivery_address', 'Delivery address')
+                ->required('delivery_city', 'City');
+        }
 
         if ($createAccount) {
             $validator->minLength('password', 8, 'Password');
@@ -106,6 +154,7 @@ final class CheckoutController extends Controller
             'guest_name' => $userId ? null : $name,
             'guest_email' => $userId ? null : $email,
             'guest_phone' => $userId ? null : $phone,
+            'fulfillment_method' => $fulfillmentMethod,
             'delivery_address' => $this->input('delivery_address'),
             'delivery_city' => $this->input('delivery_city'),
             'delivery_area' => $this->input('delivery_area') ?: null,
@@ -113,17 +162,23 @@ final class CheckoutController extends Controller
             'order_notes' => $this->rawInput('order_notes') ?: null,
         ];
 
-        $paymentMethod = $this->input('payment_method', 'cod');
+        $paymentMethod = $this->input('payment_method', '');
         if (!in_array($paymentMethod, self::ALLOWED_PAYMENT_METHODS, true)) {
-            flash('danger', 'Please select a valid payment method.');
+            flash('danger', 'Please select a payment method.');
+            redirect('checkout');
+        }
+
+        $referenceNo = $this->input('reference_no') ?: null;
+        if ($paymentMethod !== 'cod' && !$referenceNo) {
+            flash('danger', 'Please enter the transaction/reference ID for your selected payment method.');
             redirect('checkout');
         }
 
         $payment = [
             'method' => $paymentMethod,
             'discount' => 0.0,
-            'couponCode' => $this->input('coupon_code') ?: null,
-            'reference_no' => $this->input('reference_no') ?: null,
+            'couponCode' => Feature::on('coupons') ? ($this->input('coupon_code') ?: null) : null,
+            'reference_no' => $referenceNo,
         ];
 
         $cartLines = array_map(fn ($l) => ['product_id' => (int) $l['id'], 'qty' => (int) $l['qty']], $lines);
@@ -135,7 +190,7 @@ final class CheckoutController extends Controller
             redirect('checkout');
         }
 
-        if ($userId && $this->input('save_address') === '1') {
+        if ($userId && !$isPickup && $this->input('save_address') === '1') {
             (new CustomerAddress())->create($userId, [
                 'label' => 'Home', 'full_name' => $name, 'phone' => $phone,
                 'address' => $customer['delivery_address'], 'city' => $customer['delivery_city'],

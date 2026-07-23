@@ -32,7 +32,7 @@ final class PosController extends AdminController
 
             // Never trust client-submitted prices/stock — always re-read live from the DB.
             $product = $productModel->find($productId);
-            if (!$product || !$product['is_active']) {
+            if (!$product || $product['status'] === 'draft') {
                 flash('danger', 'One of the items in your cart is no longer available.');
                 redirect('admin/pos');
             }
