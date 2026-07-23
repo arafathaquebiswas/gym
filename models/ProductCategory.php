@@ -9,12 +9,25 @@ final class ProductCategory extends Model
     }
 
     /** Active top-level categories with their active children, in display order — for the public store's category picker. */
+    /** Top-level active categories, each with its active children nested under 'children' — for the store sidebar. */
     public function allActiveForStorefront(): array
     {
         $stmt = $this->db->query(
             "SELECT * FROM product_categories WHERE status = 'active' ORDER BY sort_order ASC, name ASC"
         );
-        return $stmt->fetchAll();
+        $rows = $stmt->fetchAll();
+
+        $byParent = [];
+        foreach ($rows as $row) {
+            $byParent[(int) ($row['parent_id'] ?? 0)][] = $row;
+        }
+
+        $topLevel = $byParent[0] ?? [];
+        foreach ($topLevel as &$category) {
+            $category['children'] = $byParent[(int) $category['id']] ?? [];
+        }
+
+        return $topLevel;
     }
 
     public function findBySlug(string $slug): ?array

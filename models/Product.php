@@ -21,8 +21,13 @@ final class Product extends Model
         $params = [];
 
         if ($categorySlug) {
-            $where[] = 'c.slug = :category_slug';
+            // Browsing a parent category (e.g. "Supplements") must also surface products filed
+            // under its subcategories (e.g. "Protein", "Creatine") — not just products assigned
+            // to the parent itself. Leaf categories with no children are unaffected (the OR's
+            // subquery simply matches nothing extra).
+            $where[] = '(c.slug = :category_slug OR c.parent_id = (SELECT id FROM product_categories WHERE slug = :category_slug_parent))';
             $params['category_slug'] = $categorySlug;
+            $params['category_slug_parent'] = $categorySlug;
         }
         if ($brandSlug) {
             $where[] = 'b.slug = :brand_slug';

@@ -179,29 +179,15 @@ $coverSrc = $trainer['cover_photo']
 
       <div class="col-lg-7">
         <h4 class="mb-3"><i class="bi bi-calendar-check text-orange"></i> Book a Session</h4>
-        <?php if (Auth::hasRole('member')): ?>
-        <div class="glass-card p-4" id="bookingWidget"
-             data-trainer-id="<?= (int) $trainer['id'] ?>"
-             data-slots-url="<?= url('/api/trainer-slots.php') ?>"
-             data-book-url="<?= url('/trainers/' . e($trainer['slug']) . '/book') ?>"
-             data-csrf="<?= e(Security::csrfToken()) ?>">
-          <div class="mb-3">
-            <label class="form-ps-label text-white-50 mb-2 d-block">Choose a date</label>
-            <input type="date" id="bookingDate" class="form-control form-ps-input"
-                   min="<?= e($minBookingDate) ?>" max="<?= e($maxBookingDate) ?>" value="<?= e($minBookingDate) ?>">
-          </div>
-          <div id="bookingSlots" class="slot-grid"></div>
-          <div id="bookingMessage" class="mt-3"></div>
-        </div>
-        <?php elseif (Auth::check()): ?>
+        <?php if (Auth::check()): ?>
         <div class="glass-card p-4 text-center text-white-50">
-          Trainer bookings are for members. Staff accounts can view schedules here but don't book sessions.
+          Trainer bookings are for active members. Staff accounts can view schedules here but don't book sessions.
         </div>
         <?php else: ?>
         <div class="glass-card p-4 text-center">
-          <p class="text-white-50 mb-3">Log in as a member to book a session with <?= e($trainer['name']) ?>.</p>
-          <a href="<?= url('/login') ?>" class="btn btn-ps">Login to Book</a>
-          <a href="<?= url('/register') ?>" class="btn btn-ps-outline ms-2">Create Account</a>
+          <p class="text-white-50 mb-3">Trainer sessions are booked in person for active members. Register your interest online, then visit or contact the gym to book a session with <?= e($trainer['name']) ?>.</p>
+          <a href="<?= url('/register') ?>" class="btn btn-ps">Register for Membership</a>
+          <a href="<?= url('/contact') ?>" class="btn btn-ps-outline ms-2">Contact Us</a>
         </div>
         <?php endif; ?>
       </div>

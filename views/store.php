@@ -47,22 +47,33 @@ $pageTitle = 'Store';
           </form>
           <h6 class="mt-3 mb-2">Categories</h6>
           <ul class="list-unstyled mb-0">
-            <li class="mb-2"><a href="<?= url('/store' . ($activeBrand ? '?brand=' . urlencode($activeBrand) : '')) ?>" class="<?= !$activeCategory ? 'text-orange fw-semibold' : '' ?>">All Products</a></li>
+            <li class="mb-2"><a href="<?= url('/store' . ($activeBrand ? '?brand=' . urlencode($activeBrand) : '')) ?>" class="<?= !$activeCategory ? 'text-orange fw-semibold' : 'text-white-50' ?>">All Products</a></li>
             <?php foreach ($categories as $cat): ?>
             <li class="mb-2">
-              <a href="<?= url('/store?' . http_build_query(array_filter(['category' => $cat['slug'], 'brand' => $activeBrand]))) ?>" class="<?= $activeCategory === $cat['slug'] ? 'text-orange fw-semibold' : '' ?>">
+              <a href="<?= url('/store?' . http_build_query(array_filter(['category' => $cat['slug'], 'brand' => $activeBrand]))) ?>" class="<?= $activeCategory === $cat['slug'] ? 'text-orange fw-semibold' : 'text-white-50' ?>">
                 <?= e($cat['name']) ?>
               </a>
+              <?php if (!empty($cat['children'])): ?>
+              <ul class="list-unstyled ms-3 mt-1 mb-0">
+                <?php foreach ($cat['children'] as $child): ?>
+                <li class="mb-1">
+                  <a href="<?= url('/store?' . http_build_query(array_filter(['category' => $child['slug'], 'brand' => $activeBrand]))) ?>" class="small <?= $activeCategory === $child['slug'] ? 'text-orange fw-semibold' : 'text-white-50' ?>">
+                    <?= e($child['name']) ?>
+                  </a>
+                </li>
+                <?php endforeach; ?>
+              </ul>
+              <?php endif; ?>
             </li>
             <?php endforeach; ?>
           </ul>
           <?php if (!empty($brands)): ?>
           <h6 class="mt-3 mb-2">Brands</h6>
           <ul class="list-unstyled mb-0">
-            <li class="mb-2"><a href="<?= url('/store' . ($activeCategory ? '?category=' . urlencode($activeCategory) : '')) ?>" class="<?= !$activeBrand ? 'text-orange fw-semibold' : '' ?>">All Brands</a></li>
+            <li class="mb-2"><a href="<?= url('/store' . ($activeCategory ? '?category=' . urlencode($activeCategory) : '')) ?>" class="<?= !$activeBrand ? 'text-orange fw-semibold' : 'text-white-50' ?>">All Brands</a></li>
             <?php foreach ($brands as $brand): ?>
             <li class="mb-2">
-              <a href="<?= url('/store?' . http_build_query(array_filter(['brand' => $brand['slug'], 'category' => $activeCategory]))) ?>" class="<?= $activeBrand === $brand['slug'] ? 'text-orange fw-semibold' : '' ?>">
+              <a href="<?= url('/store?' . http_build_query(array_filter(['brand' => $brand['slug'], 'category' => $activeCategory]))) ?>" class="<?= $activeBrand === $brand['slug'] ? 'text-orange fw-semibold' : 'text-white-50' ?>">
                 <?= e($brand['name']) ?>
               </a>
             </li>

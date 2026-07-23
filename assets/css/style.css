@@ -76,6 +76,18 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
 }
 .glass-card:hover { transform: translateY(-4px); border-color: rgba(255, 106, 26, 0.4); }
 
+/* ---------- Coupon selection (checkout) ---------- */
+.coupon-option {
+  border: 1px solid var(--ps-border);
+  border-radius: var(--ps-radius);
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.coupon-option:hover { border-color: rgba(255, 106, 26, 0.5); }
+.coupon-option:has(.coupon-radio:checked) { border-color: var(--ps-orange); background: rgba(255, 106, 26, 0.08); }
+.coupon-option.coupon-ineligible { opacity: .55; cursor: not-allowed; }
+.coupon-option.coupon-ineligible:hover { border-color: var(--ps-border); }
+
 /* ---------- Navbar ---------- */
 .navbar-ps {
   background: rgba(10, 10, 13, 0.85);

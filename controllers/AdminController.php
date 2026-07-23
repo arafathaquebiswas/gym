@@ -8,7 +8,8 @@ abstract class AdminController extends Controller
 {
     public function __construct()
     {
-        Auth::requireRole('super_admin', 'admin');
+        // Per-module Permission::require() gating (Phase 1) lands on top of this role check.
+        Auth::requireRole('main_admin', 'super_admin', 'admin');
     }
 
     protected function logActivity(string $action, string $description): void

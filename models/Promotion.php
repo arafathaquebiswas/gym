@@ -188,6 +188,44 @@ final class Promotion extends Model
         return $promo;
     }
 
+    /**
+     * Every coupon eligible to be *offered* for a given checkout context (store 'product' vs
+     * 'membership') — this is what powers the auto-populated, click-to-select coupon list, so
+     * a coupon never has to be typed in. Same category/date/usage-limit rules as validCoupon(),
+     * just returning every match instead of one specific code. Each row is annotated with
+     * 'meets_minimum' and 'computed_discount' so the UI can show (and the client can preview)
+     * the exact effect of picking it without a round-trip.
+     */
+    public function eligibleForCheckout(string $context, float $subtotal, ?int $memberId = null, ?string $guestEmail = null): array
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM promotions
+             WHERE is_active = 1
+               AND applies_to IN (:context, 'both')
+               AND discount_type IN ('percent', 'fixed')
+               AND start_date <= CURDATE() AND end_date >= CURDATE()
+               AND (usage_limit IS NULL OR used_count < usage_limit)
+             ORDER BY end_date ASC"
+        );
+        $stmt->execute(['context' => $context]);
+        $promos = $stmt->fetchAll();
+
+        $eligible = [];
+        foreach ($promos as $promo) {
+            if ($promo['per_customer_limit'] !== null && ($memberId !== null || $guestEmail !== null)) {
+                $used = $this->customerUsageCount((int) $promo['id'], $memberId, $guestEmail);
+                if ($used >= (int) $promo['per_customer_limit']) {
+                    continue;
+                }
+            }
+            $promo['meets_minimum'] = $subtotal >= (float) $promo['min_purchase'];
+            $promo['computed_discount'] = $promo['meets_minimum'] ? $this->computeDiscount($promo, $subtotal) : 0.0;
+            $eligible[] = $promo;
+        }
+
+        return $eligible;
+    }
+
     public function computeDiscount(array $promo, float $subtotal): float
     {
         $discount = $promo['discount_type'] === 'percent'

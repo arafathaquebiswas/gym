@@ -52,6 +52,16 @@ tr.collapse.show { display: table-row; }
 .details-chevron { transition: transform .15s ease; display: inline-block; }
 .details-chevron.rotated { transform: rotate(90deg); }
 
+/* Coupon selection (Add Member / Renew Membership) */
+.coupon-option-admin {
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.coupon-option-admin:has(.coupon-radio-admin:checked) { border-color: var(--ps-orange, #ff6a1a); background: rgba(255, 106, 26, .08); }
+.coupon-option-admin.coupon-ineligible-admin { opacity: .45; cursor: not-allowed; }
+
 .admin-main { flex-grow: 1; min-width: 0; }
 
 .admin-topbar {

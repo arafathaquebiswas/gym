@@ -53,6 +53,7 @@
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
       <small>&copy; <?= date('Y') ?> PowerSurge Gym. All rights reserved.</small>
       <small>Built with <i class="bi bi-heart-fill text-orange"></i> for a stronger you.</small>
+      <small><a href="<?= url('/login') ?>" class="text-white-50">Staff Login</a></small>
     </div>
   </div>
 </footer>

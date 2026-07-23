@@ -50,28 +50,14 @@ $router->get('/track-order', [OrderTrackingController::class, 'show']);
 $router->post('/track-order/find', [OrderTrackingController::class, 'find']);
 $router->post('/track-order/invoice', [OrderTrackingController::class, 'invoice']);
 
-// ---- Auth -------------------------------------------------------------------
+// ---- Auth (staff/delivery only — no member-facing login in this app) --------------
 $router->get('/login', [AuthController::class, 'showLogin']);
 $router->post('/login', [AuthController::class, 'login']);
-$router->get('/register', [AuthController::class, 'showRegister']);
-$router->post('/register', [AuthController::class, 'register']);
 $router->get('/logout', [AuthController::class, 'logout']);
 
-// ---- Auth-gated ---------------------------------------------------------------
-$router->get('/account', [AccountController::class, 'index']);
-$router->get('/account/profile', [AccountController::class, 'profile']);
-$router->post('/account/profile', [AccountController::class, 'profileUpdate']);
-$router->post('/account/password', [AccountController::class, 'passwordUpdate']);
-$router->get('/account/orders', [AccountController::class, 'orders']);
-$router->get('/account/orders/{id}', [AccountController::class, 'orderDetail']);
-$router->get('/account/orders/{id}/invoice', [AccountController::class, 'orderInvoice']);
-$router->get('/account/addresses', [AccountController::class, 'addresses']);
-$router->post('/account/addresses', [AccountController::class, 'addressStore']);
-$router->post('/account/addresses/{id}', [AccountController::class, 'addressUpdate']);
-$router->post('/account/addresses/{id}/default', [AccountController::class, 'addressSetDefault']);
-$router->post('/account/addresses/{id}/delete', [AccountController::class, 'addressDelete']);
-$router->get('/account/wishlist', [AccountController::class, 'wishlist']);
-$router->post('/account/wishlist/remove', [AccountController::class, 'wishlistRemove']);
+// ---- Online Membership Registration (public, account-free) ------------------------
+$router->get('/register', [MembershipRegistrationController::class, 'show']);
+$router->post('/register', [MembershipRegistrationController::class, 'submit']);
 
 $router->get('/admin', [AdminDashboardController::class, 'index']);
 

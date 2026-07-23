@@ -27,7 +27,11 @@ final class AuthController extends Controller
         $userModel = new User();
         $user = $userModel->findByEmail($email);
 
-        if (!$user || !password_verify($password, $user['password_hash'])) {
+        // There is no member-facing login in this app — members are never given credentials
+        // and can never sign in, even if a (purely internal, never-disclosed) account record
+        // exists underneath their membership. Treat it exactly like a wrong password so it
+        // reveals nothing about whether that email belongs to a member.
+        if (!$user || $user['role_slug'] === 'member' || !password_verify($password, $user['password_hash'])) {
             Auth::logAttempt($db, $user['id'] ?? null, $email, 'failed');
             flash('danger', 'Invalid email or password.');
             redirect('login');
@@ -51,66 +55,6 @@ final class AuthController extends Controller
         $this->redirectToDashboard();
     }
 
-    public function showRegister(): void
-    {
-        if (Auth::check()) {
-            $this->redirectToDashboard();
-        }
-        $this->view('register');
-    }
-
-    public function register(): void
-    {
-        Security::requireCsrf();
-
-        $name = $this->input('name');
-        $email = $this->input('email');
-        $phone = $this->input('phone');
-        $password = $this->rawInput('password');
-        $passwordConfirm = $this->rawInput('password_confirm');
-
-        $validator = new Validator([
-            'name' => $name,
-            'email' => $email,
-            'phone' => $phone,
-            'password' => $password,
-            'password_confirm' => $passwordConfirm,
-        ]);
-        $validator->required('name', 'Full name')
-            ->required('email', 'Email')
-            ->email('email')
-            ->phone('phone')
-            ->minLength('password', 8, 'Password')
-            ->matches('password_confirm', 'password', 'Password confirmation');
-
-        $userModel = new User();
-        if ($validator->fails()) {
-            flash('danger', $validator->firstError());
-            $_SESSION['_old'] = ['name' => $name, 'email' => $email, 'phone' => $phone];
-            redirect('register');
-        }
-
-        if ($userModel->emailExists($email)) {
-            flash('danger', 'An account with this email already exists.');
-            $_SESSION['_old'] = ['name' => $name, 'email' => $email, 'phone' => $phone];
-            redirect('register');
-        }
-
-        $userId = $userModel->create($name, $email, $phone, $password, 'member');
-        $memberModel = new Member();
-        $memberModel->createForUser($userId);
-
-        $user = $userModel->findById($userId);
-        $guestCartToken = session_id();
-        Auth::login($user);
-        (new Cart())->mergeGuestIntoUser($guestCartToken, $userId);
-
-        Mailer::send($email, $name, 'Welcome to PowerSurge Gym', "<p>Hi {$name},</p><p>Your account has been created. Visit the gym to activate a membership package.</p>");
-
-        flash('success', 'Account created! Visit the front desk to activate your membership.');
-        redirect('account');
-    }
-
     public function logout(): void
     {
         Auth::logout();
@@ -118,11 +62,9 @@ final class AuthController extends Controller
         redirect('login');
     }
 
+    /** Only staff (admin) and delivery roles can ever reach this — see the member-login block above. */
     private function redirectToDashboard(): never
     {
-        if (Auth::hasRole('delivery')) {
-            redirect('delivery');
-        }
-        redirect(Auth::isStaff() ? 'admin' : 'account');
+        redirect(Auth::hasRole('delivery') ? 'delivery' : 'admin');
     }
 }

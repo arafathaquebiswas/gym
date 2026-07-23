@@ -30,7 +30,7 @@ final class StoreController extends Controller
             'page' => $result['page'],
             'perPage' => $result['per_page'],
             'totalPages' => (int) ceil($result['total'] / $result['per_page']),
-            'categories' => $categoryModel->all(),
+            'categories' => $categoryModel->allActiveForStorefront(),
             'brands' => (new Brand())->all(),
             'activeCategory' => $category,
             'activeBrand' => $brand,

@@ -51,11 +51,10 @@ $cartCount = (new Cart())->count($cartIdentity['user_id'], $cartIdentity['cart_t
         </a>
         <?php endif; ?>
         <?php if ($currentUser): ?>
-          <?php $accountHref = Auth::hasRole('delivery') ? '/delivery' : (Auth::isStaff() ? '/admin' : '/account'); ?>
-          <a href="<?= url($accountHref) ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-person-circle"></i> <?= e($currentUser['name']) ?></a>
+          <?php /* Only staff/delivery can ever be logged in here — there is no member-facing account. */ ?>
+          <a href="<?= url(Auth::hasRole('delivery') ? '/delivery' : '/admin') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-person-circle"></i> <?= e($currentUser['name']) ?></a>
           <a href="<?= url('/logout') ?>" class="btn btn-ps btn-sm">Logout</a>
         <?php else: ?>
-          <a href="<?= url('/login') ?>" class="btn btn-ps-outline btn-sm">Login</a>
           <a href="<?= url('/register') ?>" class="btn btn-ps btn-sm">Join Now</a>
         <?php endif; ?>
       </div>

@@ -37,6 +37,34 @@ CREATE TABLE users (
     INDEX idx_users_status (status)
 ) ENGINE=InnoDB;
 
+-- Per-user, per-module permission overrides (Main Admin / Super Admin / Staff hierarchy).
+-- No row for a given user+module = default-allow for super_admin, default-deny for staff
+-- (see core/Permission.php) — main_admin never consults this table at all.
+CREATE TABLE user_permissions (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED NOT NULL,
+    module_key  VARCHAR(30) NOT NULL,
+    can_view    TINYINT(1) NOT NULL DEFAULT 0,
+    can_create  TINYINT(1) NOT NULL DEFAULT 0,
+    can_edit    TINYINT(1) NOT NULL DEFAULT 0,
+    can_delete  TINYINT(1) NOT NULL DEFAULT 0,
+    can_export  TINYINT(1) NOT NULL DEFAULT 0,
+    can_print   TINYINT(1) NOT NULL DEFAULT 0,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_permissions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_user_permissions (user_id, module_key)
+) ENGINE=InnoDB;
+
+-- Who can even see a module exists, independent of their own per-user permissions.
+-- 'settings' defaults to main_admin_only (seeded below); every other module defaults 'everyone'.
+CREATE TABLE module_locks (
+    module_key  VARCHAR(30) PRIMARY KEY,
+    scope       ENUM('everyone','main_admin_super_admin','main_admin_staff','main_admin_only') NOT NULL DEFAULT 'everyone',
+    updated_by  INT UNSIGNED NULL,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_module_locks_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
 CREATE TABLE password_resets (
     id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id     INT UNSIGNED NOT NULL,
@@ -228,6 +256,11 @@ CREATE TABLE members (
     notify_promotions   TINYINT(1) NOT NULL DEFAULT 1,
     join_date           DATE NOT NULL,
     trainer_id          INT UNSIGNED NULL,
+    preferred_package_id INT UNSIGNED NULL,
+    registration_notes  TEXT NULL,
+    reported_payment_method    ENUM('bkash','nagad','rocket','card','bank_transfer') NULL,
+    reported_payment_reference VARCHAR(100) NULL,
+    reported_payer_number      VARCHAR(30) NULL,
     locker_number       VARCHAR(20) NULL,
     status              ENUM('pending','active','suspended','frozen','expired') NOT NULL DEFAULT 'pending',
     qr_code             VARCHAR(255) NULL,
@@ -235,6 +268,7 @@ CREATE TABLE members (
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_members_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_members_trainer FOREIGN KEY (trainer_id) REFERENCES trainers(id) ON DELETE SET NULL,
+    CONSTRAINT fk_members_preferred_package FOREIGN KEY (preferred_package_id) REFERENCES membership_packages(id) ON DELETE SET NULL,
     INDEX idx_members_status (status),
     INDEX idx_members_trainer (trainer_id)
 ) ENGINE=InnoDB;
@@ -675,6 +709,7 @@ CREATE TABLE coupon_usages (
     member_id       INT UNSIGNED NULL,
     sale_id         INT UNSIGNED NULL,
     subscription_id INT UNSIGNED NULL,
+    order_id        INT UNSIGNED NULL,
     used_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_coupon_usages_promotion FOREIGN KEY (promotion_id) REFERENCES promotions(id) ON DELETE CASCADE,
     CONSTRAINT fk_coupon_usages_member FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL,
@@ -753,6 +788,9 @@ CREATE TABLE orders (
     INDEX idx_orders_delivery_person (delivery_person_id)
 ) ENGINE=InnoDB;
 
+ALTER TABLE coupon_usages
+    ADD CONSTRAINT fk_coupon_usages_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
+
 CREATE TABLE order_items (
     id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     order_id        INT UNSIGNED NOT NULL,
@@ -829,6 +867,7 @@ CREATE TABLE payment_transactions (
     method          VARCHAR(20) NOT NULL,
     amount          DECIMAL(10,2) NOT NULL,
     reference_no    VARCHAR(100) NULL,
+    payer_number    VARCHAR(30) NULL,
     status          ENUM('pending','verified','failed') NOT NULL DEFAULT 'pending',
     recorded_by     INT UNSIGNED NULL,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

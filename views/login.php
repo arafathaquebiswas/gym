@@ -10,8 +10,8 @@
           <form method="post" action="<?= url('/login') ?>" class="form-ps needs-validation" novalidate>
             <input type="hidden" name="_csrf" value="<?= e(Security::csrfToken()) ?>">
             <div class="mb-3">
-              <label>Email</label>
-              <input type="email" name="email" class="form-control" value="<?= old('email') ?>" required>
+              <label>Email or ID</label>
+              <input type="text" name="email" class="form-control" value="<?= old('email') ?>" required>
             </div>
             <div class="mb-3">
               <label>Password</label>

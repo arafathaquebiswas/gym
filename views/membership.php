@@ -14,7 +14,7 @@ $pageTitle = 'Membership Plans';
     <p class="lead mx-auto" style="max-width:650px">Everything about joining, pricing, and renewing at PowerSurge — packages, offers, comparisons, and trainer add-ons, all in one place.</p>
     <div class="d-flex gap-3 justify-content-center mt-4 flex-wrap">
       <a href="<?= url('/register') ?>" class="btn btn-ps btn-lg">Join Now</a>
-      <a href="<?= url('/login') ?>" class="btn btn-ps-outline btn-lg">Renew Membership</a>
+      <a href="<?= url('/contact') ?>" class="btn btn-ps-outline btn-lg">Visit / Contact to Renew</a>
     </div>
   </div>
 </section>
@@ -167,7 +167,7 @@ $pageTitle = 'Membership Plans';
     <h2 class="section-title mb-3">Ready to Start?</h2>
     <div class="d-flex gap-3 justify-content-center flex-wrap">
       <a href="<?= url('/register') ?>" class="btn btn-ps btn-lg">Join Now</a>
-      <a href="<?= url('/login') ?>" class="btn btn-ps-outline btn-lg">Renew Membership</a>
+      <a href="<?= url('/contact') ?>" class="btn btn-ps-outline btn-lg">Visit / Contact to Renew</a>
     </div>
   </div>
 </section>

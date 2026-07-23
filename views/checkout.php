@@ -148,19 +148,6 @@ $defaultFulfillment = $deliveryOn ? 'delivery' : 'pickup';
             </div>
           </div>
 
-          <?php if (!$isMember): ?>
-          <div class="glass-card p-4 mb-4">
-            <div class="form-check mb-2">
-              <input type="checkbox" name="create_account" value="1" class="form-check-input" id="createAccount" onchange="document.getElementById('createAccountFields').classList.toggle('d-none', !this.checked)">
-              <label class="form-check-label" for="createAccount">Create an account with these details (optional)</label>
-            </div>
-            <div id="createAccountFields" class="d-none">
-              <label>Password</label>
-              <input type="password" name="password" class="form-control" placeholder="At least 8 characters">
-            </div>
-          </div>
-          <?php endif; ?>
-
           <div class="glass-card p-4">
             <h6 class="mb-3">Payment Method</h6>
             <?php foreach (['cod' => 'Cash on Delivery', 'bkash' => 'bKash', 'nagad' => 'Nagad', 'rocket' => 'Rocket', 'bank_transfer' => 'Bank Transfer'] as $val => $label): ?>
@@ -169,18 +156,50 @@ $defaultFulfillment = $deliveryOn ? 'delivery' : 'pickup';
               <label class="form-check-label" for="pm_<?= $val ?>"><?= $label ?></label>
             </div>
             <?php endforeach; ?>
+            <div id="payerNumberField" class="mt-2 d-none">
+              <label>bKash/Nagad/Rocket Number</label>
+              <input type="text" name="payer_number" id="payerNumberInput" class="form-control" placeholder="e.g. 017XXXXXXXX">
+              <p class="text-white-50 small mt-1">The number you sent the payment from.</p>
+            </div>
             <div id="referenceNoField" class="mt-2 d-none">
               <label>Transaction / Reference ID</label>
               <input type="text" name="reference_no" id="referenceNoInput" class="form-control" placeholder="e.g. bKash transaction ID">
               <p class="text-white-50 small mt-1">Enter the transaction ID from your payment app — our team will verify it.</p>
             </div>
-            <?php if (Feature::on('coupons')): ?>
-            <div class="mt-3">
-              <label>Coupon Code</label>
-              <input type="text" name="coupon_code" class="form-control" placeholder="Optional">
-            </div>
-            <?php endif; ?>
           </div>
+
+          <?php if (Feature::on('coupons') && !empty($eligibleCoupons)): ?>
+          <div class="glass-card p-4 mt-4">
+            <h6 class="mb-1">Available Coupons</h6>
+            <p class="text-white-50 small mb-3">Select one coupon to apply — you don't need to type a code.</p>
+            <div class="d-flex flex-column gap-2">
+              <?php foreach ($eligibleCoupons as $coupon): ?>
+              <label class="coupon-option p-3 d-flex align-items-start gap-3 <?= !$coupon['meets_minimum'] ? 'coupon-ineligible' : '' ?>"
+                     data-discount-type="<?= e($coupon['discount_type']) ?>"
+                     data-discount-value="<?= (float) $coupon['discount_value'] ?>"
+                     data-max-discount="<?= $coupon['max_discount_amount'] !== null ? (float) $coupon['max_discount_amount'] : '' ?>"
+                     data-computed-discount="<?= (float) $coupon['computed_discount'] ?>">
+                <input type="radio" name="coupon_code" value="<?= e($coupon['code']) ?>" class="form-check-input coupon-radio mt-1" <?= !$coupon['meets_minimum'] ? 'disabled' : '' ?>>
+                <span class="flex-grow-1">
+                  <span class="d-flex justify-content-between align-items-center">
+                    <strong class="text-white"><?= e($coupon['code']) ?></strong>
+                    <span class="text-orange fw-semibold">
+                      <?= $coupon['discount_type'] === 'percent' ? number_format((float) $coupon['discount_value'], 0) . '% Off' : '৳' . number_format((float) $coupon['discount_value']) . ' Off' ?>
+                    </span>
+                  </span>
+                  <span class="d-block text-white-50 small"><?= e($coupon['title']) ?><?= $coupon['description'] ? ' — ' . e($coupon['description']) : '' ?></span>
+                  <?php if (!$coupon['meets_minimum']): ?>
+                    <span class="d-block text-danger small mt-1">Requires a minimum order of ৳<?= number_format((float) $coupon['min_purchase']) ?> — not eligible for this cart</span>
+                  <?php elseif ((float) $coupon['min_purchase'] > 0): ?>
+                    <span class="d-block text-white-50 small mt-1">Minimum order ৳<?= number_format((float) $coupon['min_purchase']) ?></span>
+                  <?php endif; ?>
+                  <span class="d-block text-white-50 small">Expires <?= format_date($coupon['end_date']) ?></span>
+                </span>
+              </label>
+              <?php endforeach; ?>
+            </div>
+          </div>
+          <?php endif; ?>
         </div>
 
         <div class="col-lg-5">
@@ -194,6 +213,10 @@ $defaultFulfillment = $deliveryOn ? 'delivery' : 'pickup';
             <?php endforeach; ?>
             <hr>
             <div class="d-flex justify-content-between"><span class="text-white-50">Subtotal</span><span>৳<?= number_format($subtotal) ?></span></div>
+            <div class="d-flex justify-content-between d-none" id="summaryDiscountRow">
+              <span class="text-white-50">Coupon Discount</span>
+              <span class="text-success" id="summaryDiscount">−৳0</span>
+            </div>
             <div class="d-flex justify-content-between">
               <span class="text-white-50">Shipping</span>
               <span id="summaryShipping"><?= $estimatedShipping > 0 ? '৳' . number_format($estimatedShipping) : 'Free' ?></span>
@@ -204,7 +227,6 @@ $defaultFulfillment = $deliveryOn ? 'delivery' : 'pickup';
             <hr>
             <div class="d-flex justify-content-between fw-bold fs-5"><span>Estimated Total</span><span class="text-orange" id="summaryTotal">৳<?= number_format($subtotal + $estimatedShipping + $estimatedTax) ?></span></div>
             <p class="text-white-50 small mt-2" id="freeShippingHint">
-              Coupon discount (if any) is applied when the order is placed.
               <?php if ($freeShippingMin > 0 && $subtotal < $freeShippingMin): ?>
                 Spend ৳<?= number_format($freeShippingMin - $subtotal) ?> more for free shipping!
               <?php endif; ?>
@@ -223,6 +245,10 @@ document.querySelectorAll('.payment-method-radio').forEach(function (radio) {
     var needsReference = this.value !== 'cod';
     document.getElementById('referenceNoField').classList.toggle('d-none', !needsReference);
     document.getElementById('referenceNoInput').required = needsReference;
+
+    var needsPayerNumber = ['bkash', 'nagad', 'rocket'].indexOf(this.value) !== -1;
+    document.getElementById('payerNumberField').classList.toggle('d-none', !needsPayerNumber);
+    document.getElementById('payerNumberInput').required = needsPayerNumber;
   });
 });
 
@@ -242,7 +268,11 @@ document.querySelectorAll('.payment-method-radio').forEach(function (radio) {
   var zoneSelect = document.getElementById('fZone');
   var summaryShipping = document.getElementById('summaryShipping');
   var summaryTotal = document.getElementById('summaryTotal');
+  var summaryDiscountRow = document.getElementById('summaryDiscountRow');
+  var summaryDiscount = document.getElementById('summaryDiscount');
   var freeShippingHint = document.getElementById('freeShippingHint');
+  var currentFulfillment = '<?= $defaultFulfillment ?>';
+  var selectedDiscount = 0;
 
   function computeShipping(isPickup) {
     if (isPickup || !shippingEnabled) return 0;
@@ -257,6 +287,7 @@ document.querySelectorAll('.payment-method-radio').forEach(function (radio) {
   }
 
   function applyFulfillment(method) {
+    currentFulfillment = method;
     var isPickup = method === 'pickup';
     if (deliveryFields) deliveryFields.classList.toggle('d-none', isPickup);
     if (pickupInfo) pickupInfo.classList.toggle('d-none', !isPickup);
@@ -267,8 +298,21 @@ document.querySelectorAll('.payment-method-radio').forEach(function (radio) {
 
     var shipping = computeShipping(isPickup);
     summaryShipping.textContent = shipping > 0 ? money(shipping) : 'Free';
-    summaryTotal.textContent = money(subtotal + shipping + tax);
+    summaryTotal.textContent = money(Math.max(0, subtotal - selectedDiscount) + shipping + tax);
   }
+
+  // The exact discount amount is computed server-side (Promotion::computeDiscount(), including
+  // any max-discount cap) and handed to us via data-computed-discount — this preview just
+  // reflects that number instantly on selection, it never recomputes the discount itself.
+  document.querySelectorAll('.coupon-radio').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      var label = radio.closest('.coupon-option');
+      selectedDiscount = radio.checked ? parseFloat(label.dataset.computedDiscount || '0') : 0;
+      if (summaryDiscountRow) summaryDiscountRow.classList.toggle('d-none', selectedDiscount <= 0);
+      if (summaryDiscount) summaryDiscount.textContent = '−' + money(selectedDiscount);
+      applyFulfillment(currentFulfillment);
+    });
+  });
 
   var fulfillmentRadios = document.querySelectorAll('.fulfillment-radio');
   fulfillmentRadios.forEach(function (radio) {

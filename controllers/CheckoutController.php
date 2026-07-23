@@ -15,9 +15,9 @@ final class CheckoutController extends Controller
             return;
         }
 
-        if (!Auth::hasRole('member') && !Feature::on('guest_checkout')) {
-            flash('danger', 'Please log in to check out.');
-            redirect('login');
+        if (!Feature::on('guest_checkout')) {
+            flash('danger', 'Checkout is currently unavailable. Please contact the gym.');
+            redirect('cart');
         }
 
         [$userId, $cartToken] = $this->cartIdentity();
@@ -61,10 +61,15 @@ final class CheckoutController extends Controller
         $deliveryOn = Feature::deliveryOn();
         $pickupOn = Feature::pickupOn();
 
+        $eligibleCoupons = Feature::on('coupons')
+            ? (new Promotion())->eligibleForCheckout('product', $subtotal, $member['id'] ?? null)
+            : [];
+
         $this->view('checkout', [
             'pageTitle' => 'Checkout',
             'lines' => $lines,
             'subtotal' => $subtotal,
+            'eligibleCoupons' => $eligibleCoupons,
             'estimatedShipping' => $shipping,
             'estimatedTax' => $tax,
             'freeShippingMin' => $freeShippingMin,
@@ -96,10 +101,10 @@ final class CheckoutController extends Controller
             redirect('store');
         }
 
-        $isMember = Auth::hasRole('member');
-        if (!$isMember && !Feature::on('guest_checkout')) {
-            flash('danger', 'Please log in to check out.');
-            redirect('login');
+        // This store is guest-checkout-only — there is no member-facing login to fall back to.
+        if (!Feature::on('guest_checkout')) {
+            flash('danger', 'Checkout is currently unavailable. Please contact the gym.');
+            redirect('cart');
         }
 
         [$userId, $cartToken] = $this->cartIdentity();
@@ -111,8 +116,6 @@ final class CheckoutController extends Controller
             flash('danger', 'Your cart is empty.');
             redirect('cart');
         }
-
-        $createAccount = !$isMember && $this->input('create_account') === '1';
 
         $name = $this->input('full_name');
         $email = $this->input('email');
@@ -158,7 +161,6 @@ final class CheckoutController extends Controller
             'full_name' => $name, 'email' => $email, 'phone' => $phone,
             'delivery_address' => $this->input('delivery_address'),
             'delivery_city' => $this->input('delivery_city'),
-            'password' => $this->rawInput('password'),
         ]);
         $validator->required('full_name', 'Full name')
             ->required('email', 'Email')->email('email')
@@ -169,31 +171,9 @@ final class CheckoutController extends Controller
                 ->required('delivery_city', 'City');
         }
 
-        if ($createAccount) {
-            $validator->minLength('password', 8, 'Password');
-        }
-
         if ($validator->fails()) {
             flash('danger', $validator->firstError());
             redirect('checkout');
-        }
-
-        if ($createAccount) {
-            $userModel = new User();
-            if ($userModel->emailExists($email)) {
-                flash('danger', 'An account with this email already exists — please log in first.');
-                redirect('checkout');
-            }
-
-            $guestCartToken = session_id();
-            $newUserId = $userModel->create($name, $email, $phone, $this->rawInput('password'), 'member');
-            (new Member())->createForUser($newUserId);
-
-            Auth::login($userModel->findById($newUserId));
-            $cartModel->mergeGuestIntoUser($guestCartToken, $newUserId);
-
-            $userId = $newUserId;
-            $lines = array_map([$productModel, 'withComputedOffer'], $cartModel->forIdentity($userId, null));
         }
 
         $customer = [
@@ -222,11 +202,20 @@ final class CheckoutController extends Controller
             redirect('checkout');
         }
 
+        // bKash/Nagad/Rocket need both the sender number and the transaction code — same
+        // dual-requirement already enforced for membership payments (MemberAdminController).
+        $payerNumber = $this->input('payer_number') ?: null;
+        if (in_array($paymentMethod, ['bkash', 'nagad', 'rocket'], true) && !$payerNumber) {
+            flash('danger', 'Please enter the ' . ucfirst($paymentMethod) . ' number you sent the payment from.');
+            redirect('checkout');
+        }
+
         $payment = [
             'method' => $paymentMethod,
             'discount' => 0.0,
             'couponCode' => Feature::on('coupons') ? ($this->input('coupon_code') ?: null) : null,
             'reference_no' => $referenceNo,
+            'payer_number' => $payerNumber,
         ];
 
         $cartLines = array_map(fn ($l) => ['product_id' => (int) $l['id'], 'qty' => (int) $l['qty']], $lines);

@@ -7,7 +7,7 @@ final class Order extends Model
     /**
      * @param array<int, array{product_id:int,qty:int}> $cartLines
      * @param array{fulfillment_method?:string,zone_id?:?int,time_slot_id?:?int,guest_name:?string,guest_email:?string,guest_phone:?string,delivery_address:?string,delivery_city:?string,delivery_area:?string,delivery_postal_code:?string,order_notes:?string} $customer
-     * @param array{method:string,discount:float,couponCode:?string,reference_no:?string} $payment
+     * @param array{method:string,discount:float,couponCode:?string,reference_no:?string,payer_number?:?string} $payment
      * @return array{id:int, order_no:string}
      */
     public function create(array $cartLines, ?int $userId, array $customer, array $payment): array
@@ -219,11 +219,12 @@ final class Order extends Model
 
             if (!empty($payment['reference_no'])) {
                 $this->db->prepare(
-                    'INSERT INTO payment_transactions (order_id, method, amount, reference_no, status)
-                     VALUES (:order_id, :method, :amount, :reference_no, "pending")'
+                    'INSERT INTO payment_transactions (order_id, method, amount, reference_no, payer_number, status)
+                     VALUES (:order_id, :method, :amount, :reference_no, :payer_number, "pending")'
                 )->execute([
                     'order_id' => $orderId, 'method' => $payment['method'],
                     'amount' => $total, 'reference_no' => $payment['reference_no'],
+                    'payer_number' => $payment['payer_number'] ?? null,
                 ]);
             }
 

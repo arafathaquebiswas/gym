@@ -2,6 +2,7 @@
 /** @var array|null $member */
 /** @var array $trainers */
 /** @var array $packages */
+/** @var array $eligibleCoupons */
 $isEdit = $member !== null;
 $action = $isEdit ? url('/admin/members/' . $member['id']) : url('/admin/members');
 $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
@@ -141,11 +142,32 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
           <label>Expiry Date <small class="text-white-50">(auto-calculated)</small></label>
           <input type="text" id="initialExpiryDisplay" class="form-control" value="—" readonly>
         </div>
-        <div class="col-md-4">
-          <label>Coupon Code <small class="text-white-50">(optional)</small></label>
-          <input type="text" name="coupon_code" class="form-control text-uppercase" placeholder="e.g. SAVE10">
+      </div>
+      <?php if (!empty($eligibleCoupons)): ?>
+      <div class="mt-3">
+        <label>Available Coupons <small class="text-white-50">(optional — select a package first to see eligibility)</small></label>
+        <div class="d-flex flex-column gap-2" id="initialCouponList">
+          <?php foreach ($eligibleCoupons as $coupon): ?>
+          <label class="coupon-option-admin p-2 px-3 d-flex justify-content-between align-items-center gap-3"
+                 data-discount-type="<?= e($coupon['discount_type']) ?>"
+                 data-discount-value="<?= (float) $coupon['discount_value'] ?>"
+                 data-max-discount="<?= $coupon['max_discount_amount'] !== null ? (float) $coupon['max_discount_amount'] : '' ?>"
+                 data-min-purchase="<?= (float) $coupon['min_purchase'] ?>">
+            <span class="d-flex align-items-center gap-2">
+              <input type="radio" name="coupon_code" value="<?= e($coupon['code']) ?>" class="form-check-input coupon-radio-admin">
+              <span>
+                <strong class="text-white"><?= e($coupon['code']) ?></strong>
+                <span class="text-white-50 small d-block"><?= e($coupon['title']) ?></span>
+              </span>
+            </span>
+            <span class="text-orange fw-semibold small text-nowrap">
+              <?= $coupon['discount_type'] === 'percent' ? number_format((float) $coupon['discount_value'], 0) . '% Off' : '৳' . number_format((float) $coupon['discount_value']) . ' Off' ?>
+            </span>
+          </label>
+          <?php endforeach; ?>
         </div>
       </div>
+      <?php endif; ?>
     </div>
 
     <div class="admin-form-section">
@@ -166,6 +188,7 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
         <div class="col-md-4">
           <label>Amount Received (৳) *</label>
           <input type="number" step="0.01" min="0.01" name="price_paid" id="initialAmountReceived" class="form-control" required>
+          <small class="text-white-50 d-none" id="initialCouponHint"></small>
         </div>
 
         <div class="col-md-4 d-none" data-payment-fields="bkash,nagad,rocket">
@@ -200,21 +223,64 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
       var startDate = document.getElementById('initialStartDate');
       var expiryDisplay = document.getElementById('initialExpiryDisplay');
       var amountField = document.getElementById('initialAmountReceived');
+      var couponHint = document.getElementById('initialCouponHint');
+      var couponList = document.getElementById('initialCouponList');
       if (!pkg || !startDate || !expiryDisplay) return;
 
-      function recalc() {
+      function recalcExpiry() {
         var opt = pkg.options[pkg.selectedIndex];
         if (!opt || !opt.value || !startDate.value) { expiryDisplay.value = '—'; return; }
         var duration = parseInt(opt.getAttribute('data-duration') || '0', 10);
         var start = new Date(startDate.value + 'T00:00:00');
         start.setDate(start.getDate() + duration);
         expiryDisplay.value = start.toISOString().slice(0, 10);
-        if (amountField && !amountField.value) {
-          amountField.value = parseFloat(opt.getAttribute('data-price') || '0').toFixed(2);
-        }
       }
-      pkg.addEventListener('change', recalc);
-      startDate.addEventListener('change', recalc);
+
+      function refreshCouponEligibility() {
+        if (!couponList) return;
+        var opt = pkg.options[pkg.selectedIndex];
+        var price = opt && opt.value ? parseFloat(opt.getAttribute('data-price') || '0') : 0;
+        couponList.querySelectorAll('.coupon-option-admin').forEach(function (row) {
+          var min = parseFloat(row.dataset.minPurchase || '0');
+          var eligible = price > 0 && price >= min;
+          row.classList.toggle('coupon-ineligible-admin', !eligible);
+          var radio = row.querySelector('.coupon-radio-admin');
+          radio.disabled = !eligible;
+          if (!eligible && radio.checked) radio.checked = false;
+        });
+      }
+
+      // Amount Received always holds the package's raw (pre-coupon) price — the server is what
+      // actually subtracts the coupon discount from whatever's in this field (createInitial-
+      // Subscription() -> applyMembershipCoupon()), same as the pre-existing renewal flow. If
+      // this field also pre-subtracted the discount client-side, the coupon would get applied
+      // twice. The hint below just previews what the server will actually charge.
+      function recalcAmount() {
+        var opt = pkg.options[pkg.selectedIndex];
+        if (!opt || !opt.value || !amountField) return;
+        var price = parseFloat(opt.getAttribute('data-price') || '0');
+        amountField.value = price.toFixed(2);
+
+        var checked = couponList ? couponList.querySelector('.coupon-radio-admin:checked') : null;
+        if (!checked || !couponHint) { if (couponHint) couponHint.classList.add('d-none'); return; }
+        var row = checked.closest('.coupon-option-admin');
+        var type = row.dataset.discountType;
+        var value = parseFloat(row.dataset.discountValue || '0');
+        var maxDiscount = row.dataset.maxDiscount ? parseFloat(row.dataset.maxDiscount) : null;
+        var discount = type === 'percent' ? (price * value / 100) : Math.min(price, value);
+        if (maxDiscount !== null && !isNaN(maxDiscount)) discount = Math.min(discount, maxDiscount);
+        var finalAmount = Math.max(0, price - discount);
+        couponHint.textContent = 'After coupon: ৳' + finalAmount.toFixed(2) + ' — enter ৳' + price.toFixed(2) + ' above, the coupon is applied automatically on save.';
+        couponHint.classList.remove('d-none');
+      }
+
+      pkg.addEventListener('change', function () { recalcExpiry(); refreshCouponEligibility(); recalcAmount(); });
+      startDate.addEventListener('change', recalcExpiry);
+      if (couponList) {
+        couponList.querySelectorAll('.coupon-radio-admin').forEach(function (radio) {
+          radio.addEventListener('change', recalcAmount);
+        });
+      }
     })();
     </script>
     <?php endif; ?>

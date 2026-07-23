@@ -45,11 +45,7 @@
 
       <div class="mt-4 d-flex gap-2 justify-content-center flex-wrap">
         <a href="<?= url('/store') ?>" class="btn btn-ps-outline">Continue Shopping</a>
-        <?php if (Auth::hasRole('member')): ?>
-          <a href="<?= url('/account/orders') ?>" class="btn btn-ps">View My Orders</a>
-        <?php else: ?>
-          <a href="<?= url('/track-order') ?>" class="btn btn-ps">Track This Order</a>
-        <?php endif; ?>
+        <a href="<?= url('/track-order') ?>" class="btn btn-ps">Track This Order</a>
       </div>
     </div>
   </div>

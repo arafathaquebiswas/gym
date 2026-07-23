@@ -119,7 +119,23 @@ final class MemberAdminController extends AdminController
             'member' => null,
             'trainers' => (new Trainer())->allActive(),
             'packages' => (new Package())->allForAdmin(),
+            'eligibleCoupons' => $this->membershipCoupons(),
         ]);
+    }
+
+    /**
+     * Active membership-category coupons for the auto-populated selection list on the Add
+     * Member / Renew Membership forms. Unlike checkout (fixed cart subtotal), the purchase
+     * amount here isn't known until a package is picked — passed PHP_FLOAT_MAX so the server
+     * never wrongly filters one out as "below minimum"; the form's own JS re-checks each
+     * coupon's real min_purchase/discount against the selected package's actual price live.
+     */
+    private function membershipCoupons(): array
+    {
+        if (!Feature::on('coupons')) {
+            return [];
+        }
+        return (new Promotion())->eligibleForCheckout('membership', PHP_FLOAT_MAX);
     }
 
     public function store(): void
@@ -157,7 +173,7 @@ final class MemberAdminController extends AdminController
         [$paymentMethod, $referenceNo, $paymentDetails, $amountReceived] = $this->requireMembershipPayment('admin/members/create');
 
         if (!$email) {
-            $email = $this->generatePlaceholderEmail($phone);
+            $email = $userModel->placeholderEmail($phone);
         }
         if ($password === '') {
             $password = bin2hex(random_bytes(5));
@@ -277,15 +293,21 @@ final class MemberAdminController extends AdminController
             }
         }
 
+        $preferredPackage = !empty($member['preferred_package_id'])
+            ? (new Package())->find((int) $member['preferred_package_id'])
+            : null;
+
         $this->adminView('members/show', [
             'pageTitle' => $member['name'],
             'member' => $member,
+            'preferredPackage' => $preferredPackage,
             'subscriptionHistory' => (new MemberSubscription())->history((int) $id),
             'attendanceLog' => $attendanceModel->recentForMember((int) $id),
             'openSession' => $attendanceModel->openSessionForMember((int) $id),
             'packages' => (new Package())->allForAdmin(),
             'trainerFeeDefault' => $trainerFeeDefault,
             'lockerFineDefault' => $settingModel->getFloat('lost_locker_fine'),
+            'eligibleCoupons' => $this->membershipCoupons(),
         ]);
     }
 
@@ -696,24 +718,6 @@ final class MemberAdminController extends AdminController
         return true;
     }
 
-    /**
-     * Walk-in members registered by the admin often have no email — but `users.email` is a
-     * required unique login field, and there's no member-facing login in this app yet (that's
-     * expected — see the online-registration flow), so a stable, collision-free placeholder is
-     * enough to satisfy the schema without pretending it's a real contact address.
-     */
-    private function generatePlaceholderEmail(string $phone): string
-    {
-        $digits = preg_replace('/\D/', '', $phone) ?: (string) time();
-        $userModel = new User();
-        $email = "member{$digits}@no-email.powersurgegym.local";
-        $suffix = 1;
-        while ($userModel->emailExists($email)) {
-            $suffix++;
-            $email = "member{$digits}-{$suffix}@no-email.powersurgegym.local";
-        }
-        return $email;
-    }
 
     private function collectMemberData(): array
     {

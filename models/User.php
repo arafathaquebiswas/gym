@@ -65,6 +65,25 @@ final class User extends Model
         $stmt->execute(['id' => $id]);
     }
 
+    /**
+     * There is no member-facing login in this app — members never see or use an email/password.
+     * `users.email` is still a NOT NULL UNIQUE column underneath every member row (name/phone/
+     * email structurally live on `users`, joined everywhere via member_id), so a walk-in or
+     * online registrant with no email still needs a stable, collision-free placeholder to
+     * satisfy that constraint. It is never disclosed and never usable as a real address.
+     */
+    public function placeholderEmail(string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', $phone) ?: (string) time();
+        $email = "member{$digits}@no-email.powersurgegym.local";
+        $suffix = 1;
+        while ($this->emailExists($email)) {
+            $suffix++;
+            $email = "member{$digits}-{$suffix}@no-email.powersurgegym.local";
+        }
+        return $email;
+    }
+
     private const WRITABLE_FIELDS = ['name', 'email', 'phone', 'status'];
 
     public function update(int $id, array $data): void

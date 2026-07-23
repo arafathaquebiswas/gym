@@ -12,6 +12,8 @@ final class Member extends Model
         'height_cm', 'weight_kg', 'fitness_goal', 'medical_notes',
         'join_date', 'trainer_id', 'locker_number', 'photo',
         'notify_email', 'notify_promotions',
+        'preferred_package_id', 'registration_notes',
+        'reported_payment_method', 'reported_payment_reference', 'reported_payer_number',
     ];
 
     private const BASE_SELECT = "SELECT m.*, u.name, u.email, u.phone, u.status AS account_status,
@@ -28,17 +30,6 @@ final class Member extends Model
                  WHERE ms.id IN (SELECT MAX(id) FROM member_subscriptions GROUP BY member_id)
              ) sub ON sub.member_id = m.id";
 
-    public function createForUser(int $userId): int
-    {
-        $memberCode = 'PSG-' . date('y') . '-' . str_pad((string) $userId, 5, '0', STR_PAD_LEFT);
-
-        $stmt = $this->db->prepare(
-            'INSERT INTO members (user_id, member_code, join_date, status, created_at)
-             VALUES (:user_id, :member_code, CURDATE(), "pending", NOW())'
-        );
-        $stmt->execute(['user_id' => $userId, 'member_code' => $memberCode]);
-        return (int) $this->db->lastInsertId();
-    }
 
     /** Admin-created walk-in member: base row + whatever details were captured on the form. */
     public function createForNewUser(int $userId, array $data): int
@@ -297,6 +288,8 @@ final class Member extends Model
         if (!empty($filters['search'])) {
             $where[] = '(u.name LIKE :search_name OR u.phone LIKE :search_phone OR u.email LIKE :search_email
                           OR m.member_code LIKE :search_code OR m.money_received_no LIKE :search_mr
+                          OR m.reported_payment_reference LIKE :search_reported_ref
+                          OR m.reported_payer_number LIKE :search_reported_payer
                           OR EXISTS (SELECT 1 FROM payments py WHERE py.member_id = m.id AND py.reference_no LIKE :search_ref))';
             $params['search_name'] = '%' . $filters['search'] . '%';
             $params['search_phone'] = '%' . $filters['search'] . '%';
@@ -304,6 +297,8 @@ final class Member extends Model
             $params['search_code'] = '%' . $filters['search'] . '%';
             $params['search_mr'] = '%' . $filters['search'] . '%';
             $params['search_ref'] = '%' . $filters['search'] . '%';
+            $params['search_reported_ref'] = '%' . $filters['search'] . '%';
+            $params['search_reported_payer'] = '%' . $filters['search'] . '%';
         }
         if (!empty($filters['status'])) {
             $where[] = 'm.status = :status';
