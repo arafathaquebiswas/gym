@@ -13,7 +13,12 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
     <div class="admin-card text-center">
       <?= media_tile($member['photo'], $member['name'], 'bi-person', 'thumb-lg mb-3', null) ?>
       <h5 class="mb-0"><?= e($member['name']) ?></h5>
-      <div class="text-white-50 small mb-2"><?= e($member['member_code']) ?></div>
+      <div class="text-white-50 small mb-2">
+        <?= e($member['member_code']) ?>
+        <?php if (!empty($member['money_received_no'])): ?>
+          &nbsp;|&nbsp; Receipt: <?= e($member['money_received_no']) ?>
+        <?php endif; ?>
+      </div>
       <span class="badge text-bg-<?= $statusColors[$member['status']] ?? 'secondary' ?> mb-3"><?= e(ucfirst($member['status'])) ?></span>
       <ul class="list-unstyled text-start small">
         <li><i class="bi bi-envelope"></i> <?= e($member['email']) ?></li>

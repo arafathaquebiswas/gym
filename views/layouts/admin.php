@@ -140,6 +140,7 @@ $childIsActive = function (array $child) use ($currentPath): bool {
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="<?= asset('js/payment-method-toggle.js') ?>"></script>
+<script src="<?= asset('js/membership-payment-fields.js') ?>"></script>
 <script src="<?= asset('js/password-toggle.js') ?>"></script>
 <script src="<?= asset('js/admin-details-toggle.js') ?>"></script>
 <?php if (!empty($extraScripts)): foreach ($extraScripts as $script): ?>

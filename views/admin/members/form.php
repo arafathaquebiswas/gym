@@ -18,12 +18,12 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
           <input type="text" name="name" class="form-control" value="<?= $v('name') ?>" required>
         </div>
         <div class="col-md-4">
-          <label>Email *</label>
-          <input type="email" name="email" class="form-control" value="<?= $v('email') ?>" required>
+          <label>Phone Number *</label>
+          <input type="text" name="phone" class="form-control" value="<?= $v('phone') ?>" required>
         </div>
         <div class="col-md-4">
-          <label>Phone</label>
-          <input type="text" name="phone" class="form-control" value="<?= $v('phone') ?>">
+          <label>Email <small class="text-white-50">(optional)</small></label>
+          <input type="email" name="email" class="form-control" value="<?= $v('email') ?>">
         </div>
         <?php if (!$isEdit): ?>
         <div class="col-md-4">
@@ -85,8 +85,8 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
       <h6>Membership</h6>
       <div class="row g-3">
         <div class="col-md-3">
-          <label>Join Date</label>
-          <input type="date" name="join_date" class="form-control" value="<?= $v('join_date', date('Y-m-d')) ?>">
+          <label>Joining Date *</label>
+          <input type="date" name="join_date" class="form-control" value="<?= $v('join_date', date('Y-m-d')) ?>" required>
         </div>
         <?php if ($isEdit): ?>
         <div class="col-md-3">
@@ -120,36 +120,26 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
 
     <?php if (!$isEdit): ?>
     <div class="admin-form-section">
-      <h6>Initial Package <small class="text-white-50">(optional — starts a subscription immediately)</small></h6>
+      <h6>Membership Package <small class="text-white-50">(mandatory — a walk-in Add Member always activates immediately)</small></h6>
       <div class="row g-3">
         <div class="col-md-4">
-          <label>Package</label>
-          <select name="package_id" id="initialPackageSelect" class="form-select">
-            <option value="">— None —</option>
+          <label>Package *</label>
+          <select name="package_id" id="initialPackageSelect" class="form-select" required>
+            <option value="" disabled selected>Select a package</option>
             <?php foreach ($packages as $package): ?>
-              <option value="<?= (int) $package['id'] ?>"><?= e($package['name']) ?> (৳<?= number_format((float) $package['display_price']) ?>)</option>
+              <option value="<?= (int) $package['id'] ?>" data-duration="<?= (int) $package['duration_days'] ?>" data-price="<?= (float) $package['display_price'] ?>">
+                <?= e($package['name']) ?> (৳<?= number_format((float) $package['display_price']) ?>)
+              </option>
             <?php endforeach; ?>
           </select>
         </div>
         <div class="col-md-4">
-          <label>Price Paid (৳)</label>
-          <input type="number" step="0.01" min="0" name="price_paid" class="form-control" placeholder="Defaults to package price">
+          <label>Start Date *</label>
+          <input type="date" name="start_date" id="initialStartDate" class="form-control" value="<?= date('Y-m-d') ?>" required>
         </div>
         <div class="col-md-4">
-          <label>Payment Method <small class="text-white-50">(required if a package is selected)</small></label>
-          <select name="payment_method" id="initialPaymentMethodSelect" class="form-select payment-method-select">
-            <option value="" selected>— Select —</option>
-            <option value="cash">Cash</option>
-            <option value="card">Card</option>
-            <option value="bkash">bKash</option>
-            <option value="nagad">Nagad</option>
-            <option value="rocket">Rocket</option>
-            <option value="bank_transfer">Bank Transfer</option>
-          </select>
-        </div>
-        <div class="col-md-4 reference-no-wrap d-none">
-          <label>Transaction / Reference ID</label>
-          <input type="text" name="reference_no" class="form-control reference-no-input" placeholder="e.g. bKash transaction ID">
+          <label>Expiry Date <small class="text-white-50">(auto-calculated)</small></label>
+          <input type="text" id="initialExpiryDisplay" class="form-control" value="—" readonly>
         </div>
         <div class="col-md-4">
           <label>Coupon Code <small class="text-white-50">(optional)</small></label>
@@ -157,14 +147,74 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
         </div>
       </div>
     </div>
+
+    <div class="admin-form-section">
+      <h6>Payment Information <small class="text-white-50">(mandatory — the membership stays Pending until this is complete)</small></h6>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label>Payment Method *</label>
+          <select name="payment_method" class="form-select payment-method-select" required>
+            <option value="" disabled selected>Select Payment Method</option>
+            <option value="cash">Cash</option>
+            <option value="bkash">bKash</option>
+            <option value="nagad">Nagad</option>
+            <option value="rocket">Rocket</option>
+            <option value="bank_transfer">Bank Transfer</option>
+            <option value="card">Card</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label>Amount Received (৳) *</label>
+          <input type="number" step="0.01" min="0.01" name="price_paid" id="initialAmountReceived" class="form-control" required>
+        </div>
+
+        <div class="col-md-4 d-none" data-payment-fields="bkash,nagad,rocket">
+          <label>Sender Number *</label>
+          <input type="text" name="payer_number" class="form-control" data-payment-required placeholder="e.g. 017XXXXXXXX">
+        </div>
+        <div class="col-md-4 d-none" data-payment-fields="bkash,nagad,rocket,card,bank_transfer">
+          <label>Transaction ID / Reference / Approval Number *</label>
+          <input type="text" name="reference_no" class="form-control" data-payment-required>
+        </div>
+        <div class="col-md-3 d-none" data-payment-fields="card">
+          <label>Card Type <small class="text-white-50">(optional)</small></label>
+          <input type="text" name="card_type" class="form-control" placeholder="e.g. Visa, Mastercard">
+        </div>
+        <div class="col-md-3 d-none" data-payment-fields="card">
+          <label>Last 4 Digits <small class="text-white-50">(optional)</small></label>
+          <input type="text" name="card_last4" maxlength="4" class="form-control" placeholder="1234">
+        </div>
+        <div class="col-md-4 d-none" data-payment-fields="bank_transfer">
+          <label>Bank Name *</label>
+          <input type="text" name="bank_name" class="form-control" data-payment-required>
+        </div>
+        <div class="col-md-4 d-none" data-payment-fields="bank_transfer">
+          <label>Account Number <small class="text-white-50">(optional)</small></label>
+          <input type="text" name="account_number" class="form-control">
+        </div>
+      </div>
+    </div>
     <script>
     (function () {
       var pkg = document.getElementById('initialPackageSelect');
-      var method = document.getElementById('initialPaymentMethodSelect');
-      if (!pkg || !method) return;
-      pkg.addEventListener('change', function () {
-        method.required = pkg.value !== '';
-      });
+      var startDate = document.getElementById('initialStartDate');
+      var expiryDisplay = document.getElementById('initialExpiryDisplay');
+      var amountField = document.getElementById('initialAmountReceived');
+      if (!pkg || !startDate || !expiryDisplay) return;
+
+      function recalc() {
+        var opt = pkg.options[pkg.selectedIndex];
+        if (!opt || !opt.value || !startDate.value) { expiryDisplay.value = '—'; return; }
+        var duration = parseInt(opt.getAttribute('data-duration') || '0', 10);
+        var start = new Date(startDate.value + 'T00:00:00');
+        start.setDate(start.getDate() + duration);
+        expiryDisplay.value = start.toISOString().slice(0, 10);
+        if (amountField && !amountField.value) {
+          amountField.value = parseFloat(opt.getAttribute('data-price') || '0').toFixed(2);
+        }
+      }
+      pkg.addEventListener('change', recalc);
+      startDate.addEventListener('change', recalc);
     })();
     </script>
     <?php endif; ?>

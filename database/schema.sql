@@ -615,6 +615,11 @@ CREATE TABLE payments (
     amount          DECIMAL(10,2) NOT NULL,
     method          ENUM('cash','card','bkash','nagad','rocket','bank_transfer') NOT NULL DEFAULT 'cash',
     reference_no    VARCHAR(100) NULL,
+    payer_number    VARCHAR(30) NULL,
+    card_type       VARCHAR(30) NULL,
+    card_last4      VARCHAR(4) NULL,
+    bank_name       VARCHAR(100) NULL,
+    account_number  VARCHAR(50) NULL,
     status          ENUM('completed','pending','failed') NOT NULL DEFAULT 'completed',
     paid_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     recorded_by     INT UNSIGNED NULL,
@@ -624,7 +629,8 @@ CREATE TABLE payments (
     CONSTRAINT fk_payments_trainer FOREIGN KEY (trainer_id) REFERENCES trainers(id) ON DELETE SET NULL,
     CONSTRAINT fk_payments_recorded_by FOREIGN KEY (recorded_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_payments_type (type),
-    INDEX idx_payments_paid_at (paid_at)
+    INDEX idx_payments_paid_at (paid_at),
+    INDEX idx_payments_reference (reference_no)
 ) ENGINE=InnoDB;
 
 CREATE TABLE expenses (

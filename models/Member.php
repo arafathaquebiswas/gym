@@ -295,11 +295,15 @@ final class Member extends Model
         $params = [];
 
         if (!empty($filters['search'])) {
-            $where[] = '(u.name LIKE :search_name OR u.phone LIKE :search_phone OR u.email LIKE :search_email OR m.member_code LIKE :search_code)';
+            $where[] = '(u.name LIKE :search_name OR u.phone LIKE :search_phone OR u.email LIKE :search_email
+                          OR m.member_code LIKE :search_code OR m.money_received_no LIKE :search_mr
+                          OR EXISTS (SELECT 1 FROM payments py WHERE py.member_id = m.id AND py.reference_no LIKE :search_ref))';
             $params['search_name'] = '%' . $filters['search'] . '%';
             $params['search_phone'] = '%' . $filters['search'] . '%';
             $params['search_email'] = '%' . $filters['search'] . '%';
             $params['search_code'] = '%' . $filters['search'] . '%';
+            $params['search_mr'] = '%' . $filters['search'] . '%';
+            $params['search_ref'] = '%' . $filters['search'] . '%';
         }
         if (!empty($filters['status'])) {
             $where[] = 'm.status = :status';

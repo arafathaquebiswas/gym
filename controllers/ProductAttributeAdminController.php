@@ -73,12 +73,12 @@ final class ProductAttributeAdminController extends AdminController
         redirect('admin/attributes');
     }
 
-    public function storeValue(string $attributeId): void
+    public function storeValue(string $id): void
     {
         Security::requireCsrf();
 
         $attributeModel = new ProductAttribute();
-        if (!$attributeModel->find((int) $attributeId)) {
+        if (!$attributeModel->find((int) $id)) {
             $this->abort404();
         }
 
@@ -89,13 +89,13 @@ final class ProductAttributeAdminController extends AdminController
         }
 
         $valueModel = new AttributeValue();
-        if ($valueModel->valueExists((int) $attributeId, $value)) {
+        if ($valueModel->valueExists((int) $id, $value)) {
             flash('danger', 'That value already exists for this attribute.');
             redirect('admin/attributes');
         }
 
-        $valueModel->create((int) $attributeId, $value);
-        $this->logActivity('attribute_value_created', "Added value \"$value\" to attribute #$attributeId");
+        $valueModel->create((int) $id, $value);
+        $this->logActivity('attribute_value_created', "Added value \"$value\" to attribute #$id");
 
         flash('success', 'Value added successfully.');
         redirect('admin/attributes');

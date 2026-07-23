@@ -23,6 +23,67 @@ final class MemberAdminController extends AdminController
         return [$method, $referenceNo];
     }
 
+    /**
+     * The stricter membership-specific gate (Add Member + Renew Membership): every method
+     * requires an Amount Received, and each non-cash method has its own mandatory proof-of-
+     * payment fields (bKash/Nagad/Rocket number + TrxID, Card approval number, Bank name +
+     * reference). A member can never become Active without these — that's the whole point.
+     * @return array{0:string,1:?string,2:array<string,?string>,3:float}
+     */
+    private function requireMembershipPayment(string $redirectTo): array
+    {
+        $method = $this->input('payment_method', '');
+        if (!in_array($method, self::ALLOWED_PAYMENT_METHODS, true)) {
+            flash('danger', 'Please select a payment method. The membership cannot be activated without one.');
+            redirect($redirectTo);
+        }
+
+        $amountInput = $this->input('price_paid', '');
+        if ($amountInput === '' || (float) $amountInput <= 0) {
+            flash('danger', 'Please enter the Amount Received.');
+            redirect($redirectTo);
+        }
+
+        $referenceNo = $this->input('reference_no') ?: null;
+        $details = [
+            'payer_number' => $this->input('payer_number') ?: null,
+            'card_type' => $this->input('card_type') ?: null,
+            'card_last4' => $this->input('card_last4') ?: null,
+            'bank_name' => $this->input('bank_name') ?: null,
+            'account_number' => $this->input('account_number') ?: null,
+        ];
+
+        $missing = [];
+        switch ($method) {
+            case 'bkash':
+                if (!$details['payer_number']) $missing[] = 'bKash Number';
+                if (!$referenceNo) $missing[] = 'Transaction ID';
+                break;
+            case 'nagad':
+                if (!$details['payer_number']) $missing[] = 'Nagad Number';
+                if (!$referenceNo) $missing[] = 'Transaction ID';
+                break;
+            case 'rocket':
+                if (!$details['payer_number']) $missing[] = 'Rocket Number';
+                if (!$referenceNo) $missing[] = 'Transaction ID';
+                break;
+            case 'card':
+                if (!$referenceNo) $missing[] = 'Transaction / Approval Number';
+                break;
+            case 'bank_transfer':
+                if (!$details['bank_name']) $missing[] = 'Bank Name';
+                if (!$referenceNo) $missing[] = 'Reference Number';
+                break;
+        }
+
+        if ($missing) {
+            flash('danger', 'Cannot activate the membership — missing: ' . implode(', ', $missing) . '.');
+            redirect($redirectTo);
+        }
+
+        return [$method, $referenceNo, $details, (float) $amountInput];
+    }
+
     public function index(): void
     {
         $memberModel = new Member();
@@ -66,29 +127,38 @@ final class MemberAdminController extends AdminController
         Security::requireCsrf();
 
         $name = $this->input('name');
-        $email = $this->input('email');
+        $email = $this->input('email') ?: null;
         $phone = $this->input('phone');
         $password = $this->rawInput('password');
 
-        $validator = new Validator(['name' => $name, 'email' => $email, 'phone' => $phone]);
-        $validator->required('name', 'Name')->required('email', 'Email')->email('email')->phone('phone');
+        $validator = new Validator(['name' => $name, 'phone' => $phone, 'email' => $email]);
+        $validator->required('name', 'Name')->required('phone', 'Phone Number')->phone('phone')->email('email');
 
-        $userModel = new User();
         if ($validator->fails()) {
             flash('danger', $validator->firstError());
             redirect('admin/members/create');
         }
-        if ($userModel->emailExists($email)) {
+
+        $userModel = new User();
+        if ($email && $userModel->emailExists($email)) {
             flash('danger', 'An account with this email already exists.');
             redirect('admin/members/create');
         }
 
-        // Validate the payment method up front (before the account/member rows exist) only
-        // when a package is actually being assigned — the "Initial Package" section is optional.
-        if ((int) $this->input('package_id') > 0) {
-            $this->requirePaymentMethod('admin/members/create');
+        // A walk-in "Add Member" is always a live sale at the desk — package + a fully
+        // verified payment are mandatory here (unlike public self-registration, which still
+        // creates an unpaid Pending member with no package, per the online-registration flow).
+        $packageId = (int) $this->input('package_id');
+        $package = $packageId > 0 ? (new Package())->find($packageId) : null;
+        if (!$package) {
+            flash('danger', 'Please select a membership package.');
+            redirect('admin/members/create');
         }
+        [$paymentMethod, $referenceNo, $paymentDetails, $amountReceived] = $this->requireMembershipPayment('admin/members/create');
 
+        if (!$email) {
+            $email = $this->generatePlaceholderEmail($phone);
+        }
         if ($password === '') {
             $password = bin2hex(random_bytes(5));
         }
@@ -105,10 +175,8 @@ final class MemberAdminController extends AdminController
 
         $memberId = $memberModel->createForNewUser($userId, $data);
 
-        $packageId = (int) $this->input('package_id');
-        if ($packageId > 0) {
-            $this->createInitialSubscription($memberId, $packageId);
-        }
+        $startDate = $this->input('start_date') ?: date('Y-m-d');
+        $this->createInitialSubscription($memberId, $package, $startDate, $paymentMethod, $referenceNo, $paymentDetails, $amountReceived);
         $memberModel->recomputeStatus($memberId);
 
         $this->logActivity('member_created', "Created member #$memberId: $name");
@@ -253,17 +321,16 @@ final class MemberAdminController extends AdminController
             redirect('admin/members/' . $id);
         }
 
-        [$paymentMethod, $referenceNo] = $this->requirePaymentMethod('admin/members/' . $id);
+        [$paymentMethod, $referenceNo, $paymentDetails, $pricePaid] = $this->requireMembershipPayment('admin/members/' . $id);
 
         $startDate = $this->input('start_date') ?: date('Y-m-d');
-        $pricePaid = (float) $this->input('price_paid', (string) $package['regular_price']);
         $couponCode = $this->input('coupon_code') ?: null;
         $durationDays = $this->input('duration_days') !== '' ? (int) $this->input('duration_days') : null;
         $discountAmount = $this->input('discount') !== '' ? (float) $this->input('discount') : null;
         $notes = $this->input('notes') ?: null;
         $trainerId = $this->input('trainer_id');
 
-        $result = $this->renewMember((int) $id, $package, $startDate, $pricePaid, $paymentMethod, $couponCode, $referenceNo, $durationDays, $discountAmount, $notes);
+        $result = $this->renewMember((int) $id, $package, $startDate, $pricePaid, $paymentMethod, $couponCode, $referenceNo, $durationDays, $discountAmount, $notes, $paymentDetails);
         if ($result === false) {
             flash('danger', 'That coupon code is invalid, expired, or no longer applicable.');
             redirect('admin/members/' . $id);
@@ -506,18 +573,12 @@ final class MemberAdminController extends AdminController
         redirect('admin/members/' . $id);
     }
 
-    private function createInitialSubscription(int $memberId, int $packageId): void
+    /** @param array<string,?string> $paymentDetails */
+    private function createInitialSubscription(int $memberId, array $package, string $startDate, string $paymentMethod, ?string $referenceNo, array $paymentDetails, float $pricePaid): void
     {
-        $package = (new Package())->find($packageId);
-        if (!$package) {
-            return;
-        }
-
-        $startDate = date('Y-m-d');
         $endDate = (new DateTimeImmutable($startDate))
             ->modify('+' . (int) $package['duration_days'] . ' days')
             ->format('Y-m-d');
-        $pricePaid = (float) $this->input('price_paid', (string) $package['regular_price']);
 
         $promotion = $this->applyMembershipCoupon($this->input('coupon_code') ?: null, $memberId, $pricePaid);
         if ($promotion) {
@@ -527,7 +588,7 @@ final class MemberAdminController extends AdminController
         $subscriptionModel = new MemberSubscription();
         $subscriptionId = $subscriptionModel->create([
             'member_id' => $memberId,
-            'package_id' => $packageId,
+            'package_id' => (int) $package['id'],
             'start_date' => $startDate,
             'end_date' => $endDate,
             'price_paid' => $pricePaid,
@@ -539,8 +600,13 @@ final class MemberAdminController extends AdminController
             'subscription_id' => $subscriptionId,
             'type' => 'membership',
             'amount' => $pricePaid,
-            'method' => $this->input('payment_method', 'cash'),
-            'reference_no' => $this->input('reference_no') ?: null,
+            'method' => $paymentMethod,
+            'reference_no' => $referenceNo,
+            'payer_number' => $paymentDetails['payer_number'] ?? null,
+            'card_type' => $paymentDetails['card_type'] ?? null,
+            'card_last4' => $paymentDetails['card_last4'] ?? null,
+            'bank_name' => $paymentDetails['bank_name'] ?? null,
+            'account_number' => $paymentDetails['account_number'] ?? null,
             'recorded_by' => (int) Auth::user()['id'],
         ]);
 
@@ -568,7 +634,8 @@ final class MemberAdminController extends AdminController
     }
 
     /** Creates a renewal subscription + payment record for one member. Returns false only when an explicitly-supplied coupon code was invalid. */
-    private function renewMember(int $memberId, array $package, string $startDate, float $pricePaid, string $paymentMethod, ?string $couponCode, ?string $referenceNo = null, ?int $durationDaysOverride = null, ?float $discountAmount = null, ?string $notes = null): bool
+    /** @param array<string,?string> $paymentDetails */
+    private function renewMember(int $memberId, array $package, string $startDate, float $pricePaid, string $paymentMethod, ?string $couponCode, ?string $referenceNo = null, ?int $durationDaysOverride = null, ?float $discountAmount = null, ?string $notes = null, array $paymentDetails = []): bool
     {
         $promotion = $this->applyMembershipCoupon($couponCode, $memberId, $pricePaid);
         if ($couponCode && !$promotion) {
@@ -610,6 +677,11 @@ final class MemberAdminController extends AdminController
             'amount' => $pricePaid,
             'method' => $paymentMethod,
             'reference_no' => $referenceNo,
+            'payer_number' => $paymentDetails['payer_number'] ?? null,
+            'card_type' => $paymentDetails['card_type'] ?? null,
+            'card_last4' => $paymentDetails['card_last4'] ?? null,
+            'bank_name' => $paymentDetails['bank_name'] ?? null,
+            'account_number' => $paymentDetails['account_number'] ?? null,
             'recorded_by' => (int) Auth::user()['id'],
         ]);
 
@@ -622,6 +694,25 @@ final class MemberAdminController extends AdminController
         $memberModel->recomputeStatus($memberId);
 
         return true;
+    }
+
+    /**
+     * Walk-in members registered by the admin often have no email — but `users.email` is a
+     * required unique login field, and there's no member-facing login in this app yet (that's
+     * expected — see the online-registration flow), so a stable, collision-free placeholder is
+     * enough to satisfy the schema without pretending it's a real contact address.
+     */
+    private function generatePlaceholderEmail(string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', $phone) ?: (string) time();
+        $userModel = new User();
+        $email = "member{$digits}@no-email.powersurgegym.local";
+        $suffix = 1;
+        while ($userModel->emailExists($email)) {
+            $suffix++;
+            $email = "member{$digits}-{$suffix}@no-email.powersurgegym.local";
+        }
+        return $email;
     }
 
     private function collectMemberData(): array

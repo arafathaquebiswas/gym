@@ -28,7 +28,7 @@ $methodLabels = ['cash' => 'Cash', 'card' => 'Card', 'bkash' => 'bKash', 'nagad'
   <div class="table-responsive">
     <table class="admin-table">
       <thead>
-        <tr><th>Date</th><th>Type</th><th>Package</th><th>Amount</th><th>Payment</th><th>Receipt</th></tr>
+        <tr><th>Date</th><th>Type</th><th>Package</th><th>Payment Method</th><th>Amount</th><th>TrxID / Ref</th><th>Money Received No.</th></tr>
       </thead>
       <tbody>
         <?php foreach ($payments as $payment): ?>
@@ -36,8 +36,9 @@ $methodLabels = ['cash' => 'Cash', 'card' => 'Card', 'bkash' => 'bKash', 'nagad'
           <td><?= format_date($payment['paid_at'], 'd M Y') ?></td>
           <td><?= e($payment['type_label']) ?></td>
           <td><?= e($payment['package_name'] ?? '—') ?></td>
-          <td><?= money((float) $payment['amount']) ?></td>
           <td><?= e($methodLabels[$payment['method']] ?? ucfirst($payment['method'])) ?></td>
+          <td><?= money((float) $payment['amount']) ?></td>
+          <td><?= e($payment['reference_no'] ?? '—') ?></td>
           <td><?= e($member['money_received_no'] ?? '—') ?></td>
         </tr>
         <?php endforeach; ?>

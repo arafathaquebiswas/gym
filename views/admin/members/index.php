@@ -31,7 +31,7 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'expired' => '
   </div>
 
   <form method="get" action="<?= url('/admin/members') ?>" class="admin-toolbar admin-form">
-    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search name, phone, email, code" value="<?= e($filters['search']) ?>">
+    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search name, phone, email, Member ID, MR No., TrxID" value="<?= e($filters['search']) ?>">
     <select name="status" class="form-select form-select-sm">
       <option value="">All Statuses</option>
       <?php foreach ($statusLabels as $value => $label): ?>
@@ -239,25 +239,47 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'expired' => '
             <input type="number" step="0.01" min="0" name="discount" id="renewDiscount" class="form-control" value="0">
           </div>
           <div class="col-md-6">
-            <label>Payment Method</label>
+            <label>Payment Method *</label>
             <select name="payment_method" class="form-select payment-method-select" required>
               <option value="" disabled selected>Select Payment Method</option>
               <option value="cash">Cash</option>
-              <option value="card">Card</option>
               <option value="bkash">bKash</option>
               <option value="nagad">Nagad</option>
               <option value="rocket">Rocket</option>
               <option value="bank_transfer">Bank Transfer</option>
+              <option value="card">Card</option>
             </select>
           </div>
-          <div class="col-md-6 reference-no-wrap d-none">
-            <label>Transaction / Reference ID</label>
-            <input type="text" name="reference_no" class="form-control reference-no-input" placeholder="e.g. bKash transaction ID">
-          </div>
           <div class="col-md-6">
-            <label>Amount Received (৳)</label>
-            <input type="number" step="0.01" min="0" name="price_paid" id="renewAmountReceived" class="form-control" required>
+            <label>Amount Received (৳) *</label>
+            <input type="number" step="0.01" min="0.01" name="price_paid" id="renewAmountReceived" class="form-control" required>
           </div>
+
+          <div class="col-md-6 d-none" data-payment-fields="bkash,nagad,rocket">
+            <label>Sender Number *</label>
+            <input type="text" name="payer_number" id="renewPayerNumber" class="form-control" data-payment-required placeholder="e.g. 017XXXXXXXX">
+          </div>
+          <div class="col-md-6 d-none" data-payment-fields="bkash,nagad,rocket,card,bank_transfer">
+            <label>Transaction ID / Reference / Approval Number *</label>
+            <input type="text" name="reference_no" id="renewReferenceNo" class="form-control" data-payment-required>
+          </div>
+          <div class="col-md-3 d-none" data-payment-fields="card">
+            <label>Card Type <small class="text-white-50">(optional)</small></label>
+            <input type="text" name="card_type" id="renewCardType" class="form-control" placeholder="e.g. Visa, Mastercard">
+          </div>
+          <div class="col-md-3 d-none" data-payment-fields="card">
+            <label>Last 4 Digits <small class="text-white-50">(optional)</small></label>
+            <input type="text" name="card_last4" id="renewCardLast4" maxlength="4" class="form-control" placeholder="1234">
+          </div>
+          <div class="col-md-6 d-none" data-payment-fields="bank_transfer">
+            <label>Bank Name *</label>
+            <input type="text" name="bank_name" id="renewBankName" class="form-control" data-payment-required>
+          </div>
+          <div class="col-md-6 d-none" data-payment-fields="bank_transfer">
+            <label>Account Number <small class="text-white-50">(optional)</small></label>
+            <input type="text" name="account_number" id="renewAccountNumber" class="form-control">
+          </div>
+
           <div class="col-md-6">
             <label>Renewal Date</label>
             <input type="date" name="start_date" id="renewStartDate" class="form-control" value="<?= date('Y-m-d') ?>">
@@ -303,13 +325,23 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'expired' => '
 
   document.querySelectorAll('.js-open-renew').forEach(function (btn) {
     btn.addEventListener('click', function () {
+      // Clears every field back to its untouched default — including Payment Method back to
+      // the disabled placeholder and Reference No back to empty — so a value picked for a
+      // previous member in this same shared modal can never carry over and slip through
+      // as an accidental (unselected) submission for the next one.
+      form.reset();
       form.action = '<?= url('/admin/members') ?>/' + btn.getAttribute('data-id') + '/renew';
       nameEl.textContent = btn.getAttribute('data-name');
-      packageSelect.value = '';
-      durationField.value = '';
-      discountField.value = '0';
-      amountField.value = '';
       if (trainerSelect) trainerSelect.value = btn.getAttribute('data-trainer-id') || '';
+
+      // membership-payment-fields.js only re-evaluates on the select's 'change' event, which
+      // a programmatic form.reset() doesn't fire — so without this, a previously-visible
+      // method's fields (and their "required") would stay stuck on screen for the next member.
+      form.querySelectorAll('[data-payment-fields]').forEach(function (group) {
+        group.classList.add('d-none');
+        group.querySelectorAll('[data-payment-required]').forEach(function (input) { input.required = false; });
+      });
+
       bootstrap.Modal.getOrCreateInstance(renewModalEl).show();
     });
   });

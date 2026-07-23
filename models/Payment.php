@@ -10,8 +10,8 @@ final class Payment extends Model
     public function record(array $data): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO payments (member_id, subscription_id, trainer_id, sale_id, type, amount, method, reference_no, status, paid_at, recorded_by)
-             VALUES (:member_id, :subscription_id, :trainer_id, :sale_id, :type, :amount, :method, :reference_no, :status, NOW(), :recorded_by)'
+            'INSERT INTO payments (member_id, subscription_id, trainer_id, sale_id, type, amount, method, reference_no, payer_number, card_type, card_last4, bank_name, account_number, status, paid_at, recorded_by)
+             VALUES (:member_id, :subscription_id, :trainer_id, :sale_id, :type, :amount, :method, :reference_no, :payer_number, :card_type, :card_last4, :bank_name, :account_number, :status, NOW(), :recorded_by)'
         );
         $stmt->execute([
             'member_id' => $data['member_id'] ?? null,
@@ -22,6 +22,11 @@ final class Payment extends Model
             'amount' => $data['amount'],
             'method' => $data['method'],
             'reference_no' => $data['reference_no'] ?? null,
+            'payer_number' => $data['payer_number'] ?? null,
+            'card_type' => $data['card_type'] ?? null,
+            'card_last4' => $data['card_last4'] ?? null,
+            'bank_name' => $data['bank_name'] ?? null,
+            'account_number' => $data['account_number'] ?? null,
             'status' => $data['status'] ?? 'completed',
             'recorded_by' => $data['recorded_by'],
         ]);
