@@ -2,6 +2,8 @@
 
 final class DeliveryZoneAdminController extends AdminController
 {
+    protected string $moduleKey = 'orders';
+
     public function index(): void
     {
         $this->adminView('delivery-zones/index', [

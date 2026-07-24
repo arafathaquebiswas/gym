@@ -2,13 +2,29 @@
 
 final class DeliveryStaffAdminController extends AdminController
 {
+    protected string $moduleKey = 'delivery_staff';
+
     private const ROLE = 'delivery';
 
     public function index(): void
     {
+        $orderModel = new Order();
+        $zoneModel = new DeliveryZone();
+        $staff = (new User())->findByRole(self::ROLE);
+
+        foreach ($staff as &$person) {
+            $person['performance'] = $orderModel->performanceSummaryForPerson((int) $person['id']);
+            $zoneIds = $zoneModel->zoneIdsForPerson((int) $person['id']);
+            $person['zone_names'] = array_map(
+                fn ($z) => $z['name'],
+                array_filter($zoneModel->all(), fn ($z) => in_array((int) $z['id'], $zoneIds, true))
+            );
+        }
+        unset($person);
+
         $this->adminView('delivery-staff/index', [
             'pageTitle' => 'Delivery Staff',
-            'staff' => (new User())->findByRole(self::ROLE),
+            'staff' => $staff,
         ]);
     }
 
@@ -17,6 +33,8 @@ final class DeliveryStaffAdminController extends AdminController
         $this->adminView('delivery-staff/form', [
             'pageTitle' => 'Add Delivery Staff',
             'member' => null,
+            'zones' => (new DeliveryZone())->allActive(),
+            'assignedZoneIds' => [],
         ]);
     }
 
@@ -47,6 +65,10 @@ final class DeliveryStaffAdminController extends AdminController
         }
 
         $id = $userModel->create($name, $email, $phone, $password, self::ROLE);
+
+        $zoneIds = array_map('intval', (array) ($_POST['zone_ids'] ?? []));
+        (new DeliveryZone())->assignZonesToPerson($id, $zoneIds);
+
         $this->logActivity('delivery_staff_created', "Added delivery staff #$id: $name");
 
         flash('success', 'Delivery staff member added successfully.');
@@ -64,6 +86,8 @@ final class DeliveryStaffAdminController extends AdminController
         $this->adminView('delivery-staff/form', [
             'pageTitle' => 'Edit Delivery Staff',
             'member' => $member,
+            'zones' => (new DeliveryZone())->allActive(),
+            'assignedZoneIds' => (new DeliveryZone())->zoneIdsForPerson((int) $id),
         ]);
     }
 
@@ -95,6 +119,9 @@ final class DeliveryStaffAdminController extends AdminController
             'status' => $this->input('status', 'active'),
         ]);
 
+        $zoneIds = array_map('intval', (array) ($_POST['zone_ids'] ?? []));
+        (new DeliveryZone())->assignZonesToPerson((int) $id, $zoneIds);
+
         $newPassword = $this->rawInput('password');
         if ($newPassword !== '') {
             if (strlen($newPassword) < 8) {
@@ -107,6 +134,25 @@ final class DeliveryStaffAdminController extends AdminController
         $this->logActivity('delivery_staff_updated', "Updated delivery staff #$id: $name");
         flash('success', 'Delivery staff member updated successfully.');
         redirect('admin/delivery-staff/' . $id . '/edit');
+    }
+
+    /** One-click Activate/Deactivate — the edit form's Status select already covers this; this just saves a click from the list. */
+    public function toggleActive(string $id): void
+    {
+        Security::requireCsrf();
+
+        $userModel = new User();
+        $staffMember = $userModel->findById((int) $id);
+        if (!$staffMember || $staffMember['role_slug'] !== self::ROLE) {
+            $this->abort404();
+        }
+
+        $newStatus = $staffMember['status'] === 'active' ? 'inactive' : 'active';
+        $userModel->update((int) $id, ['status' => $newStatus]);
+
+        $this->logActivity('delivery_staff_status_toggled', "Set delivery staff #$id ({$staffMember['name']}) to $newStatus");
+        flash('success', "Delivery staff member is now $newStatus.");
+        redirect('admin/delivery-staff');
     }
 
     public function destroy(string $id): void

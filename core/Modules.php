@@ -28,6 +28,7 @@ final class Modules
         'purchases' => 'Purchases',
         'sales' => 'Sales',
         'expenses' => 'Expenses',
+        'delivery_staff' => 'Delivery Staff',
     ];
 
     public static function label(string $key): string

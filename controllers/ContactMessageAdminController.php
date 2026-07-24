@@ -2,6 +2,8 @@
 
 final class ContactMessageAdminController extends AdminController
 {
+    protected string $moduleKey = 'messages';
+
     public function index(): void
     {
         $messageModel = new ContactMessage();

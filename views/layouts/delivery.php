@@ -33,6 +33,9 @@ $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'
             <a href="<?= url('/delivery/history') ?>" class="admin-nav-link <?= $currentPath === 'delivery/history' ? 'active' : '' ?>">
                 <i class="bi bi-clock-history"></i> Delivery History
             </a>
+            <a href="<?= url('/delivery/profile') ?>" class="admin-nav-link <?= $currentPath === 'delivery/profile' ? 'active' : '' ?>">
+                <i class="bi bi-person"></i> Profile
+            </a>
         </nav>
         <div class="admin-sidebar-footer">
             <a href="<?= url('/logout') ?>" class="admin-nav-link"><i class="bi bi-box-arrow-right"></i> Logout</a>

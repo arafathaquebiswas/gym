@@ -12,17 +12,31 @@
   <?php else: ?>
   <div class="table-responsive">
     <table class="admin-table">
-      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Delivery Areas</th><th>Performance</th><th>Status</th><th></th></tr></thead>
       <tbody>
         <?php foreach ($staff as $person): ?>
         <tr>
           <td><?= e($person['name']) ?></td>
           <td><?= e($person['email']) ?></td>
           <td><?= e($person['phone'] ?? '—') ?></td>
+          <td class="small text-white-50"><?= !empty($person['zone_names']) ? e(implode(', ', $person['zone_names'])) : '—' ?></td>
+          <td class="small">
+            <span class="text-success"><?= (int) $person['performance']['delivered_total'] ?> delivered</span> ·
+            <span class="text-white-50"><?= (int) $person['performance']['active_total'] ?> active</span>
+            <?php if ($person['performance']['failed_total'] > 0): ?>
+              · <span class="text-danger"><?= (int) $person['performance']['failed_total'] ?> failed/returned</span>
+            <?php endif; ?>
+          </td>
           <td><span class="badge text-bg-<?= $person['status'] === 'active' ? 'success' : 'secondary' ?>"><?= e(ucfirst($person['status'])) ?></span></td>
           <td>
             <div class="d-flex gap-2">
               <a href="<?= url('/admin/delivery-staff/' . $person['id'] . '/edit') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-pencil"></i></a>
+              <form method="post" action="<?= url('/admin/delivery-staff/' . $person['id'] . '/toggle-active') ?>">
+                <?= Security::csrfField() ?>
+                <button type="submit" class="btn btn-ps-outline btn-sm" title="<?= $person['status'] === 'active' ? 'Deactivate' : 'Activate' ?>">
+                  <i class="bi bi-<?= $person['status'] === 'active' ? 'pause' : 'play' ?>"></i>
+                </button>
+              </form>
               <form method="post" action="<?= url('/admin/delivery-staff/' . $person['id'] . '/delete') ?>" onsubmit="return confirm('Delete this delivery staff member? This removes their login.');">
                 <?= Security::csrfField() ?>
                 <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>

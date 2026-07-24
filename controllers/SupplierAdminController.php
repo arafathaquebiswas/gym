@@ -2,6 +2,8 @@
 
 final class SupplierAdminController extends AdminController
 {
+    protected string $moduleKey = 'store';
+
     public function index(): void
     {
         $this->adminView('suppliers/index', [

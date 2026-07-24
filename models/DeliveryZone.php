@@ -66,4 +66,22 @@ final class DeliveryZone extends Model
         $stmt->execute(['id' => $id]);
         return (int) $stmt->fetchColumn();
     }
+
+    /** @return int[] zone IDs this delivery person covers */
+    public function zoneIdsForPerson(int $userId): array
+    {
+        $stmt = $this->db->prepare('SELECT zone_id FROM delivery_person_zones WHERE user_id = :user_id');
+        $stmt->execute(['user_id' => $userId]);
+        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    /** @param int[] $zoneIds */
+    public function assignZonesToPerson(int $userId, array $zoneIds): void
+    {
+        $this->db->prepare('DELETE FROM delivery_person_zones WHERE user_id = :user_id')->execute(['user_id' => $userId]);
+        $stmt = $this->db->prepare('INSERT INTO delivery_person_zones (user_id, zone_id) VALUES (:user_id, :zone_id)');
+        foreach (array_unique(array_map('intval', $zoneIds)) as $zoneId) {
+            $stmt->execute(['user_id' => $userId, 'zone_id' => $zoneId]);
+        }
+    }
 }

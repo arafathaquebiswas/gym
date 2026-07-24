@@ -2,6 +2,8 @@
 
 final class SettingsAdminController extends AdminController
 {
+    protected string $moduleKey = 'settings';
+
     /** These match the exact keys already read by the public site (footer, home, contact, meta tags). */
     private const KEYS = [
         'gym_name', 'gym_tagline', 'gym_phone', 'gym_email', 'gym_address',

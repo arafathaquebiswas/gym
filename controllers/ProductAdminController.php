@@ -2,6 +2,8 @@
 
 final class ProductAdminController extends AdminController
 {
+    protected string $moduleKey = 'store';
+
     public function index(): void
     {
         $productModel = new Product();

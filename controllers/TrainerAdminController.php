@@ -2,6 +2,8 @@
 
 final class TrainerAdminController extends AdminController
 {
+    protected string $moduleKey = 'trainers';
+
     public function index(): void
     {
         $trainerModel = new Trainer();

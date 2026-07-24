@@ -2,7 +2,25 @@
 
 final class ModuleLock extends Model
 {
-    public const SCOPES = ['everyone', 'main_admin_super_admin', 'main_admin_staff', 'main_admin_only'];
+    public const SCOPES = [
+        'everyone',
+        'main_admin_super_admin',
+        'main_admin_staff',
+        'main_admin_delivery',
+        'main_admin_super_admin_staff',
+        'main_admin_super_admin_delivery',
+        'main_admin_only',
+    ];
+
+    public const LABELS = [
+        'everyone' => 'Everyone',
+        'main_admin_super_admin' => 'Main Admin + Super Admin',
+        'main_admin_staff' => 'Main Admin + Staff',
+        'main_admin_delivery' => 'Main Admin + Delivery Man',
+        'main_admin_super_admin_staff' => 'Main Admin + Super Admin + Staff',
+        'main_admin_super_admin_delivery' => 'Main Admin + Super Admin + Delivery Man',
+        'main_admin_only' => 'Only Main Admin',
+    ];
 
     /** @return array<string, string> module_key => scope, only for modules that have an explicit lock row */
     public function all(): array

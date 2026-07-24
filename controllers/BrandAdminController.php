@@ -2,6 +2,8 @@
 
 final class BrandAdminController extends AdminController
 {
+    protected string $moduleKey = 'store';
+
     public function index(): void
     {
         $brandModel = new Brand();

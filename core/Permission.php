@@ -8,6 +8,17 @@
  */
 final class Permission
 {
+    /** Which non-Main-Admin roles a lock scope admits, beyond the implicit Main Admin. Empty array = Main Admin only. */
+    private const SCOPE_ROLES = [
+        'everyone' => ['super_admin', 'staff', 'delivery'],
+        'main_admin_super_admin' => ['super_admin'],
+        'main_admin_staff' => ['staff'],
+        'main_admin_delivery' => ['delivery'],
+        'main_admin_super_admin_staff' => ['super_admin', 'staff'],
+        'main_admin_super_admin_delivery' => ['super_admin', 'delivery'],
+        'main_admin_only' => [],
+    ];
+
     /** @var array<string, string>|null */
     private static ?array $lockCache = null;
 
@@ -26,13 +37,8 @@ final class Permission
         }
 
         $scope = self::lockScope($moduleKey);
-        if ($scope === 'main_admin_only') {
-            return false;
-        }
-        if ($scope === 'main_admin_super_admin' && Auth::hasRole('staff')) {
-            return false;
-        }
-        if ($scope === 'main_admin_staff' && Auth::hasRole('super_admin')) {
+        $allowedRoles = self::SCOPE_ROLES[$scope] ?? [];
+        if (empty($allowedRoles) || !Auth::hasRole(...$allowedRoles)) {
             return false;
         }
 

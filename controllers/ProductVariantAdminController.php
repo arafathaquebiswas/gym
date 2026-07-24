@@ -2,6 +2,8 @@
 
 final class ProductVariantAdminController extends AdminController
 {
+    protected string $moduleKey = 'store';
+
     public function store(string $id): void
     {
         Security::requireCsrf();

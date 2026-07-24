@@ -2,6 +2,8 @@
 
 final class MemberAdminController extends AdminController
 {
+    protected string $moduleKey = 'members';
+
     private const ALLOWED_PAYMENT_METHODS = ['cash', 'card', 'bkash', 'nagad', 'rocket', 'bank_transfer'];
     private const NO_REFERENCE_METHODS = ['cash', 'card'];
 

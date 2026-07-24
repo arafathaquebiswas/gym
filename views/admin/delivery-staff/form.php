@@ -1,5 +1,7 @@
 <?php
 /** @var array|null $member */
+/** @var array $zones */
+/** @var array $assignedZoneIds */
 $isEdit = $member !== null;
 $action = $isEdit ? url('/admin/delivery-staff/' . $member['id']) : url('/admin/delivery-staff');
 $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
@@ -38,6 +40,21 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
         <?php endif; ?>
       </div>
     </div>
+
+    <?php if (!empty($zones)): ?>
+    <div class="admin-form-section">
+      <h6>Assigned Delivery Areas <small class="text-white-50">(optional)</small></h6>
+      <div class="row g-2">
+        <?php foreach ($zones as $zone): ?>
+        <div class="col-md-4 form-check">
+          <input type="checkbox" name="zone_ids[]" value="<?= (int) $zone['id'] ?>" class="form-check-input" id="zone<?= $zone['id'] ?>"
+            <?= in_array((int) $zone['id'], $assignedZoneIds, true) ? 'checked' : '' ?>>
+          <label class="form-check-label" for="zone<?= $zone['id'] ?>"><?= e($zone['name']) ?></label>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
 
     <div class="d-flex gap-2 mt-2">
       <button type="submit" class="btn btn-ps"><?= $isEdit ? 'Save Changes' : 'Add Delivery Staff' ?></button>

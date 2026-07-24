@@ -2,6 +2,8 @@
 
 final class AdminDashboardController extends AdminController
 {
+    protected string $moduleKey = 'dashboard';
+
     public function index(): void
     {
         (new Member())->syncAllStatuses();

@@ -10,18 +10,23 @@ $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'
  * expandable sub-menu — cross-page shortcuts belong here, in the sidebar, never scattered as
  * ad-hoc buttons inside a page's own content.
  */
-$navItems = [
-    ['dashboard', 'Dashboard', 'bi-speedometer2', url('/admin'), null],
-];
-if (Feature::trainerModuleOn()) {
+$navItems = [];
+if (Permission::can('dashboard')) {
+    $navItems[] = ['dashboard', 'Dashboard', 'bi-speedometer2', url('/admin'), null];
+}
+if (Feature::trainerModuleOn() && Permission::can('trainers')) {
     $navItems[] = ['trainers', 'Trainers', 'bi-person-badge', url('/admin/trainers'), null];
 }
-$navItems[] = ['packages', 'Packages', 'bi-box-seam', url('/admin/packages'), null];
-if (Feature::on('coupons')) {
+if (Permission::can('packages')) {
+    $navItems[] = ['packages', 'Packages', 'bi-box-seam', url('/admin/packages'), null];
+}
+if (Feature::on('coupons') && Permission::can('coupons')) {
     $navItems[] = ['coupons', 'Coupons', 'bi-ticket-perforated', url('/admin/coupons'), null];
 }
-$navItems[] = ['members', 'Members', 'bi-people', url('/admin/members'), null];
-if (Feature::on('store')) {
+if (Permission::can('members')) {
+    $navItems[] = ['members', 'Members', 'bi-people', url('/admin/members'), null];
+}
+if (Feature::on('store') && Permission::can('store')) {
     $navItems[] = ['products', 'Store', 'bi-shop', url('/admin/products'), [
         ['Products', url('/admin/products'), 'admin/products', 'admin/products/sales'],
         ['Categories', url('/admin/categories'), 'admin/categories', null],
@@ -32,17 +37,33 @@ if (Feature::on('store')) {
         ['Sales', url('/admin/products/sales'), 'admin/products/sales', null],
     ]];
 }
-$navItems[] = ['pos', 'POS', 'bi-calculator', url('/admin/pos'), null];
-if (Feature::on('store')) {
+if (Permission::can('pos')) {
+    $navItems[] = ['pos', 'POS', 'bi-calculator', url('/admin/pos'), null];
+}
+if (Feature::on('store') && Permission::can('orders')) {
     $navItems[] = ['orders', 'Orders', 'bi-bag-check', url('/admin/orders'), null];
 }
-$navItems[] = ['reports', 'Reports', 'bi-bar-chart', url('/admin/reports'), null];
-$navItems[] = ['messages', 'Messages', 'bi-envelope', url('/admin/messages'), null];
-if (Feature::on('reviews')) {
+if (Feature::deliveryOn() && Permission::can('delivery_staff')) {
+    $navItems[] = ['delivery-staff', 'Delivery Staff', 'bi-truck', url('/admin/delivery-staff'), null];
+}
+if (Permission::can('reports')) {
+    $navItems[] = ['reports', 'Reports', 'bi-bar-chart', url('/admin/reports'), null];
+}
+if (Permission::can('messages')) {
+    $navItems[] = ['messages', 'Messages', 'bi-envelope', url('/admin/messages'), null];
+}
+if (Feature::on('reviews') && Permission::can('reviews')) {
     $navItems[] = ['reviews', 'Reviews', 'bi-star', url('/admin/reviews'), null];
 }
-$navItems[] = ['audit-log', 'Audit Log', 'bi-clock-history', url('/admin/audit-log'), null];
-$navItems[] = ['settings', 'Settings', 'bi-gear', url('/admin/settings'), null];
+if (Permission::can('audit_logs')) {
+    $navItems[] = ['audit-log', 'Audit Log', 'bi-clock-history', url('/admin/audit-log'), null];
+}
+if (Permission::can('settings')) {
+    $navItems[] = ['settings', 'Settings', 'bi-gear', url('/admin/settings'), null];
+}
+if (Auth::hasRole('main_admin', 'super_admin')) {
+    $navItems[] = ['roles', 'Role Management', 'bi-shield-lock', url('/admin/roles'), null];
+}
 $unreadMessageCount = (new ContactMessage())->newCount();
 $newOrderCount = (new Order())->statusCounts()['pending'] ?? 0;
 $pendingReviewCount = (new ProductReview())->pendingCount();

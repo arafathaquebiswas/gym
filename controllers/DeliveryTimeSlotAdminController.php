@@ -2,6 +2,8 @@
 
 final class DeliveryTimeSlotAdminController extends AdminController
 {
+    protected string $moduleKey = 'orders';
+
     public function index(): void
     {
         $allSlots = (new DeliveryTimeSlot())->all();

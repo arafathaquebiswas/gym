@@ -202,9 +202,14 @@ $router->post('/admin/delivery-staff', [DeliveryStaffAdminController::class, 'st
 $router->get('/admin/delivery-staff/{id}/edit', [DeliveryStaffAdminController::class, 'edit']);
 $router->post('/admin/delivery-staff/{id}', [DeliveryStaffAdminController::class, 'update']);
 $router->post('/admin/delivery-staff/{id}/delete', [DeliveryStaffAdminController::class, 'destroy']);
+$router->post('/admin/delivery-staff/{id}/toggle-active', [DeliveryStaffAdminController::class, 'toggleActive']);
 
 $router->get('/delivery', [DeliveryController::class, 'dashboard']);
 $router->get('/delivery/history', [DeliveryController::class, 'history']);
+$router->get('/delivery/profile', [DeliveryController::class, 'profile']);
+$router->post('/delivery/profile', [DeliveryController::class, 'profileUpdate']);
+$router->post('/delivery/password', [DeliveryController::class, 'passwordUpdate']);
+$router->get('/delivery/orders/{id}', [DeliveryController::class, 'orderDetail']);
 $router->post('/delivery/{id}/status', [DeliveryController::class, 'updateStatus']);
 
 $router->get('/admin/products/sales', [ProductAdminController::class, 'sales']);
@@ -253,6 +258,25 @@ $router->post('/admin/settings', [SettingsAdminController::class, 'update']);
 $router->get('/admin/settings/free-trial-registrations', [SettingsAdminController::class, 'freeTrialRegistrations']);
 $router->get('/admin/settings/backup', [SettingsAdminController::class, 'backup']);
 $router->post('/admin/settings/restore', [SettingsAdminController::class, 'restore']);
+
+// ---- Admin: Role & Permission Management (Main Admin + Super Admin only) ----------
+$router->get('/admin/roles', [RoleAdminController::class, 'index']);
+$router->get('/admin/roles/staff/create', [RoleAdminController::class, 'createStaff']);
+$router->post('/admin/roles/staff', [RoleAdminController::class, 'storeStaff']);
+$router->get('/admin/roles/staff/{id}/edit', [RoleAdminController::class, 'editStaff']);
+$router->post('/admin/roles/staff/{id}', [RoleAdminController::class, 'updateStaff']);
+$router->post('/admin/roles/staff/{id}/toggle-suspend', [RoleAdminController::class, 'toggleStaffStatus']);
+$router->post('/admin/roles/staff/{id}/delete', [RoleAdminController::class, 'deleteStaff']);
+$router->get('/admin/roles/super-admin/create', [RoleAdminController::class, 'createSuperAdmin']);
+$router->post('/admin/roles/super-admin', [RoleAdminController::class, 'storeSuperAdmin']);
+$router->get('/admin/roles/super-admin/{id}/edit', [RoleAdminController::class, 'editSuperAdmin']);
+$router->post('/admin/roles/super-admin/{id}', [RoleAdminController::class, 'updateSuperAdmin']);
+$router->post('/admin/roles/super-admin/{id}/toggle-suspend', [RoleAdminController::class, 'toggleSuperAdminStatus']);
+$router->post('/admin/roles/super-admin/{id}/delete', [RoleAdminController::class, 'deleteSuperAdmin']);
+$router->get('/admin/roles/{id}/permissions', [RoleAdminController::class, 'permissions']);
+$router->post('/admin/roles/{id}/permissions', [RoleAdminController::class, 'savePermissions']);
+$router->get('/admin/roles/locks', [RoleAdminController::class, 'moduleLocks']);
+$router->post('/admin/roles/locks', [RoleAdminController::class, 'saveModuleLocks']);
 
 // ---- Admin: Messages ---------------------------------------------------------------
 $router->get('/admin/messages', [ContactMessageAdminController::class, 'index']);

@@ -2,6 +2,8 @@
 
 final class PosController extends AdminController
 {
+    protected string $moduleKey = 'pos';
+
     public function index(): void
     {
         $settingModel = new Setting();

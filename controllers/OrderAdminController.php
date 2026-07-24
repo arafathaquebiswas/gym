@@ -2,6 +2,8 @@
 
 final class OrderAdminController extends AdminController
 {
+    protected string $moduleKey = 'orders';
+
     private const STATUSES = ['pending', 'confirmed', 'preparing', 'packed', 'ready_for_pickup', 'shipped', 'delivered', 'cancelled', 'returned'];
 
     public function index(): void

@@ -2,6 +2,8 @@
 
 final class PurchaseAdminController extends AdminController
 {
+    protected string $moduleKey = 'purchases';
+
     public function index(): void
     {
         $page = max(1, (int) $this->input('page', '1'));

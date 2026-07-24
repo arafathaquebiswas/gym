@@ -2,6 +2,8 @@
 
 final class ProductCategoryAdminController extends AdminController
 {
+    protected string $moduleKey = 'store';
+
     public function index(): void
     {
         $categoryModel = new ProductCategory();

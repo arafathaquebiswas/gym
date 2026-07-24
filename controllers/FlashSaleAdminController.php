@@ -2,6 +2,8 @@
 
 final class FlashSaleAdminController extends AdminController
 {
+    protected string $moduleKey = 'store';
+
     public function index(): void
     {
         $this->adminView('flash-sales/index', [

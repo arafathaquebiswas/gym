@@ -2,6 +2,8 @@
 
 final class AuditLogController extends AdminController
 {
+    protected string $moduleKey = 'audit_logs';
+
     private const PER_PAGE = 30;
 
     public function index(): void

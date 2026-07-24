@@ -2,6 +2,8 @@
 
 final class ReportController extends AdminController
 {
+    protected string $moduleKey = 'reports';
+
     public function index(): void
     {
         $this->adminView('reports/index', ['pageTitle' => 'Reports']);

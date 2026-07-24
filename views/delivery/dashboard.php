@@ -4,7 +4,8 @@
 /** @var float $feePerOrder */
 /** @var float|null $monthlyEarnings */
 /** @var int|null $deliveredThisMonth */
-$statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' => 'info', 'packed' => 'info', 'ready_for_pickup' => 'info', 'shipped' => 'primary', 'delivered' => 'success', 'cancelled' => 'danger', 'returned' => 'dark'];
+$statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' => 'info', 'packed' => 'info', 'ready_for_pickup' => 'info', 'picked_up' => 'info', 'shipped' => 'primary', 'delivered' => 'success', 'delivery_failed' => 'danger', 'cancelled' => 'danger', 'returned' => 'dark'];
+$statusLabels = DeliveryController::STATUS_LABELS;
 ?>
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
@@ -36,7 +37,7 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
         <?php foreach ($orders as $order): ?>
         <?php $phone = $order['account_phone'] ?? $order['guest_phone'] ?? ''; ?>
         <tr>
-          <td><?= e($order['order_no']) ?></td>
+          <td><a href="<?= url('/delivery/orders/' . $order['id']) ?>"><?= e($order['order_no']) ?></a></td>
           <td>
             <?= e($order['account_name'] ?? $order['guest_name']) ?><br>
             <?php if ($phone): ?>
@@ -50,17 +51,20 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
             <?php endif; ?>
           </td>
           <td class="small"><?= e($order['time_slot_label'] ?? '—') ?></td>
-          <td><span class="badge text-bg-<?= $statusColors[$order['status']] ?? 'secondary' ?>"><?= e(ucfirst(str_replace('_', ' ', $order['status']))) ?></span></td>
+          <td><span class="badge text-bg-<?= $statusColors[$order['status']] ?? 'secondary' ?>"><?= e($statusLabels[$order['status']] ?? ucfirst(str_replace('_', ' ', $order['status']))) ?></span></td>
           <td style="min-width:220px">
-            <?php if (in_array($order['status'], ['delivered', 'cancelled', 'returned'], true)): ?>
+            <?php if (in_array($order['status'], ['delivered', 'delivery_failed', 'cancelled', 'returned'], true)): ?>
               <span class="text-white-50 small">—</span>
             <?php else: ?>
             <form method="post" action="<?= url('/delivery/' . $order['id'] . '/status') ?>" class="d-flex flex-column gap-1">
               <?= Security::csrfField() ?>
               <div class="d-flex gap-2">
                 <select name="status" class="form-select form-select-sm">
-                  <option value="shipped" <?= $order['status'] === 'shipped' ? 'selected' : '' ?>>Out for Delivery</option>
+                  <option value="picked_up" <?= $order['status'] === 'picked_up' ? 'selected' : '' ?>>Picked Up</option>
+                  <option value="shipped" <?= $order['status'] === 'shipped' ? 'selected' : '' ?>>On the Way</option>
                   <option value="delivered">Delivered</option>
+                  <option value="delivery_failed">Delivery Failed</option>
+                  <option value="returned">Returned</option>
                 </select>
                 <button type="submit" class="btn btn-ps btn-sm text-nowrap">Update</button>
               </div>

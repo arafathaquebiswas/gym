@@ -50,6 +50,7 @@ CREATE TABLE user_permissions (
     can_delete  TINYINT(1) NOT NULL DEFAULT 0,
     can_export  TINYINT(1) NOT NULL DEFAULT 0,
     can_print   TINYINT(1) NOT NULL DEFAULT 0,
+    can_approve TINYINT(1) NOT NULL DEFAULT 0,
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_user_permissions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE KEY uq_user_permissions (user_id, module_key)
@@ -59,7 +60,7 @@ CREATE TABLE user_permissions (
 -- 'settings' defaults to main_admin_only (seeded below); every other module defaults 'everyone'.
 CREATE TABLE module_locks (
     module_key  VARCHAR(30) PRIMARY KEY,
-    scope       ENUM('everyone','main_admin_super_admin','main_admin_staff','main_admin_only') NOT NULL DEFAULT 'everyone',
+    scope       ENUM('everyone','main_admin_super_admin','main_admin_staff','main_admin_delivery','main_admin_super_admin_staff','main_admin_super_admin_delivery','main_admin_only') NOT NULL DEFAULT 'everyone',
     updated_by  INT UNSIGNED NULL,
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_module_locks_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
@@ -749,6 +750,16 @@ CREATE TABLE delivery_time_slots (
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+-- Which delivery zones a given delivery person (users.role = 'delivery') covers.
+CREATE TABLE delivery_person_zones (
+    id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED NOT NULL,
+    zone_id     INT UNSIGNED NOT NULL,
+    CONSTRAINT fk_delivery_person_zones_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_delivery_person_zones_zone FOREIGN KEY (zone_id) REFERENCES delivery_zones(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_delivery_person_zones (user_id, zone_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE orders (
     id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     order_no            VARCHAR(30) NOT NULL UNIQUE,
@@ -775,7 +786,7 @@ CREATE TABLE orders (
     promotion_id        INT UNSIGNED NULL,
     payment_method      VARCHAR(30) NOT NULL COMMENT 'validated in application code (CheckoutController) so new gateways (Stripe, SSLCommerz, AmarPay, ...) can be added without a migration',
     payment_status      ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
-    status              ENUM('pending','confirmed','preparing','packed','ready_for_pickup','shipped','delivered','cancelled','returned') NOT NULL DEFAULT 'pending',
+    status              ENUM('pending','confirmed','preparing','packed','ready_for_pickup','picked_up','shipped','delivered','delivery_failed','cancelled','returned') NOT NULL DEFAULT 'pending',
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,

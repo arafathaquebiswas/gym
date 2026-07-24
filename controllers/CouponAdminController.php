@@ -2,6 +2,8 @@
 
 final class CouponAdminController extends AdminController
 {
+    protected string $moduleKey = 'coupons';
+
     public function index(): void
     {
         $promotionModel = new Promotion();

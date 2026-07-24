@@ -2,6 +2,8 @@
 
 final class BundleAdminController extends AdminController
 {
+    protected string $moduleKey = 'store';
+
     public function index(): void
     {
         $this->adminView('bundles/index', [

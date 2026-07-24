@@ -2,6 +2,8 @@
 
 final class MembershipAdminController extends AdminController
 {
+    protected string $moduleKey = 'packages';
+
     public function index(): void
     {
         $packageModel = new Package();

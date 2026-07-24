@@ -6,10 +6,16 @@
  */
 abstract class AdminController extends Controller
 {
+    /** Every concrete subclass sets this to its Modules::ALL key so Permission::require() knows what to check. Left blank = no per-module gate (only RoleAdminController, which has its own hard-coded access rules). */
+    protected string $moduleKey = '';
+
     public function __construct()
     {
-        // Per-module Permission::require() gating (Phase 1) lands on top of this role check.
-        Auth::requireRole('main_admin', 'super_admin', 'admin');
+        Auth::requireRole('main_admin', 'super_admin', 'staff', 'admin');
+
+        if ($this->moduleKey !== '') {
+            Permission::require($this->moduleKey);
+        }
     }
 
     protected function logActivity(string $action, string $description): void

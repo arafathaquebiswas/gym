@@ -280,7 +280,7 @@ final class Order extends Model
     public function forDeliveryPersonHistory(int $deliveryPersonId, int $page = 1, int $perPage = 20): array
     {
         $countStmt = $this->db->prepare(
-            "SELECT COUNT(*) FROM orders WHERE delivery_person_id = :delivery_person_id AND status IN ('delivered', 'returned')"
+            "SELECT COUNT(*) FROM orders WHERE delivery_person_id = :delivery_person_id AND status IN ('delivered', 'delivery_failed', 'returned')"
         );
         $countStmt->execute(['delivery_person_id' => $deliveryPersonId]);
         $total = (int) $countStmt->fetchColumn();
@@ -292,7 +292,7 @@ final class Order extends Model
 
         $stmt = $this->db->prepare(
             self::BASE_SELECT . " WHERE o.delivery_person_id = :delivery_person_id
-             AND o.status IN ('delivered', 'returned')
+             AND o.status IN ('delivered', 'delivery_failed', 'returned')
              ORDER BY o.updated_at DESC LIMIT :limit OFFSET :offset"
         );
         $stmt->bindValue(':delivery_person_id', $deliveryPersonId, PDO::PARAM_INT);
@@ -347,6 +347,31 @@ final class Order extends Model
         );
         $stmt->execute(['id' => $deliveryPersonId, 'id2' => $deliveryPersonId, 'start' => $start, 'end' => $end]);
         return (int) $stmt->fetchColumn();
+    }
+
+    /** All-time performance snapshot for one driver — powers the "View delivery performance" summary on the admin Delivery Staff list. */
+    public function performanceSummaryForPerson(int $deliveryPersonId): array
+    {
+        $delivered = $this->db->prepare(
+            "SELECT COUNT(*) FROM orders WHERE delivery_person_id = :id AND status = 'delivered'"
+        );
+        $delivered->execute(['id' => $deliveryPersonId]);
+
+        $failed = $this->db->prepare(
+            "SELECT COUNT(*) FROM orders WHERE delivery_person_id = :id AND status IN ('delivery_failed', 'returned')"
+        );
+        $failed->execute(['id' => $deliveryPersonId]);
+
+        $active = $this->db->prepare(
+            "SELECT COUNT(*) FROM orders WHERE delivery_person_id = :id AND status NOT IN ('delivered', 'delivery_failed', 'cancelled', 'returned')"
+        );
+        $active->execute(['id' => $deliveryPersonId]);
+
+        return [
+            'delivered_total' => (int) $delivered->fetchColumn(),
+            'failed_total' => (int) $failed->fetchColumn(),
+            'active_total' => (int) $active->fetchColumn(),
+        ];
     }
 
     public function assignDeliveryPerson(int $id, ?int $deliveryPersonId): void

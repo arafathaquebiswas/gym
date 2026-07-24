@@ -2,6 +2,8 @@
 
 final class ProductAttributeAdminController extends AdminController
 {
+    protected string $moduleKey = 'store';
+
     public function index(): void
     {
         $this->adminView('attributes/index', [

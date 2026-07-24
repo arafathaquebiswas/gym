@@ -2,7 +2,7 @@
 
 final class UserPermission extends Model
 {
-    private const ACTIONS = ['view', 'create', 'edit', 'delete', 'export', 'print'];
+    private const ACTIONS = ['view', 'create', 'edit', 'delete', 'export', 'print', 'approve'];
 
     /** @return array<string, array{can_view:int,can_create:int,can_edit:int,can_delete:int,can_export:int,can_print:int}> keyed by module_key */
     public function forUser(int $userId): array
@@ -34,8 +34,8 @@ final class UserPermission extends Model
         $this->db->prepare('DELETE FROM user_permissions WHERE user_id = :user_id')->execute(['user_id' => $userId]);
 
         $stmt = $this->db->prepare(
-            'INSERT INTO user_permissions (user_id, module_key, can_view, can_create, can_edit, can_delete, can_export, can_print)
-             VALUES (:user_id, :module_key, :view, :create, :edit, :delete, :export, :print)'
+            'INSERT INTO user_permissions (user_id, module_key, can_view, can_create, can_edit, can_delete, can_export, can_print, can_approve)
+             VALUES (:user_id, :module_key, :view, :create, :edit, :delete, :export, :print, :approve)'
         );
         foreach ($moduleActions as $moduleKey => $actions) {
             $stmt->execute([
@@ -47,6 +47,7 @@ final class UserPermission extends Model
                 'delete' => !empty($actions['delete']) ? 1 : 0,
                 'export' => !empty($actions['export']) ? 1 : 0,
                 'print' => !empty($actions['print']) ? 1 : 0,
+                'approve' => !empty($actions['approve']) ? 1 : 0,
             ]);
         }
     }

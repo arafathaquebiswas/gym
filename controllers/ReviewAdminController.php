@@ -2,6 +2,8 @@
 
 final class ReviewAdminController extends AdminController
 {
+    protected string $moduleKey = 'reviews';
+
     public function index(): void
     {
         $reviewModel = new ProductReview();
