@@ -28,7 +28,8 @@ final class HomeController extends Controller
 
     private function freeTrialAvailable(Setting $settingModel): bool
     {
-        if (!$settingModel->getBool('free_trial_enabled')) {
+        $val = $settingModel->get('free_trial_enabled', '1');
+        if ($val === '0' || $val === 'false' || $val === 'off') {
             return false;
         }
 

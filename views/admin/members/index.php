@@ -42,6 +42,9 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'expired' => '
       <h6 class="mb-0">All Members <span class="badge text-bg-secondary ms-2"><?= (int) $total ?></span></h6>
     </div>
     <div class="toolbar-group">
+      <?php if (Permission::can('members', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="members"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
       <a href="<?= url('/admin/members/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Member</a>
     </div>
   </div>

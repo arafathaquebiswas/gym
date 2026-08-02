@@ -21,6 +21,9 @@ $statusColors = ['pending' => 'secondary', 'approved' => 'success', 'hidden' => 
 <div class="admin-card">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h6 class="mb-0">Reviews (<?= (int) $total ?>)</h6>
+    <?php if (Permission::can('reviews', 'export')): ?>
+    <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="reviews"><i class="bi bi-download me-1"></i> Export</button>
+    <?php endif; ?>
   </div>
 
   <form method="get" action="<?= url('/admin/reviews') ?>" class="admin-toolbar admin-form">

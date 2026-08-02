@@ -19,6 +19,9 @@ if (Feature::on('blog')) {
 }
 $navItems['faq'] = ['FAQ', '/faq'];
 $navItems['contact'] = ['Contact', '/contact'];
+if (!$currentUser) {
+    $navItems['login'] = ['Staff Login', '/login'];
+}
 $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/');
 if ($currentPath === '') { $currentPath = 'home'; }
 $cartIdentity = Cart::identity();

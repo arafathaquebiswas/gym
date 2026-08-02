@@ -22,6 +22,9 @@ $statusColors = ['new' => 'success', 'read' => 'secondary', 'replied' => 'info']
 <div class="admin-card">
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h6 class="mb-0">Messages (<?= (int) $total ?>) <?php if ($newCount > 0): ?><span class="badge text-bg-success"><?= (int) $newCount ?> new</span><?php endif; ?></h6>
+    <?php if (Permission::can('messages', 'export')): ?>
+    <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="messages"><i class="bi bi-download me-1"></i> Export</button>
+    <?php endif; ?>
   </div>
 
   <form method="get" action="<?= url('/admin/messages') ?>" class="admin-toolbar admin-form">

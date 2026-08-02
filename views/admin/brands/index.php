@@ -13,8 +13,11 @@
       </nav>
       <h1 class="admin-page-title">Brands</h1>
     </div>
-    <div class="admin-page-actions">
+    <div class="admin-page-actions d-flex gap-2">
       <a href="<?= url('/admin/products') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back to Products</a>
+      <?php if (Permission::can('store', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="brands"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
       <button type="button" class="btn btn-ps btn-sm" data-bs-toggle="modal" data-bs-target="#addBrandModal"><i class="bi bi-plus-lg"></i> Add Brand</button>
     </div>
   </div>

@@ -38,6 +38,9 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
 <div class="admin-card">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h6 class="mb-0">Orders (<?= (int) $total ?>)</h6>
+    <?php if (Permission::can('orders', 'export')): ?>
+    <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="orders"><i class="bi bi-download me-1"></i> Export</button>
+    <?php endif; ?>
   </div>
   <form method="get" action="<?= url('/admin/orders') ?>" class="admin-toolbar admin-form">
     <input type="hidden" name="status" value="<?= e($filters['status']) ?>">

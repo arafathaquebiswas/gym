@@ -165,7 +165,27 @@ $childIsActive = function (array $child) use ($currentPath): bool {
                 </button>
                 <h5 class="mb-0"><?= e($pageTitle ?? 'Dashboard') ?></h5>
             </div>
-            <div class="admin-user">
+            <div class="admin-user d-flex align-items-center gap-2">
+                <!-- In-App Notification Bell Center -->
+                <div class="dropdown me-2" id="psNotificationDropdown">
+                    <button class="btn btn-sm btn-ps-outline position-relative border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="psNotifBell" title="Notifications">
+                        <i class="bi bi-bell fs-5"></i>
+                        <span class="badge bg-orange text-white rounded-pill position-absolute top-0 start-100 translate-middle d-none" id="psNotifBadge">0</span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end dropdown-menu-dark p-0 shadow-lg border-secondary" style="width: 340px; max-height: 420px; overflow-y: auto;">
+                        <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center bg-dark">
+                            <strong class="small text-white"><i class="bi bi-bell-fill text-orange me-1"></i> Notifications</strong>
+                            <div>
+                                <button type="button" class="btn btn-link text-white-50 p-0 me-2 small text-decoration-none" id="psNotifMarkAllBtn" style="font-size: 0.75rem;">Mark all read</button>
+                                <a href="<?= url('/admin/notifications') ?>" class="text-orange small text-decoration-none" style="font-size: 0.75rem;">View all</a>
+                            </div>
+                        </div>
+                        <div id="psNotifList" class="p-2 small">
+                            <div class="text-center text-muted py-3">Loading notifications…</div>
+                        </div>
+                    </div>
+                </div>
+
                 <span class="admin-user-pill"><i class="bi bi-person-circle"></i> <?= e($currentUser['name'] ?? '') ?></span>
                 <span class="badge-ps badge ms-2"><?= e(ucfirst(str_replace('_', ' ', $currentUser['role'] ?? ''))) ?></span>
             </div>
@@ -260,16 +280,83 @@ $childIsActive = function (array $child) use ($currentPath): bool {
     setSidebarOpen(false);
   });
   setSidebarOpen(false);
-  restoreGroupState();
 })();
 </script>
+<?php include BASE_PATH . '/views/admin/partials/_export_modal.php'; ?>
 <script src="<?= asset('js/payment-method-toggle.js') ?>"></script>
 <script src="<?= asset('js/membership-payment-fields.js') ?>"></script>
 <script src="<?= asset('js/password-toggle.js') ?>"></script>
 <script src="<?= asset('js/admin-details-toggle.js') ?>"></script>
 <script src="<?= asset('js/admin-bulk-actions.js') ?>"></script>
+<script src="<?= asset('js/admin-export-modal.js') ?>"></script>
 <?php if (!empty($extraScripts)): foreach ($extraScripts as $script): ?>
 <script src="<?= asset($script) ?>"></script>
 <?php endforeach; endif; ?>
+<script>
+(function() {
+  var bell = document.getElementById('psNotifBell');
+  var badge = document.getElementById('psNotifBadge');
+  var notifList = document.getElementById('psNotifList');
+  var markAllBtn = document.getElementById('psNotifMarkAllBtn');
+  var csrfToken = '<?= Security::csrfToken() ?>';
+  var latestUrl = '<?= url('/admin/notifications/latest') ?>';
+  var markAllUrl = '<?= url('/admin/notifications/mark-all-read') ?>';
+
+  function fetchNotifications() {
+    fetch(latestUrl)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (!data) return;
+        var count = data.unread_count || 0;
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : count;
+          badge.classList.remove('d-none');
+        } else {
+          badge.classList.add('d-none');
+        }
+
+        if (!data.notifications || !data.notifications.length) {
+          notifList.innerHTML = '<div class="text-center text-muted py-3">No notifications</div>';
+          return;
+        }
+
+        notifList.innerHTML = data.notifications.map(function(n) {
+          return '<div class="p-2 mb-1 rounded border-bottom border-secondary border-opacity-25 ' + (n.is_read ? 'opacity-75' : 'bg-dark') + '">' +
+            '<div class="d-flex justify-content-between align-items-start mb-1">' +
+              '<strong class="text-white small" style="font-size:0.8rem;">' + escapeHtml(n.title) + '</strong>' +
+              (!n.is_read ? '<span class="badge bg-orange text-white rounded-pill" style="font-size:0.6rem;">NEW</span>' : '') +
+            '</div>' +
+            '<div class="text-muted" style="font-size:0.75rem;">' + escapeHtml(n.message) + '</div>' +
+            '<div class="d-flex justify-content-between align-items-center mt-1" style="font-size:0.7rem;">' +
+              '<span class="text-secondary">' + escapeHtml(n.created_at) + '</span>' +
+              (n.link ? '<a href="' + escapeHtml(n.link) + '" class="text-orange text-decoration-none">View Order →</a>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('');
+      })
+      .catch(function(err) { /* silent */ });
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function(m) {
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
+    });
+  }
+
+  if (markAllBtn) {
+    markAllBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      var formData = new FormData();
+      formData.append('_csrf', csrfToken);
+      formData.append('ajax', '1');
+      fetch(markAllUrl, { method: 'POST', body: formData })
+        .then(function() { fetchNotifications(); });
+    });
+  }
+
+  fetchNotifications();
+  setInterval(fetchNotifications, 20000);
+})();
+</script>
 </body>
 </html>

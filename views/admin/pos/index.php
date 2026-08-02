@@ -1,113 +1,181 @@
 <div class="admin-page-shell">
-  <div class="admin-page-header">
+  <div class="admin-page-header border-bottom pb-3 mb-3 d-flex justify-content-between align-items-center">
     <div>
       <nav class="admin-breadcrumb" aria-label="Breadcrumb">
-        <ol class="breadcrumb">
+        <ol class="breadcrumb mb-1">
           <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
           <li class="breadcrumb-item active">POS</li>
         </ol>
       </nav>
-      <h1 class="admin-page-title">POS</h1>
+      <div class="d-flex align-items-center gap-2">
+        <h1 class="admin-page-title m-0">POS Terminal</h1>
+        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
+          <i class="bi bi-circle-fill me-1 small"></i> Terminal Active
+        </span>
+      </div>
+    </div>
+    <div class="admin-page-actions d-flex align-items-center gap-2">
+      <?php if (Permission::can('pos', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="pos">
+        <i class="bi bi-download me-1"></i> Export POS Sales
+      </button>
+      <?php endif; ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" onclick="location.reload()" title="Refresh Catalog">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
     </div>
   </div>
+
 <?php
 /** @var string $productsJson */
 /** @var string $membersJson */
 /** @var bool $taxEnabled */
 /** @var float $taxPercent */
 ?>
-<div class="row g-4">
-  <div class="col-lg-7">
-    <div class="admin-card">
-      <div class="pos-search-wrap mb-2">
+
+<div class="row g-3">
+  <!-- Left Side: Product Catalog & Search -->
+  <div class="col-lg-7 col-xl-8">
+    <div class="admin-card p-3 mb-0" style="min-height: calc(100vh - 160px);">
+      
+      <!-- Search & Scan Header Bar -->
+      <div class="pos-search-box mb-3">
         <i class="bi bi-search"></i>
-        <input type="text" id="posSearch" class="form-control" placeholder="Search by name or SKU, or scan a barcode…" autofocus>
+        <input type="text" id="posSearch" class="form-control" placeholder="Search by product name, SKU, or scan barcode…" autofocus>
+        <div class="pos-search-actions">
+          <button type="button" class="btn btn-sm btn-ps-outline py-1 px-2 border-0" id="posBarcodeBtn" title="Scan Barcode">
+            <i class="bi bi-qr-code-scan text-orange"></i>
+          </button>
+          <button type="button" class="btn btn-sm btn-ps-outline py-1 px-2 border-0" id="posFilterBtn" title="Filter Catalog">
+            <i class="bi bi-funnel text-muted"></i>
+          </button>
+          <span class="badge bg-dark text-muted border px-2 py-1 me-1 small d-none d-md-inline-block">/ or Ctrl+K</span>
+        </div>
       </div>
-      <p class="text-white-50 small mb-3">Tip: press <kbd>/</kbd> to search, <kbd>Esc</kbd> to clear, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> to complete the sale.</p>
 
-      <div id="posChips" class="pos-chips mb-4"></div>
+      <!-- Category Filter Chips -->
+      <div id="posChips" class="pos-chips-wrap"></div>
 
-      <div id="posProductGrid" class="pos-product-grid" style="max-height:560px; overflow-y:auto;"></div>
+      <!-- Product Tiles Grid -->
+      <div id="posProductGrid" class="pos-product-grid" style="max-height: calc(100vh - 270px); overflow-y: auto; padding-right: 4px;"></div>
     </div>
   </div>
 
-  <div class="col-lg-5">
-    <div class="admin-card pos-cart-panel d-flex flex-column" style="min-height:520px;">
-      <h6 class="mb-3">Cart</h6>
-
-      <label>Customer</label>
-      <select id="posMemberSelect" class="form-select mb-3">
-        <option value="">Walk-in Customer</option>
-      </select>
-
-      <div id="posCartList" class="flex-grow-1 mb-3" style="overflow-y:auto; max-height:320px;">
-        <p id="posCartEmpty" class="text-white-50 text-center py-4 mb-0">Cart is empty — search for a product to get started.</p>
+  <!-- Right Side: Order Cart Panel -->
+  <div class="col-lg-5 col-xl-4">
+    <div class="admin-card pos-cart-panel d-flex flex-column" style="min-height: calc(100vh - 160px);">
+      
+      <!-- Cart Header -->
+      <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom">
+        <h6 class="m-0 fw-bold d-flex align-items-center gap-2">
+          <i class="bi bi-cart3 text-orange"></i> Order Cart
+          <span class="badge bg-orange text-white rounded-pill px-2" id="posCartCount">0</span>
+        </h6>
+        <button type="button" class="btn btn-link text-muted p-0 small text-decoration-none" id="posClearCartBtn" title="Clear Cart">
+          <i class="bi bi-trash me-1"></i>Clear
+        </button>
       </div>
 
-      <form method="post" action="<?= url('/admin/pos/checkout') ?>" id="posCheckoutForm" class="mt-auto">
+      <!-- Customer Selection -->
+      <div class="mb-3">
+        <label class="form-label text-muted small fw-semibold mb-1">Customer / Member</label>
+        <select id="posMemberSelect" class="form-select form-select-sm bg-dark text-white border-secondary">
+          <option value="">Walk-in Customer</option>
+        </select>
+      </div>
+
+      <!-- Cart Itemized List -->
+      <div id="posCartList" class="flex-grow-1 mb-3" style="overflow-y: auto; max-height: calc(100vh - 480px); padding-right: 2px;">
+        <div id="posCartEmpty" class="text-muted text-center py-5">
+          <i class="bi bi-bag-plus fs-1 text-secondary opacity-50 d-block mb-2"></i>
+          <p class="small mb-0">Cart is empty</p>
+          <span class="small text-muted">Click any product to start sale</span>
+        </div>
+      </div>
+
+      <!-- Checkout Form -->
+      <form method="post" action="<?= url('/admin/pos/checkout') ?>" id="posCheckoutForm" class="mt-auto border-top pt-3">
         <?= Security::csrfField() ?>
         <input type="hidden" name="cart_json" id="posCartJson" value="[]">
         <input type="hidden" name="member_id" id="posMemberIdField" value="">
 
+        <!-- Discount & Coupon Row -->
         <div class="row g-2 mb-3">
           <div class="col-6">
-            <label>Discount (৳)</label>
-            <input type="number" step="0.01" min="0" name="discount" id="posDiscount" class="form-control" value="0">
+            <label class="form-label text-muted small fw-semibold mb-1">Discount (৳)</label>
+            <input type="number" step="0.01" min="0" name="discount" id="posDiscount" class="form-control form-control-sm bg-dark text-white border-secondary" value="0">
           </div>
           <div class="col-6">
-            <label>Coupon Code</label>
-            <input type="text" name="coupon_code" class="form-control" placeholder="Optional">
+            <label class="form-label text-muted small fw-semibold mb-1">Coupon Code</label>
+            <input type="text" name="coupon_code" id="posCouponCode" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="Optional">
           </div>
         </div>
 
-        <label>Payment Method</label>
-        <select name="payment_method" class="form-select mb-3">
-          <option value="cash">Cash</option>
-          <option value="card">Card</option>
-          <option value="bkash">bKash</option>
-          <option value="nagad">Nagad</option>
-          <option value="rocket">Rocket</option>
-          <option value="bank_transfer">Bank Transfer</option>
+        <!-- Payment Method Selector -->
+        <label class="form-label text-muted small fw-semibold mb-1">Payment Method</label>
+        <select name="payment_method" id="posPaymentMethod" class="form-select form-select-sm bg-dark text-white border-secondary mb-3">
+          <option value="cash">💵 Cash</option>
+          <option value="card">💳 Card</option>
+          <option value="bkash">📱 bKash</option>
+          <option value="nagad">📱 Nagad</option>
+          <option value="rocket">📱 Rocket</option>
+          <option value="bank_transfer">🏦 Bank Transfer</option>
         </select>
 
-        <div class="pos-totals mb-3">
-          <div class="d-flex justify-content-between small text-white-50"><span>Subtotal</span><span id="posSubtotalDisplay">৳0.00</span></div>
-          <div class="d-flex justify-content-between small text-white-50"><span>Discount</span><span id="posDiscountDisplay">− ৳0.00</span></div>
+        <!-- Sticky Totals Summary -->
+        <div class="bg-dark bg-opacity-50 p-3 rounded-3 border border-secondary border-opacity-25 mb-3">
+          <div class="d-flex justify-content-between small text-muted mb-1">
+            <span>Subtotal</span>
+            <span class="text-white fw-semibold" id="posSubtotalDisplay">৳0.00</span>
+          </div>
+          <div class="d-flex justify-content-between small text-muted mb-1">
+            <span>Discount</span>
+            <span class="text-success fw-semibold" id="posDiscountDisplay">− ৳0.00</span>
+          </div>
           <?php if ($taxEnabled): ?>
-          <div class="d-flex justify-content-between small text-white-50"><span>Tax (<?= e((string) $taxPercent) ?>%)</span><span id="posTaxDisplay">৳0.00</span></div>
+          <div class="d-flex justify-content-between small text-muted mb-1">
+            <span>Tax (<?= e((string) $taxPercent) ?>%)</span>
+            <span class="text-white fw-semibold" id="posTaxDisplay">৳0.00</span>
+          </div>
           <?php endif; ?>
-          <div class="d-flex justify-content-between align-items-baseline pt-2 mt-1" style="border-top:1px solid var(--ps-border)">
-            <span class="text-white-50">Total</span>
-            <span class="text-orange fw-bold fs-3" id="posTotalDisplay">৳0.00</span>
+          <div class="d-flex justify-content-between align-items-baseline pt-2 mt-1 border-top border-secondary border-opacity-25">
+            <span class="fw-bold text-white">Grand Total</span>
+            <span class="text-orange fw-bold fs-4" id="posTotalDisplay">৳0.00</span>
           </div>
         </div>
 
-        <button type="submit" class="btn btn-ps w-100 py-2" id="posCheckoutBtn" disabled>Complete Sale</button>
+        <!-- Complete Sale Button -->
+        <button type="submit" class="btn btn-ps w-100 py-2.5 fw-bold fs-6 d-flex align-items-center justify-content-center gap-2" id="posCheckoutBtn" disabled>
+          <i class="bi bi-check-circle-fill"></i> Complete Sale (Ctrl+Enter)
+        </button>
       </form>
     </div>
   </div>
 </div>
 
+<!-- Product Details Modal -->
 <div class="modal fade" id="posDetailsModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content bg-dark">
-      <div class="modal-header">
-        <h6 class="modal-title" id="posDetailsName">Product Details</h6>
+    <div class="modal-content bg-dark text-white border-secondary">
+      <div class="modal-header border-secondary">
+        <h6 class="modal-title fw-bold" id="posDetailsName">Product Details</h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <div class="row g-3 small">
-          <div class="col-6"><span class="text-white-50">SKU</span><br><span id="posDetailsSku">—</span></div>
-          <div class="col-6"><span class="text-white-50">Barcode</span><br><span id="posDetailsBarcode">—</span></div>
-          <div class="col-6"><span class="text-white-50">Category</span><br><span id="posDetailsCategory">—</span></div>
-          <div class="col-6"><span class="text-white-50">Stock</span><br><span id="posDetailsStock">—</span></div>
-          <div class="col-6"><span class="text-white-50">Regular Price</span><br><span id="posDetailsRegularPrice">—</span></div>
-          <div class="col-6"><span class="text-white-50">Offer Price</span><br><span id="posDetailsOfferPrice">—</span></div>
+          <div class="col-6"><span class="text-muted">SKU</span><br><strong id="posDetailsSku">—</strong></div>
+          <div class="col-6"><span class="text-muted">Barcode</span><br><strong id="posDetailsBarcode">—</strong></div>
+          <div class="col-6"><span class="text-muted">Category</span><br><strong id="posDetailsCategory">—</strong></div>
+          <div class="col-6"><span class="text-muted">Stock Level</span><br><span id="posDetailsStock" class="badge bg-success-subtle text-success">—</span></div>
+          <div class="col-6"><span class="text-muted">Regular Price</span><br><strong id="posDetailsRegularPrice">—</strong></div>
+          <div class="col-6"><span class="text-muted">Offer Price</span><br><strong id="posDetailsOfferPrice" class="text-orange">—</strong></div>
         </div>
       </div>
-      <div class="modal-footer">
+      <div class="modal-footer border-secondary">
         <button type="button" class="btn btn-ps-outline btn-sm" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-ps btn-sm" id="posDetailsAddBtn">Add to Cart</button>
+        <button type="button" class="btn btn-ps btn-sm" id="posDetailsAddBtn">
+          <i class="bi bi-cart-plus me-1"></i> Add to Cart
+        </button>
       </div>
     </div>
   </div>
@@ -121,7 +189,7 @@
   const taxPercent = <?= (float) $taxPercent ?>;
 
   const cart = {}; // product_id -> {product, qty}
-  let activeChip = ''; // '' = All, '__favorites', '__recent', or a category name
+  let activeChip = ''; // '' = All, '__favorites', '__recent', or category name
   const FAVORITES_KEY = 'pos_favorites';
   const RECENT_KEY = 'pos_recent';
   const MAX_RECENT = 12;
@@ -147,6 +215,8 @@
   const chipsWrap = document.getElementById('posChips');
   const search = document.getElementById('posSearch');
   const cartList = document.getElementById('posCartList');
+  const cartCount = document.getElementById('posCartCount');
+  const clearCartBtn = document.getElementById('posClearCartBtn');
   const cartJson = document.getElementById('posCartJson');
   const discountInput = document.getElementById('posDiscount');
   const subtotalDisplay = document.getElementById('posSubtotalDisplay');
@@ -161,9 +231,6 @@
   const memberIdField = document.getElementById('posMemberIdField');
   let detailsProductId = null;
 
-  // Lazy — bootstrap.bundle.js loads at the bottom of the page, after this inline
-  // script runs, so instantiating a Modal at top-level here would throw and silently
-  // abort the rest of this IIFE (this was the root cause of a permanently blank grid).
   function getDetailsModal() {
     return bootstrap.Modal.getOrCreateInstance(detailsModalEl);
   }
@@ -183,7 +250,7 @@
   function renderChips() {
     const categories = [...new Set(products.map(p => p.category_name).filter(Boolean))].sort();
     const pinned = [
-      { key: '', label: 'All' },
+      { key: '', label: 'All Items' },
       { key: '__favorites', label: '★ Favorites' },
       { key: '__recent', label: '⏱ Recent' },
     ];
@@ -203,10 +270,10 @@
   function skeletonHtml(count) {
     return Array.from({ length: count }).map(() => `
       <div class="pos-tile pos-skeleton">
-        <div class="pos-skeleton-block" style="width:64px;height:64px;border-radius:10px;"></div>
-        <div class="pos-skeleton-block" style="width:80%;height:14px;"></div>
-        <div class="pos-skeleton-block" style="width:50%;height:18px;"></div>
-        <div class="pos-skeleton-block" style="width:90%;height:32px;border-radius:8px;"></div>
+        <div class="pos-skeleton-block" style="width:52px;height:52px;border-radius:8px;"></div>
+        <div class="pos-skeleton-block" style="width:80%;height:12px;"></div>
+        <div class="pos-skeleton-block" style="width:50%;height:16px;"></div>
+        <div class="pos-skeleton-block" style="width:90%;height:28px;border-radius:6px;"></div>
       </div>
     `).join('');
   }
@@ -233,7 +300,7 @@
     grid.innerHTML = matches.slice(0, 90).map(p => {
       const isFav = favorites.includes(p.id);
       return `
-      <div class="pos-tile" data-id="${p.id}">
+      <div class="pos-tile" data-id="${p.id}" onclick="window.posAddToCart(${p.id})">
         <button type="button" class="pos-tile-fav ${isFav ? 'active' : ''}" data-action="fav" data-id="${p.id}" title="Favorite"><i class="bi ${isFav ? 'bi-star-fill' : 'bi-star'}"></i></button>
         <div class="pos-tile-thumb">${p.image_url ? `<img src="${escapeHtml(p.image_url)}" alt="">` : '<i class="bi bi-box-seam"></i>'}</div>
         ${p.offer_is_live ? '<span class="pos-tile-offer-badge">OFFER</span>' : ''}
@@ -241,7 +308,7 @@
         <div class="pos-tile-price">${priceHtml(p)}</div>
         <div class="pos-tile-stock ${p.stock_qty <= 5 ? 'low' : ''}">${p.stock_qty} in stock</div>
         <button type="button" class="btn btn-ps btn-sm pos-tile-add" data-action="add" data-id="${p.id}">Add to Cart</button>
-        <button type="button" class="pos-tile-details" data-action="details" data-id="${p.id}">View Details</button>
+        <button type="button" class="pos-tile-details" data-action="details" data-id="${p.id}">Details</button>
       </div>
     `;
     }).join('') || '<p class="text-white-50 text-center py-4 w-100">No products found.</p>';
@@ -256,8 +323,6 @@
       btn.addEventListener('click', (e) => { e.stopPropagation(); toggleFavorite(parseInt(btn.dataset.id, 10)); });
     });
 
-    // A barcode scanner behaves like fast keyboard input ending in Enter — if there's
-    // exactly one exact barcode/SKU match, add it straight to cart instead of just filtering.
     if (term) {
       const exact = products.find(p => (p.barcode && p.barcode.toLowerCase() === term) || p.sku.toLowerCase() === term);
       if (exact && matches.length === 1) {
@@ -268,6 +333,10 @@
     }
   }
 
+  window.posAddToCart = function (id) {
+    addToCart(id);
+  };
+
   function showDetails(productId) {
     const p = products.find(x => x.id === productId);
     if (!p) return;
@@ -276,7 +345,7 @@
     document.getElementById('posDetailsSku').textContent = p.sku || '—';
     document.getElementById('posDetailsBarcode').textContent = p.barcode || '—';
     document.getElementById('posDetailsCategory').textContent = p.category_name || '—';
-    document.getElementById('posDetailsStock').textContent = p.stock_qty;
+    document.getElementById('posDetailsStock').textContent = p.stock_qty + ' in stock';
     document.getElementById('posDetailsRegularPrice').textContent = money(p.selling_price);
     document.getElementById('posDetailsOfferPrice').textContent = p.offer_is_live ? money(p.display_price) : '—';
     getDetailsModal().show();
@@ -321,27 +390,43 @@
     renderCart();
   }
 
+  clearCartBtn.addEventListener('click', () => {
+    if (Object.keys(cart).length === 0) return;
+    if (confirm('Clear all items from cart?')) {
+      for (const k in cart) delete cart[k];
+      renderCart();
+    }
+  });
+
   function renderCart() {
     const lines = Object.values(cart);
+    const totalItemsCount = lines.reduce((sum, l) => sum + l.qty, 0);
+    cartCount.textContent = totalItemsCount;
+
     if (!lines.length) {
-      cartList.innerHTML = '<p id="posCartEmpty" class="text-white-50 text-center py-4 mb-0">Cart is empty — search for a product to get started.</p>';
+      cartList.innerHTML = `
+        <div id="posCartEmpty" class="text-muted text-center py-5">
+          <i class="bi bi-bag-plus fs-1 text-secondary opacity-50 d-block mb-2"></i>
+          <p class="small mb-0">Cart is empty</p>
+          <span class="small text-muted">Click any product to start sale</span>
+        </div>`;
     } else {
       cartList.innerHTML = lines.map(line => {
         const price = line.product.display_price;
         const subtotal = price * line.qty;
         return `
           <div class="pos-cart-line d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-semibold small">${escapeHtml(line.product.name)}</div>
-              <div class="text-white-50 small">${money(price)} × ${line.qty} = <span class="text-white">${money(subtotal)}</span></div>
+            <div style="max-width: 60%;">
+              <div class="fw-semibold small text-white text-truncate">${escapeHtml(line.product.name)}</div>
+              <div class="text-muted small">${money(price)} × ${line.qty} = <span class="text-orange font-monospace">${money(subtotal)}</span></div>
             </div>
             <div class="d-flex align-items-center gap-2">
-              <div class="d-flex align-items-center gap-1">
-                <button type="button" class="btn btn-ps-outline btn-sm" data-action="dec" data-id="${line.product.id}">−</button>
-                <span style="min-width:1.5rem;text-align:center;display:inline-block">${line.qty}</span>
-                <button type="button" class="btn btn-ps-outline btn-sm" data-action="inc" data-id="${line.product.id}">+</button>
+              <div class="d-flex align-items-center gap-1 bg-dark rounded border px-1">
+                <button type="button" class="btn btn-sm btn-link text-white text-decoration-none p-0 px-1" data-action="dec" data-id="${line.product.id}">−</button>
+                <span class="fw-bold px-1" style="min-width: 1.2rem; text-align: center; font-size: 0.85rem;">${line.qty}</span>
+                <button type="button" class="btn btn-sm btn-link text-white text-decoration-none p-0 px-1" data-action="inc" data-id="${line.product.id}">+</button>
               </div>
-              <button type="button" class="btn btn-link text-danger p-0" data-action="remove" data-id="${line.product.id}"><i class="bi bi-trash"></i></button>
+              <button type="button" class="btn btn-link text-danger p-0 ms-1" data-action="remove" data-id="${line.product.id}" title="Remove Item"><i class="bi bi-trash"></i></button>
             </div>
           </div>
         `;
@@ -350,7 +435,8 @@
 
     cartList.querySelectorAll('[data-action]').forEach(btn => {
       const id = parseInt(btn.dataset.id, 10);
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         if (btn.dataset.action === 'inc') changeQty(id, 1);
         else if (btn.dataset.action === 'dec') changeQty(id, -1);
         else if (btn.dataset.action === 'remove') removeFromCart(id);
@@ -384,7 +470,6 @@
     updateTotals();
   });
 
-  // Keyboard shortcuts: "/" focuses search, Esc clears it, Ctrl/Cmd+Enter completes the sale.
   document.addEventListener('keydown', (e) => {
     if (e.key === '/' && document.activeElement !== search) {
       e.preventDefault();

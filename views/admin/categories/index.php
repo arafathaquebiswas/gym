@@ -14,8 +14,11 @@ $topLevel = array_filter($categories, fn ($c) => !$c['parent_id']);
       </nav>
       <h1 class="admin-page-title">Categories</h1>
     </div>
-    <div class="admin-page-actions">
+    <div class="admin-page-actions d-flex gap-2">
       <a href="<?= url('/admin/products') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back to Products</a>
+      <?php if (Permission::can('store', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="categories"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
       <button type="button" class="btn btn-ps btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal"><i class="bi bi-plus-lg"></i> Add Category</button>
     </div>
   </div>

@@ -21,6 +21,9 @@
     <h6 class="mb-0">Purchases (<?= (int) $total ?>)</h6>
     <div class="d-flex gap-2">
       <a href="<?= url('/admin/suppliers') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-people"></i> Suppliers</a>
+      <?php if (Permission::can('purchases', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="purchases"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
       <a href="<?= url('/admin/purchases/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Record Purchase</a>
     </div>
   </div>

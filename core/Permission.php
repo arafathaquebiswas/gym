@@ -10,12 +10,12 @@ final class Permission
 {
     /** Which non-Main-Admin roles a lock scope admits, beyond the implicit Main Admin. Empty array = Main Admin only. */
     private const SCOPE_ROLES = [
-        'everyone' => ['super_admin', 'staff', 'delivery'],
-        'main_admin_super_admin' => ['super_admin'],
+        'everyone' => ['super_admin', 'admin', 'staff', 'delivery'],
+        'main_admin_super_admin' => ['super_admin', 'admin'],
         'main_admin_staff' => ['staff'],
         'main_admin_delivery' => ['delivery'],
-        'main_admin_super_admin_staff' => ['super_admin', 'staff'],
-        'main_admin_super_admin_delivery' => ['super_admin', 'delivery'],
+        'main_admin_super_admin_staff' => ['super_admin', 'admin', 'staff'],
+        'main_admin_super_admin_delivery' => ['super_admin', 'admin', 'delivery'],
         'main_admin_only' => [],
     ];
 
@@ -27,9 +27,9 @@ final class Permission
 
     public static function can(string $moduleKey, string $action = 'view'): bool
     {
-        // Main Admin is never subject to a lock scope or a permission row — hard-coded, not
-        // data-driven, so it can never be misconfigured into locking itself out.
-        if (Auth::hasRole('main_admin')) {
+        // Main Admin & Super Admin are never subject to a lock scope or permission row — hard-coded, not
+        // data-driven, so they can never be misconfigured into locking themselves out.
+        if (Auth::hasRole('main_admin', 'super_admin', 'admin')) {
             return true;
         }
         if (!Auth::check()) {

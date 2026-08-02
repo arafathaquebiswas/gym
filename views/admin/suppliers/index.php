@@ -19,6 +19,9 @@
     <div class="d-flex gap-2">
       <a href="<?= url('/admin/products') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back to Products</a>
       <a href="<?= url('/admin/purchases') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-truck"></i> Purchases</a>
+      <?php if (Permission::can('store', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="suppliers"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
       <button type="button" class="btn btn-ps btn-sm" data-bs-toggle="modal" data-bs-target="#addSupplierModal"><i class="bi bi-plus-lg"></i> Add Supplier</button>
     </div>
   </div>

@@ -37,7 +37,12 @@ $statusColors = ['draft' => 'secondary', 'published' => 'success', 'hidden' => '
 <div class="admin-card">
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h6 class="mb-0">All Products (<?= (int) $total ?>)</h6>
-    <a href="<?= url('/admin/products/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Product</a>
+    <div class="d-flex gap-2">
+      <?php if (Permission::can('store', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="products"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
+      <a href="<?= url('/admin/products/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Product</a>
+    </div>
   </div>
 
   <form method="get" action="<?= url('/admin/products') ?>" class="admin-toolbar admin-form">

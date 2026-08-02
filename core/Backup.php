@@ -16,6 +16,9 @@ final class Backup
         $tables = $db->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
 
         foreach ($tables as $table) {
+            if (!preg_match('/^[a-zA-Z0-9_]+$/', (string) $table)) {
+                continue;
+            }
             $createRow = $db->query('SHOW CREATE TABLE `' . $table . '`')->fetch();
             $createSql = $createRow['Create Table'] ?? null;
             if ($createSql === null) {

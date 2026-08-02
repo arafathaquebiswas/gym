@@ -84,6 +84,14 @@ final class AdminDashboardController extends AdminController
             'd', 'total'
         );
 
+        $latestExports = $db->query(
+            "SELECT l.*, COALESCE(l.user_name, u.name, 'System User') AS display_name
+             FROM activity_logs l
+             LEFT JOIN users u ON u.id = l.user_id
+             WHERE l.action LIKE 'export_%' OR l.export_format IS NOT NULL
+             ORDER BY l.id DESC LIMIT 5"
+        )->fetchAll();
+
         $this->adminView('dashboard', [
             'pageTitle' => 'Dashboard',
             'trainerCount' => count($trainers),
@@ -108,6 +116,7 @@ final class AdminDashboardController extends AdminController
             'memberStatusCounts' => $memberStatusCounts,
             'newMembersByMonth' => $newMembersByMonth,
             'revenueByDay' => $revenueByDay,
+            'latestExports' => $latestExports,
         ]);
     }
 

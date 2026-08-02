@@ -12,7 +12,10 @@
       </nav>
       <h1 class="admin-page-title">Packages</h1>
     </div>
-    <div class="admin-page-actions">
+    <div class="admin-page-actions d-flex gap-2">
+      <?php if (Permission::can('packages', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="packages"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
       <a href="<?= url('/admin/packages/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Package</a>
     </div>
   </div>

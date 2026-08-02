@@ -88,9 +88,10 @@ $statusBadge = fn ($status) => $status === 'suspended' ? 'danger' : ($status ===
     <div class="toolbar-group">
       <h6 class="mb-0">Staff <span class="badge text-bg-secondary ms-2"><?= count($staff) ?></span></h6>
     </div>
-    <div class="toolbar-group">
-    <a href="<?= url('/admin/roles/staff/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Staff</a>
-  </div>
+    <div class="toolbar-group d-flex gap-2">
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="staff"><i class="bi bi-download me-1"></i> Export Staff</button>
+      <a href="<?= url('/admin/roles/staff/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Staff</a>
+    </div>
   <?php if (empty($staff)): ?>
     <p class="text-white-50 text-center py-4 mb-0">No staff accounts yet. Staff only see the modules you assign them.</p>
   <?php else: ?>

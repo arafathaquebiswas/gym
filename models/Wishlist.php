@@ -2,14 +2,17 @@
 
 final class Wishlist extends Model
 {
-    public function forUser(int $userId): array
+    public function forUser(int $userId, int $limit = 100, int $offset = 0): array
     {
         $stmt = $this->db->prepare(
             'SELECT w.id AS wishlist_id, w.created_at AS added_at, p.*
              FROM wishlist w JOIN products p ON p.id = w.product_id
-             WHERE w.user_id = :user_id ORDER BY w.id DESC'
+             WHERE w.user_id = :user_id ORDER BY w.id DESC LIMIT :limit OFFSET :offset'
         );
-        $stmt->execute(['user_id' => $userId]);
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
         return $stmt->fetchAll();
     }
 

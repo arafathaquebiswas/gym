@@ -19,7 +19,10 @@ $statusLabels = ['available' => 'Available', 'busy' => 'Busy', 'on_leave' => 'On
       </nav>
       <h1 class="admin-page-title">Trainers</h1>
     </div>
-    <div class="admin-page-actions">
+    <div class="admin-page-actions d-flex gap-2">
+      <?php if (Permission::can('trainers', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="trainers"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
       <a href="<?= url('/admin/trainers/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Trainer</a>
     </div>
   </div>

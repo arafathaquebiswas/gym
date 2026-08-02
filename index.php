@@ -7,6 +7,11 @@
 require __DIR__ . '/config/config.php';
 require __DIR__ . '/core/bootstrap.php';
 
+// Global Security Response Headers
+header('X-Frame-Options: SAMEORIGIN');
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+
 $router = new Router();
 
 // ---- Public pages ---------------------------------------------------------
@@ -60,7 +65,15 @@ $router->get('/register', [MembershipRegistrationController::class, 'show']);
 $router->post('/register', [MembershipRegistrationController::class, 'submit']);
 
 $router->get('/admin', [AdminDashboardController::class, 'index']);
+$router->get('/admin/export/{module}', [AdminExportController::class, 'download']);
 $router->get('/admin/exports/{module}', [AdminExportController::class, 'download']);
+
+// ---- Admin: Notifications --------------------------------------------------------
+$router->get('/admin/notifications', [NotificationAdminController::class, 'index']);
+$router->get('/admin/notifications/unread-count', [NotificationAdminController::class, 'unreadCount']);
+$router->get('/admin/notifications/latest', [NotificationAdminController::class, 'latest']);
+$router->post('/admin/notifications/mark-all-read', [NotificationAdminController::class, 'markAllAsRead']);
+$router->post('/admin/notifications/{id}/read', [NotificationAdminController::class, 'markAsRead']);
 
 // ---- Admin: Trainers ------------------------------------------------------------
 $router->get('/admin/trainers', [TrainerAdminController::class, 'index']);

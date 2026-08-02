@@ -75,9 +75,9 @@ final class Auth
             'SELECT COUNT(*) FROM login_logs
              WHERE (email = :email OR ip_address = :ip)
                AND status = "failed"
-               AND created_at > (NOW() - INTERVAL :minutes MINUTE)'
+               AND created_at > (NOW() - INTERVAL ' . (int) self::LOCKOUT_MINUTES . ' MINUTE)'
         );
-        $stmt->execute(['email' => $email, 'ip' => $ip, 'minutes' => self::LOCKOUT_MINUTES]);
+        $stmt->execute(['email' => $email, 'ip' => $ip]);
         return (int) $stmt->fetchColumn() >= self::MAX_ATTEMPTS;
     }
 

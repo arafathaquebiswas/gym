@@ -233,6 +233,26 @@ final class Order extends Model
             }
 
             $this->db->commit();
+
+            // Trigger in-app notification for authorized staff & admins
+            try {
+                $customerName = $customer['guest_name'] ?? null;
+                if (!$customerName && $userId) {
+                    $u = (new User())->find($userId);
+                    $customerName = $u['name'] ?? 'Member Customer';
+                }
+                Notification::notifyNewOrder([
+                    'id' => $orderId,
+                    'order_no' => $orderNo,
+                    'customer_name' => $customerName ?: 'Customer',
+                    'total' => $total,
+                    'payment_method' => $payment['method'] ?? 'cash',
+                    'status' => 'pending',
+                ]);
+            } catch (Throwable $e) {
+                // Silently ignore notification trigger failures so order completion is never blocked
+            }
+
             return ['id' => $orderId, 'order_no' => $orderNo];
         } catch (Throwable $e) {
             $this->db->rollBack();

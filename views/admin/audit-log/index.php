@@ -22,6 +22,9 @@
 <div class="admin-card">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h6 class="mb-0">Audit Log (<?= (int) $total ?>)</h6>
+    <?php if (Permission::can('audit_logs', 'export')): ?>
+    <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="audit-logs"><i class="bi bi-download me-1"></i> Export Audit Log</button>
+    <?php endif; ?>
   </div>
 
   <form method="get" action="<?= url('/admin/audit-log') ?>" class="admin-toolbar admin-form">
@@ -50,15 +53,70 @@
   <?php else: ?>
   <div class="table-responsive">
     <table class="admin-table">
-      <thead><tr><th>Date/Time</th><th>Admin</th><th>Action</th><th>Description</th><th>IP Address</th></tr></thead>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Role</th>
+          <th>Module</th>
+          <th>File</th>
+          <th>Format</th>
+          <th>Records</th>
+          <th>Time</th>
+          <th>IP</th>
+          <th>Browser</th>
+          <th>Status</th>
+        </tr>
+      </thead>
       <tbody>
         <?php foreach ($logs as $log): ?>
+        <?php
+          $fmt = strtolower($log['export_format'] ?? '');
+          $fmtBadgeClass = match($fmt) {
+              'xlsx' => 'text-bg-success',
+              'csv' => 'text-bg-info',
+              'pdf' => 'text-bg-danger',
+              default => 'text-bg-secondary'
+          };
+          $roleLabel = ucfirst(str_replace('_', ' ', $log['user_role'] ?? 'Admin'));
+        ?>
         <tr>
-          <td class="text-nowrap"><?= format_date($log['created_at'], 'd M Y, h:i A') ?></td>
-          <td><?= e($log['user_name'] ?? 'Deleted User') ?></td>
-          <td><span class="badge text-bg-secondary"><?= e($log['action']) ?></span></td>
-          <td><?= e($log['description'] ?? '—') ?></td>
-          <td class="text-white-50"><?= e($log['ip_address'] ?? '—') ?></td>
+          <td>
+            <strong><?= e($log['user_name'] ?? 'System User') ?></strong>
+            <?php if (!empty($log['user_id'])): ?><span class="text-white-50 small font-monospace d-block">ID: #<?= (int) $log['user_id'] ?></span><?php endif; ?>
+          </td>
+          <td><span class="badge text-bg-dark border border-secondary"><?= e($roleLabel) ?></span></td>
+          <td>
+            <span class="badge text-bg-secondary mb-1"><?= e(ucfirst(str_replace(['_', '-'], ' ', $log['module_key'] ?? $log['action']))) ?></span>
+          </td>
+          <td>
+            <?php if (!empty($log['file_name'])): ?>
+              <div class="fw-bold font-monospace text-orange"><i class="bi bi-file-earmark-arrow-down me-1"></i><?= e($log['file_name']) ?></div>
+            <?php else: ?>
+              <div class="small text-white-50"><?= e($log['description'] ?? '—') ?></div>
+            <?php endif; ?>
+          </td>
+          <td>
+            <?php if ($fmt): ?>
+              <span class="badge <?= $fmtBadgeClass ?> text-uppercase"><?= e($fmt) ?></span>
+            <?php else: ?>
+              <span class="text-white-50">—</span>
+            <?php endif; ?>
+          </td>
+          <td>
+            <?= isset($log['record_count']) && $log['record_count'] !== null ? '<span class="badge text-bg-primary">' . (int) $log['record_count'] . '</span>' : '<span class="text-white-50">—</span>' ?>
+          </td>
+          <td class="text-nowrap small text-white-50"><?= format_date($log['created_at'], 'd M Y, h:i A') ?></td>
+          <td class="text-white-50 small"><?= e($log['ip_address'] ?? '0.0.0.0') ?></td>
+          <td class="text-white-50 small">
+            <?php if (!empty($log['user_agent'])): ?>
+              <div class="text-truncate text-white-50" style="max-width:130px;" title="<?= e($log['user_agent']) ?>"><?= e($log['user_agent']) ?></div>
+            <?php else: ?>
+              —
+            <?php endif; ?>
+          </td>
+          <td>
+            <span class="badge text-bg-success"><i class="bi bi-check-circle me-1"></i>Completed</span>
+          </td>
         </tr>
         <?php endforeach; ?>
       </tbody>

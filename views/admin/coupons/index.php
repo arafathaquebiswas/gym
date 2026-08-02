@@ -21,7 +21,12 @@ $appliesLabels = ['product' => 'Store Products', 'membership' => 'Membership', '
 <div class="admin-card">
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h6 class="mb-0">Coupons (<?= (int) $total ?>)</h6>
-    <a href="<?= url('/admin/coupons/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Coupon</a>
+    <div class="d-flex gap-2">
+      <?php if (Permission::can('coupons', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="coupons"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
+      <a href="<?= url('/admin/coupons/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Coupon</a>
+    </div>
   </div>
 
   <form method="get" action="<?= url('/admin/coupons') ?>" class="admin-toolbar admin-form">
@@ -67,9 +72,9 @@ $appliesLabels = ['product' => 'Store Products', 'membership' => 'Membership', '
                 <?= Security::csrfField() ?>
                 <button type="submit" class="btn btn-ps-outline btn-sm" title="Duplicate"><i class="bi bi-copy"></i></button>
               </form>
-              <form method="post" action="<?= url('/admin/coupons/' . $coupon['id'] . '/delete') ?>" onsubmit="return confirm('Delete this coupon?');">
+              <form method="post" action="<?= url('/admin/coupons/' . $coupon['id'] . '/delete') ?>" class="d-inline">
                 <?= Security::csrfField() ?>
-                <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="if(confirm('Are you sure you want to delete this coupon record?')) this.closest('form').submit();" title="Delete"><i class="bi bi-trash"></i></button>
               </form>
             </div>
           </td>

@@ -16,7 +16,12 @@
 <div class="admin-card">
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h6 class="mb-0">Delivery Staff (<?= count($staff) ?>)</h6>
-    <a href="<?= url('/admin/delivery-staff/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Delivery Staff</a>
+    <div class="d-flex gap-2">
+      <?php if (Permission::can('delivery_staff', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="delivery-staff"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
+      <a href="<?= url('/admin/delivery-staff/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Delivery Staff</a>
+    </div>
   </div>
 
   <?php if (empty($staff)): ?>

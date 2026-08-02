@@ -167,8 +167,58 @@ $stats = [
       <?php endif; ?>
     </div>
   </div>
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="admin-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0"><i class="bi bi-download text-orange me-2"></i>Export Activity</h6>
+        <a href="<?= url('/admin/audit-log') ?>" class="btn btn-ps-outline btn-sm">View Audit Log <i class="bi bi-arrow-right ms-1"></i></a>
+      </div>
+      <?php if (empty($latestExports)): ?>
+        <p class="text-white-50 small mb-0 py-2">No export activity recorded yet.</p>
+      <?php else: ?>
+        <div class="table-responsive">
+          <table class="admin-table mb-0">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Who Exported</th>
+                <th>Module</th>
+                <th>File Name</th>
+                <th>Format</th>
+                <th>Records</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($latestExports as $exp): ?>
+              <?php
+                $fmt = strtolower($exp['export_format'] ?? '');
+                $fmtBadge = match($fmt) {
+                    'xlsx' => 'text-bg-success',
+                    'csv' => 'text-bg-info',
+                    'pdf' => 'text-bg-danger',
+                    default => 'text-bg-secondary'
+                };
+              ?>
+              <tr class="cursor-pointer" onclick="window.location.href='<?= url('/admin/audit-log') ?>'">
+                <td class="text-nowrap small text-white-50"><?= format_date($exp['created_at'], 'd M Y, h:i A') ?></td>
+                <td>
+                  <strong><?= e($exp['display_name']) ?></strong>
+                  <?php if (!empty($exp['user_role'])): ?><span class="badge text-bg-dark border border-secondary ms-1 small"><?= e(ucfirst(str_replace('_', ' ', $exp['user_role']))) ?></span><?php endif; ?>
+                </td>
+                <td><span class="badge text-bg-secondary"><?= e(ucfirst(str_replace(['_', '-'], ' ', $exp['module_key'] ?? $exp['action']))) ?></span></td>
+                <td class="font-monospace small text-orange"><?= e($exp['file_name'] ?? '—') ?></td>
+                <td><span class="badge <?= $fmtBadge ?> text-uppercase"><?= e($fmt ?: 'export') ?></span></td>
+                <td><span class="badge text-bg-primary"><?= (int) ($exp['record_count'] ?? 0) ?></span></td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      <?php endif; ?>
+    </div>
+  </div>
 </div>
-
 </div>
 
 <div class="admin-card">

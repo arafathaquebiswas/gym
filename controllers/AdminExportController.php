@@ -41,8 +41,16 @@ final class AdminExportController extends Controller
             exit('Unsupported export format');
         }
         $filters = $this->filters();
+        $options = [
+            'filename' => trim((string) ($_GET['filename'] ?? '')),
+            'include_headers' => ($_GET['include_headers'] ?? '1') !== '0',
+            'include_filters' => ($_GET['include_filters'] ?? '1') !== '0',
+            'include_logo' => ($_GET['include_logo'] ?? '1') !== '0',
+            'include_date' => ($_GET['include_date'] ?? '1') !== '0',
+            'include_user' => ($_GET['include_user'] ?? '1') !== '0',
+        ];
         $rows = $this->rows($config[1], $filters);
-        ExportService::download($module, $format, $rows, $filters);
+        ExportService::download($module, $format, $rows, $filters, $options);
     }
 
     private function filters(): array

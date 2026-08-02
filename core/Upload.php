@@ -53,6 +53,14 @@ final class Upload
         }
 
         $extension = self::MIME_EXTENSIONS[$mime];
+
+        // Extra security layer: verify getimagesize() confirms a valid image header
+        $imgInfo = @getimagesize($file['tmp_name']);
+        if ($imgInfo === false || $imgInfo[0] <= 0 || $imgInfo[1] <= 0) {
+            self::$lastError = 'File content is not a valid image.';
+            return null;
+        }
+
         $filename = bin2hex(random_bytes(16)) . '.' . $extension;
         $targetDir = UPLOAD_PATH . '/' . trim($subfolder, '/');
 

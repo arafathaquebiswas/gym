@@ -22,6 +22,9 @@
     <h6 class="mb-0">Store Sales (<?= (int) $total ?>)</h6>
     <div class="d-flex gap-2">
       <a href="<?= url('/admin/products') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back to Products</a>
+      <?php if (Permission::can('sales', 'export')): ?>
+      <button type="button" class="btn btn-ps-outline btn-sm" data-export-module="sales"><i class="bi bi-download me-1"></i> Export</button>
+      <?php endif; ?>
       <a href="<?= url('/admin/pos') ?>" class="btn btn-ps btn-sm"><i class="bi bi-cart-plus"></i> New Sale</a>
     </div>
   </div>
