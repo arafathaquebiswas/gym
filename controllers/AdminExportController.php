@@ -6,7 +6,7 @@ final class AdminExportController extends Controller
         'members' => ['members', 'SELECT m.id, m.member_code, u.name, u.email, u.phone, m.status, m.join_date, m.created_at FROM members m JOIN users u ON u.id = m.user_id'],
         'trainers' => ['trainers', 'SELECT id, name, email, phone, specialization, availability_status, is_featured, is_active, created_at FROM trainers'],
         'packages' => ['packages', 'SELECT id, name, category, duration_days, regular_price, offer_price, is_featured, is_active, created_at FROM membership_packages'],
-        'coupons' => ['coupons', 'SELECT id, code, title, type, value, is_active, starts_at, ends_at, created_at FROM promotions'],
+        'coupons' => ['coupons', 'SELECT id, code, title, discount_type, discount_value, is_active, start_date, end_date, created_at FROM promotions'],
         'products' => ['store', 'SELECT id, sku, name, selling_price, stock_qty, status, is_featured, is_archived, created_at FROM products'],
         'categories' => ['store', 'SELECT id, name, status, sort_order FROM product_categories'],
         'attributes' => ['store', 'SELECT id, name, slug, created_at FROM product_attributes'],

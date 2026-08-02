@@ -287,10 +287,18 @@ final class OrderAdminController extends AdminController
             $this->abort404();
         }
 
+        $items = $this->orderItemsWithDetails((int) $id);
+        if (!empty($order['user_id'])) {
+            $member = (new Member())->findByUserId((int) $order['user_id']);
+            if ($member) {
+                $order['member_code'] = $member['member_code'];
+            }
+        }
+
         $this->adminView('orders/receipt', [
             'pageTitle' => 'Invoice — ' . $order['order_no'],
             'order' => $order,
-            'items' => (new OrderItem())->forOrder((int) $id),
+            'items' => $items,
         ]);
     }
 
@@ -301,7 +309,14 @@ final class OrderAdminController extends AdminController
             $this->abort404();
         }
 
-        $items = (new OrderItem())->forOrder((int) $id);
+        $items = $this->orderItemsWithDetails((int) $id);
+        if (!empty($order['user_id'])) {
+            $member = (new Member())->findByUserId((int) $order['user_id']);
+            if ($member) {
+                $order['member_code'] = $member['member_code'];
+            }
+        }
+
         $pdf = Invoice::generateForOrder($order, $items);
 
         header('Content-Type: application/pdf');
@@ -309,6 +324,19 @@ final class OrderAdminController extends AdminController
         header('Content-Length: ' . strlen($pdf));
         echo $pdf;
         exit;
+    }
+
+    private function orderItemsWithDetails(int $orderId): array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT oi.*, p.image AS product_image
+             FROM order_items oi
+             LEFT JOIN products p ON p.id = oi.product_id
+             WHERE oi.order_id = :order_id
+             ORDER BY oi.id ASC'
+        );
+        $stmt->execute(['order_id' => $orderId]);
+        return $stmt->fetchAll();
     }
 
     private function paymentTransactions(int $orderId): array

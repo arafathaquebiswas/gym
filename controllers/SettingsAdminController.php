@@ -106,6 +106,19 @@ final class SettingsAdminController extends AdminController
         exit;
     }
 
+    public function backupMedia(): void
+    {
+        $zipTmp = Backup::exportMediaZip();
+        $filename = 'powersurge-media-' . date('Y-m-d-His') . '.zip';
+
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($zipTmp));
+        readfile($zipTmp);
+        @unlink($zipTmp);
+        exit;
+    }
+
     public function restore(): void
     {
         Security::requireCsrf();

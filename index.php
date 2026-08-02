@@ -258,6 +258,7 @@ $router->get('/admin/settings', [SettingsAdminController::class, 'index']);
 $router->post('/admin/settings', [SettingsAdminController::class, 'update']);
 $router->get('/admin/settings/free-trial-registrations', [SettingsAdminController::class, 'freeTrialRegistrations']);
 $router->get('/admin/settings/backup', [SettingsAdminController::class, 'backup']);
+$router->get('/admin/settings/backup-media', [SettingsAdminController::class, 'backupMedia']);
 $router->post('/admin/settings/restore', [SettingsAdminController::class, 'restore']);
 
 // ---- Admin: Role & Permission Management (Main Admin + Super Admin only) ----------

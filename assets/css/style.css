@@ -445,9 +445,9 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
 .bmi-details-card strong { color: var(--ps-text); }
 
 @media print {
-  body * { visibility: hidden; }
-  #bmiResult, #bmiResult * { visibility: visible; }
-  #bmiResult { position: absolute; top: 0; left: 0; width: 100%; }
+  body:has(#bmiResult) * { visibility: hidden; }
+  body:has(#bmiResult) #bmiResult, body:has(#bmiResult) #bmiResult * { visibility: visible !important; }
+  body:has(#bmiResult) #bmiResult { position: absolute; top: 0; left: 0; width: 100%; }
 }
 
 /* ---------- Forms ---------- */

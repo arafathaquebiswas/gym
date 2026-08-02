@@ -85,10 +85,12 @@ final class PosController extends AdminController
             $this->abort404();
         }
 
+        $items = $this->saleItemsWithDetails((int) $id);
+
         $this->adminView('pos/receipt', [
             'pageTitle' => 'Receipt — ' . $sale['invoice_no'],
             'sale' => $sale,
-            'items' => (new SaleItem())->forSale((int) $id),
+            'items' => $items,
         ]);
     }
 
@@ -99,7 +101,7 @@ final class PosController extends AdminController
             $this->abort404();
         }
 
-        $items = (new SaleItem())->forSale((int) $id);
+        $items = $this->saleItemsWithDetails((int) $id);
         $pdf = Invoice::generate($sale, $items);
 
         header('Content-Type: application/pdf');
@@ -107,5 +109,18 @@ final class PosController extends AdminController
         header('Content-Length: ' . strlen($pdf));
         echo $pdf;
         exit;
+    }
+
+    private function saleItemsWithDetails(int $saleId): array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT si.*, p.name AS product_name, p.sku, p.image AS product_image
+             FROM sale_items si
+             JOIN products p ON p.id = si.product_id
+             WHERE si.sale_id = :sale_id
+             ORDER BY si.id ASC'
+        );
+        $stmt->execute(['sale_id' => $saleId]);
+        return $stmt->fetchAll();
     }
 }

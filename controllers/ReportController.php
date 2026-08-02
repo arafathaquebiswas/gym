@@ -537,7 +537,7 @@ final class ReportController extends AdminController
     }
 
     /**
-     * Streams the report as CSV/PDF and exits if ?export=csv|pdf is present — otherwise a no-op.
+     * Streams the report through the shared audited export service when requested.
      * Called after a report's data is fetched but before its normal HTML view renders, so every
      * report exports the exact same rows the admin is looking at.
      * @param array<int, array<int, mixed>> $rows
@@ -545,10 +545,17 @@ final class ReportController extends AdminController
     private function maybeExport(string $title, array $headers, array $rows, string $subtitle = ''): void
     {
         $export = $this->input('export');
-        if ($export === 'csv') {
-            ReportExporter::csv($title, $headers, $rows);
-        } elseif ($export === 'pdf') {
-            ReportExporter::pdf($title, $headers, $rows, $subtitle);
+        if (in_array($export, ['csv', 'xlsx', 'pdf'], true)) {
+            Permission::require('reports', 'export');
+            $associativeRows = array_map(
+                static fn (array $row) => array_combine($headers, array_map('strval', $row)),
+                $rows
+            );
+            ExportService::download('reports', $export, $associativeRows, [
+                'report' => $title,
+                'subtitle' => $subtitle,
+                'filters' => $_GET,
+            ]);
         }
     }
 }

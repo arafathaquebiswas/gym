@@ -341,3 +341,75 @@ tr.collapse.show { display: table-row; }
   .admin-breadcrumb { max-width: 100%; overflow-x: auto; }
   .admin-breadcrumb .breadcrumb { flex-wrap: nowrap; white-space: nowrap; }
 }
+
+/* =========================================================
+   PowerSurge Gym — Universal Print Engine & A4 Optimization
+   ========================================================= */
+@media print {
+  /* 1. Reset Root Document */
+  html, body, .admin-body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 2. Hide Non-Printable Admin UI Components */
+  .admin-sidebar,
+  .admin-topbar,
+  .admin-overlay,
+  .admin-sidebar-toggle,
+  .admin-breadcrumb,
+  .admin-page-actions,
+  .no-print,
+  .btn,
+  .alert,
+  .flash-container,
+  nav:not(.print-keep),
+  header:not(.print-keep),
+  footer:not(.invoice-print-footer) {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    opacity: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 3. Strip Layout Shell Positioning & Offsets */
+  .admin-shell,
+  .admin-main,
+  .admin-content,
+  .admin-page-shell {
+    display: block !important;
+    position: static !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  /* 4. A4 Printable Container Defaults */
+  @page {
+    size: A4 portrait;
+    margin: 12mm 12mm 15mm 12mm;
+  }
+
+  /* 5. Force Printable Item Visibility */
+  .admin-shell *, .invoice-wrapper * {
+    visibility: visible !important;
+  }
+}

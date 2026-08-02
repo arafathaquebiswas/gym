@@ -76,6 +76,61 @@ final class Backup
         }
     }
 
+    /** Creates a zip archive of the uploads directory for media/file backup. */
+    public static function exportMediaZip(): string
+    {
+        $zipFile = tempnam(sys_get_temp_dir(), 'media_backup_') . '.zip';
+        $zip = new ZipArchive();
+        if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            throw new RuntimeException('Failed to create media zip archive');
+        }
+
+        $uploadsDir = realpath(__DIR__ . '/../uploads');
+        if ($uploadsDir && is_dir($uploadsDir)) {
+            $files = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($uploadsDir, RecursiveDirectoryIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::LEAVES_ONLY
+            );
+            foreach ($files as $file) {
+                if (!$file->isDir()) {
+                    $filePath = $file->getRealPath();
+                    $relativePath = 'uploads/' . substr($filePath, strlen($uploadsDir) + 1);
+                    $zip->addFile($filePath, $relativePath);
+                }
+            }
+        }
+        $zip->close();
+        return $zipFile;
+    }
+
+    /** Triggers automated daily backup storing SQL dump & media zip in backups/daily/. */
+    public static function runDailyBackup(int $keepDays = 7): array
+    {
+        $backupDir = __DIR__ . '/../backups/daily';
+        if (!is_dir($backupDir)) {
+            mkdir($backupDir, 0755, true);
+        }
+
+        $dateStr = date('Y-m-d');
+        $sqlPath = "$backupDir/daily-db-$dateStr.sql";
+        file_put_contents($sqlPath, self::export());
+
+        $zipTmp = self::exportMediaZip();
+        $zipPath = "$backupDir/daily-media-$dateStr.zip";
+        copy($zipTmp, $zipPath);
+        @unlink($zipTmp);
+
+        // Prune older daily backups
+        $cutoff = strtotime("-$keepDays days");
+        foreach (glob("$backupDir/daily-*.*") as $oldFile) {
+            if (filemtime($oldFile) < $cutoff) {
+                @unlink($oldFile);
+            }
+        }
+
+        return ['sql' => $sqlPath, 'media' => $zipPath];
+    }
+
     /** @return string[] */
     private static function splitStatements(string $sql): array
     {
@@ -100,3 +155,4 @@ final class Backup
         return $statements;
     }
 }
+
