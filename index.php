@@ -73,6 +73,11 @@ $router->get('/admin/notifications', [NotificationAdminController::class, 'index
 $router->get('/admin/notifications/unread-count', [NotificationAdminController::class, 'unreadCount']);
 $router->get('/admin/notifications/latest', [NotificationAdminController::class, 'latest']);
 $router->post('/admin/notifications/mark-all-read', [NotificationAdminController::class, 'markAllAsRead']);
+$router->post('/admin/notifications/toggle-sound', [NotificationAdminController::class, 'toggleSound']);
+$router->post('/admin/notifications/sound-choice', [NotificationAdminController::class, 'soundChoice']);
+$router->post('/admin/notifications/desktop-pref', [NotificationAdminController::class, 'desktopPref']);
+$router->post('/admin/notifications/category-pref', [NotificationAdminController::class, 'categoryPref']);
+$router->post('/admin/notifications/cleanup', [NotificationAdminController::class, 'cleanup']);
 $router->post('/admin/notifications/{id}/read', [NotificationAdminController::class, 'markAsRead']);
 
 // ---- Admin: Trainers ------------------------------------------------------------

@@ -175,8 +175,9 @@ $childIsActive = function (array $child) use ($currentPath): bool {
                     <div class="dropdown-menu dropdown-menu-end dropdown-menu-dark p-0 shadow-lg border-secondary" style="width: 340px; max-height: 420px; overflow-y: auto;">
                         <div class="p-2 border-bottom border-secondary d-flex justify-content-between align-items-center bg-dark">
                             <strong class="small text-white"><i class="bi bi-bell-fill text-orange me-1"></i> Notifications</strong>
-                            <div>
-                                <button type="button" class="btn btn-link text-white-50 p-0 me-2 small text-decoration-none" id="psNotifMarkAllBtn" style="font-size: 0.75rem;">Mark all read</button>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-link p-0 text-decoration-none" id="psNotifSoundBtn" title="Toggle notification sound" style="font-size: 1rem; line-height:1;">🔊</button>
+                                <button type="button" class="btn btn-link text-white-50 p-0 small text-decoration-none" id="psNotifMarkAllBtn" style="font-size: 0.75rem;">Mark all read</button>
                                 <a href="<?= url('/admin/notifications') ?>" class="text-orange small text-decoration-none" style="font-size: 0.75rem;">View all</a>
                             </div>
                         </div>
@@ -293,65 +294,182 @@ $childIsActive = function (array $child) use ($currentPath): bool {
 <script src="<?= asset($script) ?>"></script>
 <?php endforeach; endif; ?>
 <script>
-(function() {
-  var bell = document.getElementById('psNotifBell');
-  var badge = document.getElementById('psNotifBadge');
-  var notifList = document.getElementById('psNotifList');
+(function () {
+  /* ── DOM ── */
+  var badge      = document.getElementById('psNotifBadge');
+  var notifList  = document.getElementById('psNotifList');
   var markAllBtn = document.getElementById('psNotifMarkAllBtn');
-  var csrfToken = '<?= Security::csrfToken() ?>';
-  var latestUrl = '<?= url('/admin/notifications/latest') ?>';
-  var markAllUrl = '<?= url('/admin/notifications/mark-all-read') ?>';
+  var soundBtn   = document.getElementById('psNotifSoundBtn');
 
-  function fetchNotifications() {
-    fetch(latestUrl)
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        if (!data) return;
-        var count = data.unread_count || 0;
-        if (count > 0) {
-          badge.textContent = count > 99 ? '99+' : count;
-          badge.classList.remove('d-none');
-        } else {
-          badge.classList.add('d-none');
-        }
+  /* ── URLs ── */
+  var CSRF         = '<?= Security::csrfToken() ?>';
+  var latestUrl    = '<?= url('/admin/notifications/latest') ?>';
+  var markAllUrl   = '<?= url('/admin/notifications/mark-all-read') ?>';
+  var toggleSndUrl = '<?= url('/admin/notifications/toggle-sound') ?>';
+  var markReadBase = '<?= url('/admin/notifications') ?>';
 
-        if (!data.notifications || !data.notifications.length) {
-          notifList.innerHTML = '<div class="text-center text-muted py-3">No notifications</div>';
-          return;
-        }
+  /* ── Sound files ── */
+  var SOUNDS = {
+    classic_ding: '<?= asset('audio/notif.wav') ?>',
+    soft_pop:     '<?= asset('audio/soft_pop.wav') ?>',
+    bell:         '<?= asset('audio/bell.wav') ?>',
+    chime:        '<?= asset('audio/chime.wav') ?>',
+    silent:       null,
+  };
 
-        notifList.innerHTML = data.notifications.map(function(n) {
-          return '<div class="p-2 mb-1 rounded border-bottom border-secondary border-opacity-25 ' + (n.is_read ? 'opacity-75' : 'bg-dark') + '">' +
-            '<div class="d-flex justify-content-between align-items-start mb-1">' +
-              '<strong class="text-white small" style="font-size:0.8rem;">' + escapeHtml(n.title) + '</strong>' +
-              (!n.is_read ? '<span class="badge bg-orange text-white rounded-pill" style="font-size:0.6rem;">NEW</span>' : '') +
-            '</div>' +
-            '<div class="text-muted" style="font-size:0.75rem;">' + escapeHtml(n.message) + '</div>' +
-            '<div class="d-flex justify-content-between align-items-center mt-1" style="font-size:0.7rem;">' +
-              '<span class="text-secondary">' + escapeHtml(n.created_at) + '</span>' +
-              (n.link ? '<a href="' + escapeHtml(n.link) + '" class="text-orange text-decoration-none">View Order →</a>' : '') +
-            '</div>' +
-          '</div>';
-        }).join('');
-      })
-      .catch(function(err) { /* silent */ });
-  }
+  /* ── State ── */
+  var prevCount   = null;  // null = first load, skip sound
+  var soundOn     = true;
+  var soundChoice = 'classic_ding';
+  var desktopOn   = false;
 
-  function escapeHtml(s) {
+  /* ─────────── Helpers ─────────── */
+  function esc(s) {
     return String(s || '').replace(/[&<>"']/g, function(m) {
-      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
+      return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]);
     });
   }
 
+  function post(url, data) {
+    var fd = new FormData();
+    fd.append('_csrf', CSRF);
+    fd.append('ajax', '1');
+    for (var k in data) fd.append(k, data[k]);
+    return fetch(url, { method: 'POST', body: fd });
+  }
+
+  /* ─────────── Audio ─────────── */
+  function playSynthDing() {
+    try {
+      var A = window.AudioContext || window.webkitAudioContext;
+      if (!A) return;
+      var ctx = new A(), osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.08);
+      g.gain.setValueAtTime(0.35, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.connect(g); g.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.35);
+    } catch(e) {}
+  }
+
+  function playDing() {
+    if (!soundOn) return;
+    var url = SOUNDS[soundChoice] || null;
+    if (!url) return;
+    try {
+      var a = new Audio(url);
+      var p = a.play();
+      if (p) p.catch(function() { playSynthDing(); });
+    } catch(e) { playSynthDing(); }
+  }
+
+  /* ─────────── Desktop notification ─────────── */
+  function pushDesktop(title, body) {
+    if (!desktopOn || !('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      new Notification(title, {
+        body: body,
+        icon: '<?= asset('images/logo/logo.png') ?>',
+        tag: 'ps-notif',
+      });
+    } catch(e) {}
+  }
+
+  /* ─────────── Sound toggle button ─────────── */
+  function updateSoundBtn(on) {
+    if (!soundBtn) return;
+    soundBtn.textContent = on ? '🔊' : '🔇';
+    soundBtn.title = on ? 'Sound ON – click to mute' : 'Sound OFF – click to enable';
+  }
+
+  if (soundBtn) {
+    soundBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      soundOn = !soundOn;
+      updateSoundBtn(soundOn);
+      post(toggleSndUrl, { enabled: soundOn ? '1' : '0' }).catch(function(){});
+    });
+  }
+
+  /* ─────────── Mark-all-read ─────────── */
   if (markAllBtn) {
     markAllBtn.addEventListener('click', function(e) {
       e.preventDefault();
-      var formData = new FormData();
-      formData.append('_csrf', csrfToken);
-      formData.append('ajax', '1');
-      fetch(markAllUrl, { method: 'POST', body: formData })
-        .then(function() { fetchNotifications(); });
+      post(markAllUrl, {}).then(function() { fetchNotifications(); }).catch(function(){});
     });
+  }
+
+  /* ─────────── Render dropdown list ─────────── */
+  function renderList(items) {
+    if (!items || !items.length) {
+      notifList.innerHTML = '<div class="text-center text-muted py-3 small">No notifications yet.</div>';
+      return;
+    }
+    notifList.innerHTML = items.map(function(n) {
+      return '<div class="ps-notif-item px-3 py-2 border-bottom border-secondary border-opacity-25 ' +
+        (n.is_read ? 'opacity-75' : '') + '"' +
+        ' data-id="' + n.id + '"' +
+        ' data-link="' + esc(n.link || '') + '"' +
+        ' data-read="' + (n.is_read ? '1' : '0') + '"' +
+        ' style="cursor:' + (n.link ? 'pointer' : 'default') + ';">' +
+        '<div class="d-flex align-items-start gap-2">' +
+          '<span class="badge ' + esc(n.color) + ' rounded-pill p-1" style="font-size:.85rem;">' + esc(n.icon) + '</span>' +
+          '<div class="flex-grow-1 min-w-0">' +
+            '<div class="d-flex justify-content-between align-items-start">' +
+              '<strong style="font-size:.78rem;" class="text-white d-block text-truncate" style="max-width:220px;">' + esc(n.title) + '</strong>' +
+              (!n.is_read ? '<span class="badge bg-orange ms-1 flex-shrink-0" style="font-size:.55rem;">NEW</span>' : '') +
+            '</div>' +
+            '<div class="text-muted text-truncate" style="font-size:.72rem;">' + esc(n.message) + '</div>' +
+            '<div class="text-secondary" style="font-size:.68rem;">' + esc(n.created_at) + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    /* click-to-read + navigate */
+    notifList.querySelectorAll('.ps-notif-item').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var id   = this.dataset.id;
+        var link = this.dataset.link;
+        var read = this.dataset.read === '1';
+        function go() { if (link) window.location.href = link; }
+        if (!read) {
+          post(markReadBase + '/' + id + '/read', {}).then(go).catch(go);
+        } else { go(); }
+      });
+    });
+  }
+
+  /* ─────────── AJAX poll ─────────── */
+  function fetchNotifications() {
+    fetch(latestUrl)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data) return;
+
+        /* Sync preferences from server */
+        if (typeof data.sound_enabled === 'boolean') { soundOn = data.sound_enabled; updateSoundBtn(soundOn); }
+        if (data.sound_choice) soundChoice = data.sound_choice;
+        if (typeof data.desktop_notif === 'boolean') desktopOn = data.desktop_notif;
+
+        /* Badge */
+        var count = data.unread_count || 0;
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.classList.toggle('d-none', count === 0);
+
+        /* Sound + desktop alert only when count increases */
+        if (prevCount !== null && count > prevCount) {
+          playDing();
+          var newest = data.notifications && data.notifications[0];
+          if (newest) pushDesktop(newest.title, newest.message);
+        }
+        prevCount = count;
+
+        renderList(data.notifications);
+      })
+      .catch(function() {});
   }
 
   fetchNotifications();
@@ -360,3 +478,5 @@ $childIsActive = function (array $child) use ($currentPath): bool {
 </script>
 </body>
 </html>
+
+
