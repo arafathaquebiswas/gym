@@ -7,14 +7,16 @@ $pageTitle = 'Membership Plans';
 /** @var array $faqs */
 ?>
 
-<section class="hero py-5 text-center">
+<section class="hero page-hero text-center">
   <div class="container">
-    <span class="hero-badge">Membership Plans</span>
-    <h1>A Plan for <span class="text-orange">Every Goal</span></h1>
-    <p class="lead mx-auto" style="max-width:650px">Everything about joining, pricing, and renewing at PowerSurge — packages, offers, comparisons, and trainer add-ons, all in one place.</p>
-    <div class="d-flex gap-3 justify-content-center mt-4 flex-wrap">
-      <a href="<?= url('/register') ?>" class="btn btn-ps btn-lg">Join Now</a>
-      <a href="<?= url('/contact') ?>" class="btn btn-ps-outline btn-lg">Visit / Contact to Renew</a>
+    <div class="hero-copy">
+      <span class="hero-badge">Membership Plans</span>
+      <h1>A Plan for <span class="text-orange">Every Goal</span></h1>
+      <p class="hero-subtitle">Everything about joining, pricing, and renewing at PowerSurge — packages, offers, comparisons, and trainer add-ons, all in one place.</p>
+      <div class="hero-actions">
+        <a href="<?= url('/register') ?>" class="btn btn-ps btn-lg">Join Now</a>
+        <a href="<?= url('/contact') ?>" class="btn btn-ps-outline btn-lg">Visit / Contact to Renew</a>
+      </div>
     </div>
   </div>
 </section>

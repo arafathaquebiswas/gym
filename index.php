@@ -60,6 +60,7 @@ $router->get('/register', [MembershipRegistrationController::class, 'show']);
 $router->post('/register', [MembershipRegistrationController::class, 'submit']);
 
 $router->get('/admin', [AdminDashboardController::class, 'index']);
+$router->get('/admin/exports/{module}', [AdminExportController::class, 'download']);
 
 // ---- Admin: Trainers ------------------------------------------------------------
 $router->get('/admin/trainers', [TrainerAdminController::class, 'index']);

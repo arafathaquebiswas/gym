@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Reports</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Reports</h1>
+    </div>
+  </div>
 <?php
 $reports = [
     ['sales', 'Sales Report', 'bi-graph-up', 'Daily/monthly POS sales totals'],
@@ -28,4 +40,5 @@ $reports = [
     </a>
   </div>
   <?php endforeach; ?>
+</div>
 </div>

@@ -1,3 +1,18 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Module Locks</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Module Locks</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="/admin/roles" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
 <?php
 /** @var array $modules module_key => label */
 /** @var array $scopes list of scope slugs */
@@ -45,4 +60,5 @@
     </div>
     <button type="submit" class="btn btn-ps btn-sm mt-2">Save Module Locks</button>
   </form>
+</div>
 </div>

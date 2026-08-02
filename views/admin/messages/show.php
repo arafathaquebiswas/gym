@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Message Details</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Message Details</h1>
+    </div>
+  </div>
 <?php
 /** @var array $message */
 $statusColors = ['new' => 'success', 'read' => 'secondary', 'replied' => 'info'];
@@ -32,4 +44,5 @@ $statusColors = ['new' => 'success', 'read' => 'secondary', 'replied' => 'info']
       <button type="submit" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Delete</button>
     </form>
   </div>
+</div>
 </div>

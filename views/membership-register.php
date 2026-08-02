@@ -9,8 +9,10 @@ $pageTitle = 'Register for Membership';
     <div class="row justify-content-center">
       <div class="col-md-9 col-lg-8">
         <div class="glass-card p-4 p-md-5">
-          <h3 class="text-center mb-1">Online Membership Registration</h3>
-          <p class="text-white-50 text-center mb-4">No account or password needed — submit your details below, then visit or contact the PowerSurge Gym office to complete your payment and activate your membership.</p>
+          <div class="text-center mb-4">
+            <h3 class="mb-1">Online Membership Registration</h3>
+            <p class="text-white-50 mb-0">No account or password needed — submit your details below, then visit or contact the PowerSurge Gym office to complete your payment and activate your membership.</p>
+          </div>
           <form method="post" action="<?= url('/register') ?>" class="form-ps needs-validation" novalidate>
             <input type="hidden" name="_csrf" value="<?= e(Security::csrfToken()) ?>">
 

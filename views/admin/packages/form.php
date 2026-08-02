@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Package</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Package</h1>
+    </div>
+  </div>
 <?php
 /** @var array|null $package */
 /** @var array $features */
@@ -163,3 +175,4 @@ document.getElementById('featuresList').addEventListener('click', function (e) {
   }
 });
 </script>
+</div>

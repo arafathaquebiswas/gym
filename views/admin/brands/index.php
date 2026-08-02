@@ -1,12 +1,29 @@
 <?php
 /** @var array $brands */
 ?>
-<div class="admin-card">
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h6 class="mb-0">Brands</h6>
-    <div class="d-flex gap-2">
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="<?= url('/admin/products') ?>">Products</a></li>
+          <li class="breadcrumb-item active">Brands</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Brands</h1>
+    </div>
+    <div class="admin-page-actions">
       <a href="<?= url('/admin/products') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back to Products</a>
       <button type="button" class="btn btn-ps btn-sm" data-bs-toggle="modal" data-bs-target="#addBrandModal"><i class="bi bi-plus-lg"></i> Add Brand</button>
+    </div>
+  </div>
+
+  <div class="admin-card">
+  <div class="admin-section-heading mb-3">
+    <div>
+      <h6 class="mb-0">Brands</h6>
+      <p class="text-white-50 small mb-0">Manage product branding and promotional offers.</p>
     </div>
   </div>
 
@@ -87,6 +104,7 @@
     </table>
   </div>
   <?php endif; ?>
+</div>
 </div>
 
 <div class="modal fade" id="addBrandModal" tabindex="-1">

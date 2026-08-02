@@ -12,12 +12,16 @@ $pageTitle = 'Store';
 /** @var array $popularIds */
 ?>
 
-<section class="hero py-5 text-center">
+<section class="hero page-hero text-center">
   <div class="container">
-    <span class="hero-badge">Store</span>
-    <h1>Supplements &amp; <span class="text-orange">Gym Gear</span></h1>
-    <p class="lead mx-auto" style="max-width:600px">Everything you need to fuel training and recovery — available at the front desk.</p>
-    <a href="<?= url('/bundles') ?>" class="btn btn-ps-outline btn-sm mt-2"><i class="bi bi-gift"></i> View Bundle Deals</a>
+    <div class="hero-copy">
+      <span class="hero-badge">Store</span>
+      <h1>Supplements &amp; <span class="text-orange">Gym Gear</span></h1>
+      <p class="hero-subtitle">Everything you need to fuel training and recovery — available at the front desk.</p>
+      <div class="hero-actions">
+        <a href="<?= url('/bundles') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-gift"></i> View Bundle Deals</a>
+      </div>
+    </div>
   </div>
 </section>
 

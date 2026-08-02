@@ -1,10 +1,12 @@
 <?php $pageTitle = 'Contact'; /** @var array $settings */ ?>
 
-<section class="hero py-5 text-center">
+<section class="hero page-hero text-center">
   <div class="container">
-    <span class="hero-badge">Contact</span>
-    <h1>Get In <span class="text-orange">Touch</span></h1>
-    <p class="lead mx-auto" style="max-width:600px">Questions about membership, training, or the store? We're here to help.</p>
+    <div class="hero-copy">
+      <span class="hero-badge">Contact</span>
+      <h1>Get In <span class="text-orange">Touch</span></h1>
+      <p class="hero-subtitle">Questions about membership, training, or the store? We're here to help.</p>
+    </div>
   </div>
 </section>
 

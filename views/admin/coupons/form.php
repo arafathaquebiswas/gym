@@ -1,3 +1,18 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Coupon</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Coupon</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="/admin/coupons" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
 <?php
 /** @var array|null $coupon */
 $isEdit = $coupon !== null;
@@ -99,3 +114,4 @@ $v = fn ($key, $default = '') => e((string) ($coupon[$key] ?? $default));
     </div>
   </div>
 </form>
+</div>

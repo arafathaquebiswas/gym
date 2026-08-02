@@ -24,24 +24,24 @@ if ($currentPath === '') { $currentPath = 'home'; }
 $cartIdentity = Cart::identity();
 $cartCount = (new Cart())->count($cartIdentity['user_id'], $cartIdentity['cart_token']);
 ?>
-<nav class="navbar navbar-expand-lg navbar-ps sticky-top py-3">
-  <div class="container">
+<nav class="navbar navbar-expand-lg navbar-ps sticky-top py-2">
+  <div class="container navbar-ps-container">
     <a class="navbar-brand d-flex align-items-center gap-2" href="<?= url('/') ?>">
-      <img src="<?= asset('images/logo/logo.png') ?>" alt="PowerSurge Gym" height="42">
+      <img src="<?= asset('images/logo/logo.png') ?>" alt="PowerSurge Gym">
       Power<span>Surge</span>
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#psNav">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="psNav">
-      <ul class="navbar-nav mx-auto">
+      <ul class="navbar-nav navbar-ps-links">
         <?php foreach ($navItems as $key => [$label, $href]): ?>
           <li class="nav-item">
             <a class="nav-link <?= $currentPath === $key || ($key === 'home' && $currentPath === '') ? 'active' : '' ?>" href="<?= url($href) ?>"><?= e($label) ?></a>
           </li>
         <?php endforeach; ?>
       </ul>
-      <div class="d-flex gap-2 align-items-center">
+      <div class="navbar-ps-actions d-flex gap-2 align-items-center">
         <?php if (Feature::on('store')): ?>
         <a href="<?= url('/cart') ?>" class="btn btn-ps-outline btn-sm position-relative">
           <i class="bi bi-cart3"></i>

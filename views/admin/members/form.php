@@ -7,7 +7,24 @@ $isEdit = $member !== null;
 $action = $isEdit ? url('/admin/members/' . $member['id']) : url('/admin/members');
 $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
 ?>
-<form method="post" action="<?= $action ?>" enctype="multipart/form-data" class="admin-form">
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="<?= url('/admin/members') ?>">Members</a></li>
+          <li class="breadcrumb-item active"><?= $isEdit ? 'Edit Member' : 'Add Member' ?></li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title"><?= $isEdit ? 'Edit Member' : 'Add Member' ?></h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="<?= url('/admin/members') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
+
+  <form method="post" action="<?= $action ?>" enctype="multipart/form-data" class="admin-form">
   <?= Security::csrfField() ?>
 
   <div class="admin-card mb-4">
@@ -303,3 +320,4 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
     </div>
   </div>
 </form>
+</div>

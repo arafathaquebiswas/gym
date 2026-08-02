@@ -1,10 +1,28 @@
 <?php
 /** @var array $packages */
 ?>
-<div class="admin-card">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h6 class="mb-0">All Packages (<?= count($packages) ?>)</h6>
-    <a href="<?= url('/admin/packages/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Package</a>
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Packages</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Packages</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="<?= url('/admin/packages/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Package</a>
+    </div>
+  </div>
+
+  <div class="admin-card">
+  <div class="admin-section-heading mb-3">
+    <div>
+      <h6 class="mb-0">All Packages (<?= count($packages) ?>)</h6>
+      <p class="text-white-50 small mb-0">Order, feature, and control package visibility from one place.</p>
+    </div>
   </div>
 
   <?php if (empty($packages)): ?>
@@ -81,4 +99,5 @@
     </table>
   </div>
   <?php endif; ?>
+</div>
 </div>

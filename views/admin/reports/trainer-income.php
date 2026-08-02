@@ -1,3 +1,18 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Trainer Income</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Trainer Income</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="/admin/reports" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
 <?php
 /** @var array $rows */
 /** @var string $from */
@@ -30,4 +45,5 @@
   </div>
   <p class="text-white-50 small mt-2 mb-0">Trainer fee payments are logged via the <code>payments</code> table (type = trainer_fee) — none recorded yet if all rows show ৳0.00.</p>
   <?php endif; ?>
+</div>
 </div>

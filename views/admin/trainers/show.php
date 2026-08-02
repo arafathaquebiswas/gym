@@ -5,11 +5,24 @@
 /** @var int $reviewCount */
 /** @var float|null $averageRating */
 ?>
-<div class="mb-3">
-  <a href="<?= url('/admin/trainers') ?>" class="text-white-50 small"><i class="bi bi-arrow-left"></i> Back to Trainers</a>
-</div>
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="<?= url('/admin/trainers') ?>">Trainers</a></li>
+          <li class="breadcrumb-item active">Profile</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Trainer Profile</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="<?= url('/admin/trainers') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back to Trainers</a>
+    </div>
+  </div>
 
-<div class="row g-4">
+  <div class="row g-4">
   <div class="col-lg-4">
     <div class="admin-card text-center">
       <img src="<?= e($trainer['photo'] ? (str_starts_with($trainer['photo'], 'uploads/') ? url($trainer['photo']) : asset('images/' . $trainer['photo'])) : asset('images/defaults/default-trainer.svg')) ?>" style="width:140px;height:140px;object-fit:cover;border-radius:50%" alt="">
@@ -56,4 +69,5 @@
       <?php endif; ?>
     </div>
   </div>
+</div>
 </div>

@@ -1,3 +1,18 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Bundle</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Bundle</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="/admin/bundles" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
 <?php
 /** @var array|null $bundle */
 /** @var array $items */
@@ -87,3 +102,4 @@ document.querySelector('#bundleLines tbody').addEventListener('click', function 
   }
 });
 </script>
+</div>

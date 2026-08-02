@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Roles & Staff</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Roles & Staff</h1>
+    </div>
+  </div>
 <?php
 /** @var bool $isMainAdmin */
 /** @var array $staff */
@@ -26,8 +38,11 @@ $statusBadge = fn ($status) => $status === 'suspended' ? 'danger' : ($status ===
 
 <?php if ($isMainAdmin): ?>
 <div class="admin-card mb-4">
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h6 class="mb-0">Super Admins (<?= count($superAdmins) ?>)</h6>
+  <div class="admin-page-toolbar">
+    <div class="toolbar-group">
+      <h6 class="mb-0">Super Admins <span class="badge text-bg-secondary ms-2"><?= count($superAdmins) ?></span></h6>
+    </div>
+    <div class="toolbar-group">
     <a href="<?= url('/admin/roles/super-admin/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Super Admin</a>
   </div>
   <?php if (empty($superAdmins)): ?>
@@ -69,8 +84,11 @@ $statusBadge = fn ($status) => $status === 'suspended' ? 'danger' : ($status ===
 <?php endif; ?>
 
 <div class="admin-card">
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h6 class="mb-0">Staff (<?= count($staff) ?>)</h6>
+  <div class="admin-page-toolbar">
+    <div class="toolbar-group">
+      <h6 class="mb-0">Staff <span class="badge text-bg-secondary ms-2"><?= count($staff) ?></span></h6>
+    </div>
+    <div class="toolbar-group">
     <a href="<?= url('/admin/roles/staff/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Staff</a>
   </div>
   <?php if (empty($staff)): ?>
@@ -108,4 +126,5 @@ $statusBadge = fn ($status) => $status === 'suspended' ? 'danger' : ($status ===
     </table>
   </div>
   <?php endif; ?>
+</div>
 </div>

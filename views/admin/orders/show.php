@@ -1,3 +1,18 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Order Details</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Order Details</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="/admin/orders" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> All Orders</a>
+    </div>
+  </div>
 <?php
 /** @var array $order */
 /** @var array $items */
@@ -272,4 +287,5 @@ $isTerminal = in_array($order['status'], ['delivered', 'cancelled', 'returned'],
       </form>
     </div>
   </div>
+</div>
 </div>

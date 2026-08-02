@@ -3,13 +3,24 @@
 /** @var array $payments */
 $methodLabels = ['cash' => 'Cash', 'card' => 'Card', 'bkash' => 'bKash', 'nagad' => 'Nagad', 'rocket' => 'Rocket', 'bank_transfer' => 'Bank Transfer'];
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-  <div>
-    <a href="<?= url('/admin/members/' . $member['id']) ?>" class="text-white-50 text-decoration-none small"><i class="bi bi-arrow-left"></i> Back to <?= e($member['name']) ?></a>
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="<?= url('/admin/members') ?>">Members</a></li>
+          <li class="breadcrumb-item active">Payments</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Payment History</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="<?= url('/admin/members/' . $member['id']) ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back to Profile</a>
+    </div>
   </div>
-</div>
 
-<div class="admin-card mb-4">
+  <div class="admin-card mb-4">
   <div class="d-flex align-items-center gap-3 mb-3">
     <?= media_tile($member['photo'], $member['name'], 'bi-person', 'thumb') ?>
     <div>

@@ -1,3 +1,18 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Delivery Staff</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Delivery Staff</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="/admin/delivery-staff" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
 <?php
 /** @var array|null $member */
 /** @var array $zones */
@@ -62,3 +77,4 @@ $v = fn ($key, $default = '') => e((string) ($member[$key] ?? $default));
     </div>
   </div>
 </form>
+</div>

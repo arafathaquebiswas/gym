@@ -5,11 +5,13 @@ foreach ($faqs as $faq) {
 }
 ?>
 
-<section class="hero py-5 text-center">
+<section class="hero page-hero text-center">
   <div class="container">
-    <span class="hero-badge">FAQ</span>
-    <h1>Frequently Asked <span class="text-orange">Questions</span></h1>
-    <p class="lead mx-auto" style="max-width:600px">Can't find what you're looking for? <a href="<?= url('/contact') ?>">Contact us</a> directly.</p>
+    <div class="hero-copy">
+      <span class="hero-badge">FAQ</span>
+      <h1>Frequently Asked <span class="text-orange">Questions</span></h1>
+      <p class="hero-subtitle">Can't find what you're looking for? <a href="<?= url('/contact') ?>">Contact us</a> directly.</p>
+    </div>
   </div>
 </section>
 

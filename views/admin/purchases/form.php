@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Purchase</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Purchase</h1>
+    </div>
+  </div>
 <?php
 /** @var array $suppliers */
 /** @var array $products */
@@ -71,3 +83,4 @@ document.querySelector('#purchaseLines tbody').addEventListener('click', functio
   }
 });
 </script>
+</div>

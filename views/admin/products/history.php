@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Inventory History</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Inventory History</h1>
+    </div>
+  </div>
 <?php
 /** @var array $product */
 /** @var array $movements */
@@ -39,4 +51,5 @@ $typeLabels = ['order' => 'Order', 'sale' => 'POS Sale', 'purchase' => 'Purchase
     </table>
   </div>
   <?php endif; ?>
+</div>
 </div>

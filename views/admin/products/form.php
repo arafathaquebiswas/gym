@@ -1,3 +1,18 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Product</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Product</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="/admin/products" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
 <?php
 /** @var array|null $product */
 /** @var array $categories */
@@ -317,3 +332,4 @@ $assignedAttributeIds = array_column($assignedAttributes, 'id');
   </form>
 </div>
 <?php endif; ?>
+</div>

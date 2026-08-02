@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Messages</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Messages</h1>
+    </div>
+  </div>
 <?php
 /** @var array $messages */
 /** @var int $total */
@@ -68,4 +80,5 @@ $statusColors = ['new' => 'success', 'read' => 'secondary', 'replied' => 'info']
   </nav>
   <?php endif; ?>
   <?php endif; ?>
+</div>
 </div>

@@ -5,8 +5,10 @@
     <div class="row justify-content-center">
       <div class="col-md-6 col-lg-5">
         <div class="glass-card p-4 p-md-5">
-          <h3 class="text-center mb-1">Welcome Back</h3>
-          <p class="text-white-50 text-center mb-4">Log in to your PowerSurge account.</p>
+          <div class="text-center mb-4">
+            <h3 class="mb-1">Welcome Back</h3>
+            <p class="text-white-50 mb-0">Log in to your PowerSurge account.</p>
+          </div>
           <form method="post" action="<?= url('/login') ?>" class="form-ps needs-validation" novalidate>
             <input type="hidden" name="_csrf" value="<?= e(Security::csrfToken()) ?>">
             <div class="mb-3">

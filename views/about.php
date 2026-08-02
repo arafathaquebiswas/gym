@@ -1,10 +1,12 @@
 <?php $pageTitle = 'About Us'; /** @var array $trainers */ ?>
 
-<section class="hero py-5">
+<section class="hero page-hero">
   <div class="container text-center">
-    <span class="hero-badge">About PowerSurge</span>
-    <h1>Built for People Who <span class="text-orange">Show Up</span></h1>
-    <p class="lead mx-auto" style="max-width:700px">PowerSurge Gym opened its doors with one goal: give every member — beginner or competitive athlete — the tools, coaching, and community to keep training hard for the long run.</p>
+    <div class="hero-copy">
+      <span class="hero-badge">About PowerSurge</span>
+      <h1>Built for People Who <span class="text-orange">Show Up</span></h1>
+      <p class="hero-subtitle">PowerSurge Gym opened its doors with one goal: give every member — beginner or competitive athlete — the tools, coaching, and community to keep training hard for the long run.</p>
+    </div>
   </div>
 </section>
 

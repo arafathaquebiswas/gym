@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Delivery Time Slots</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Delivery Time Slots</h1>
+    </div>
+  </div>
 <?php
 /** @var array $deliverySlots */
 /** @var array $pickupSlots */
@@ -104,3 +116,4 @@ $renderTable = function (array $slots, string $type) {
   </div>
 </div>
 <?php endforeach; ?>
+</div>

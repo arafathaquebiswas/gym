@@ -4,11 +4,13 @@ $pageTitle = 'Blog';
 $cats = ['workout_tips' => 'Workout Tips', 'diet_tips' => 'Diet Tips', 'fitness_news' => 'Fitness News', 'announcements' => 'Announcements'];
 ?>
 
-<section class="hero py-5 text-center">
+<section class="hero page-hero text-center">
   <div class="container">
-    <span class="hero-badge">Blog</span>
-    <h1>Workout Tips &amp; <span class="text-orange">Fitness News</span></h1>
-    <p class="lead mx-auto" style="max-width:600px">Training advice, nutrition guidance, and updates from PowerSurge Gym.</p>
+    <div class="hero-copy">
+      <span class="hero-badge">Blog</span>
+      <h1>Workout Tips &amp; <span class="text-orange">Fitness News</span></h1>
+      <p class="hero-subtitle">Training advice, nutrition guidance, and updates from PowerSurge Gym.</p>
+    </div>
   </div>
 </section>
 

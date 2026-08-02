@@ -17,12 +17,14 @@ $pageTitle = 'Home';
   <div class="container position-relative">
     <div class="row">
       <div class="col-lg-7">
-        <span class="hero-badge"><i class="bi bi-fire"></i> Bangladesh's Modern Fitness Center</span>
-        <h1>Train Hard. <br><span class="text-orange">Surge</span> Ahead.</h1>
-        <p class="lead mt-3">PowerSurge Gym gives you world-class equipment, certified trainers, and a community that pushes you further — every single day.</p>
-        <div class="d-flex gap-3 mt-4 flex-wrap">
-          <a href="<?= url('/register') ?>" class="btn btn-ps btn-lg">Join Now <i class="bi bi-arrow-right"></i></a>
-          <a href="<?= url('/membership') ?>" class="btn btn-ps-outline btn-lg">View Plans</a>
+        <div class="hero-copy">
+          <span class="hero-badge"><i class="bi bi-fire"></i> Bangladesh's Modern Fitness Center</span>
+          <h1>Train Hard. <br><span class="text-orange">Surge</span> Ahead.</h1>
+          <p class="hero-subtitle">PowerSurge Gym gives you world-class equipment, certified trainers, and a community that pushes you further — every single day.</p>
+          <div class="hero-actions">
+            <a href="<?= url('/register') ?>" class="btn btn-ps btn-lg">Join Now <i class="bi bi-arrow-right"></i></a>
+            <a href="<?= url('/membership') ?>" class="btn btn-ps-outline btn-lg">View Plans</a>
+          </div>
         </div>
         <div class="hero-stats">
           <div><div class="stat-num">1200+</div><div class="stat-label">Active Members</div></div>

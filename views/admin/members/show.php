@@ -10,7 +10,24 @@
 /** @var array $eligibleCoupons */
 $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' => 'danger', 'frozen' => 'info', 'expired' => 'dark'];
 ?>
-<div class="row g-4">
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="<?= url('/admin/members') ?>">Members</a></li>
+          <li class="breadcrumb-item active">Profile</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Member Profile</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="<?= url('/admin/members') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back to Members</a>
+    </div>
+  </div>
+
+  <div class="row g-4">
   <div class="col-md-4">
     <div class="admin-card text-center">
       <?= media_tile($member['photo'], $member['name'], 'bi-person', 'thumb-lg mb-3', null) ?>

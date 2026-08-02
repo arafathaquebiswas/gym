@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Dashboard</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Dashboard</h1>
+    </div>
+  </div>
 <?php
 /** @var int $trainerCount */
 /** @var int $activeTrainerCount */
@@ -41,7 +53,14 @@ $stats = [
     ['Upcoming Trainer Bookings', $upcomingTrainerBookings, 'bi-calendar-event', 'admin/trainers'],
 ];
 ?>
-<div class="row g-3 mb-4">
+<div class="admin-page-section">
+  <div class="admin-section-heading">
+    <div>
+      <h6>Operations Overview</h6>
+      <p class="text-white-50 small">A quick snapshot of the most important gym activity.</p>
+    </div>
+  </div>
+  <div class="row g-3 mb-4">
   <?php foreach ($stats as [$label, $value, $icon, $link]): ?>
   <div class="col-6 col-md-4 col-lg-3">
     <?php if ($link): ?><a href="<?= url('/' . $link) ?>" class="text-decoration-none text-white"><?php endif; ?>
@@ -53,11 +72,19 @@ $stats = [
     <?php if ($link): ?></a><?php endif; ?>
   </div>
   <?php endforeach; ?>
+  </div>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="admin-page-section">
+  <div class="admin-section-heading">
+    <div>
+      <h6>Performance Analytics</h6>
+      <p class="text-white-50 small">Membership and revenue trends for the current period.</p>
+    </div>
+  </div>
+  <div class="row g-3 mb-4">
   <div class="col-lg-4">
-    <div class="admin-card">
+    <div class="admin-card h-100">
       <h6 class="mb-3">Member Status Distribution</h6>
       <?php if (empty($memberStatusCounts)): ?>
         <p class="text-white-50 small mb-0">No members yet.</p>
@@ -67,7 +94,7 @@ $stats = [
     </div>
   </div>
   <div class="col-lg-8">
-    <div class="admin-card">
+    <div class="admin-card h-100">
       <h6 class="mb-3">New Member Registrations <span class="text-white-50 small fw-normal">(last 12 months)</span></h6>
       <div style="height:140px"><canvas id="chartNewMembers"></canvas></div>
     </div>
@@ -98,7 +125,14 @@ $stats = [
   </div>
 </div>
 
-<div class="row g-3 mb-4">
+<div class="admin-page-section">
+  <div class="admin-section-heading">
+    <div>
+      <h6>Sales & Member Insights</h6>
+      <p class="text-white-50 small">Best-performing products and top members at a glance.</p>
+    </div>
+  </div>
+  <div class="row g-3 mb-4">
   <div class="col-md-6">
     <div class="admin-card h-100">
       <h6 class="mb-3">Top Products <span class="text-white-50 small fw-normal">(last 90 days)</span></h6>
@@ -135,12 +169,16 @@ $stats = [
   </div>
 </div>
 
+</div>
+
 <div class="admin-card">
   <h6 class="mb-3">Quick Actions</h6>
-  <a href="<?= url('/admin/pos') ?>" class="btn btn-ps me-2"><i class="bi bi-calculator"></i> New Sale</a>
-  <a href="<?= url('/admin/members/create') ?>" class="btn btn-ps-outline me-2"><i class="bi bi-person-plus"></i> Add Member</a>
-  <a href="<?= url('/admin/trainers/create') ?>" class="btn btn-ps-outline me-2"><i class="bi bi-plus-lg"></i> Add Trainer</a>
-  <a href="<?= url('/admin/reports') ?>" class="btn btn-ps-outline"><i class="bi bi-bar-chart"></i> View Reports</a>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="<?= url('/admin/pos') ?>" class="btn btn-ps"><i class="bi bi-calculator"></i> New Sale</a>
+    <a href="<?= url('/admin/members/create') ?>" class="btn btn-ps-outline"><i class="bi bi-person-plus"></i> Add Member</a>
+    <a href="<?= url('/admin/trainers/create') ?>" class="btn btn-ps-outline"><i class="bi bi-plus-lg"></i> Add Trainer</a>
+    <a href="<?= url('/admin/reports') ?>" class="btn btn-ps-outline"><i class="bi bi-bar-chart"></i> View Reports</a>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -217,3 +255,4 @@ $stats = [
   });
 })();
 </script>
+</div>

@@ -7,7 +7,24 @@ $v = fn ($key, $default = '') => e((string) ($trainer[$key] ?? $default));
 $checked = fn ($key) => !empty($trainer[$key]) ? 'checked' : '';
 $dayLabels = TrainerSchedule::DAY_LABELS;
 ?>
-<form method="post" action="<?= $action ?>" enctype="multipart/form-data" class="admin-form">
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item"><a href="<?= url('/admin/trainers') ?>">Trainers</a></li>
+          <li class="breadcrumb-item active"><?= $isEdit ? 'Edit Trainer' : 'Add Trainer' ?></li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title"><?= $isEdit ? 'Edit Trainer' : 'Add Trainer' ?></h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="<?= url('/admin/trainers') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
+
+  <form method="post" action="<?= $action ?>" enctype="multipart/form-data" class="admin-form">
   <?= Security::csrfField() ?>
 
   <div class="admin-card mb-4">
@@ -219,3 +236,4 @@ $dayLabels = TrainerSchedule::DAY_LABELS;
     </div>
   </div>
 </form>
+</div>

@@ -21,7 +21,8 @@ $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'
 <body class="admin-body">
 
 <div class="admin-shell">
-    <aside class="admin-sidebar">
+    <div class="admin-overlay" id="deliveryOverlay" hidden></div>
+    <aside class="admin-sidebar" id="deliverySidebar">
         <a href="<?= url('/delivery') ?>" class="admin-brand">
             <img src="<?= asset('images/logo/logo.png') ?>" alt="PowerSurge Gym" height="34">
             <span>Power<span class="text-orange">Surge</span> Delivery</span>
@@ -44,9 +45,14 @@ $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'
 
     <div class="admin-main">
         <header class="admin-topbar">
-            <h5 class="mb-0"><?= e($pageTitle ?? 'My Deliveries') ?></h5>
+            <div class="admin-topbar-start">
+                <button class="admin-sidebar-toggle" type="button" aria-label="Toggle navigation" aria-controls="deliverySidebar" aria-expanded="false">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h5 class="mb-0"><?= e($pageTitle ?? 'My Deliveries') ?></h5>
+            </div>
             <div class="admin-user">
-                <i class="bi bi-person-circle"></i> <?= e($currentUser['name'] ?? '') ?>
+                <span class="admin-user-pill"><i class="bi bi-person-circle"></i> <?= e($currentUser['name'] ?? '') ?></span>
             </div>
         </header>
 
@@ -66,5 +72,29 @@ $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+  var shell = document.querySelector('.admin-shell');
+  var sidebar = document.getElementById('deliverySidebar');
+  var toggle = document.querySelector('.admin-sidebar-toggle');
+  var overlay = document.getElementById('deliveryOverlay');
+  var drawerQuery = window.matchMedia('(max-width: 1023px)');
+  if (!shell || !sidebar || !toggle || !overlay) return;
+
+  function setDrawerOpen(open) {
+    if (!drawerQuery.matches) open = false;
+    shell.classList.toggle('admin-sidebar-open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    overlay.hidden = !open;
+  }
+
+  toggle.addEventListener('click', function () {
+    setDrawerOpen(!shell.classList.contains('admin-sidebar-open'));
+  });
+  overlay.addEventListener('click', function () { setDrawerOpen(false); });
+  drawerQuery.addEventListener('change', function () { setDrawerOpen(false); });
+  setDrawerOpen(false);
+})();
+</script>
 </body>
 </html>

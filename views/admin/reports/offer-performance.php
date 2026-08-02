@@ -1,3 +1,18 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Offer Performance</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Offer Performance</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="/admin/reports" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
 <?php
 /** @var array $rows */
 /** @var array $sourceLabels */
@@ -36,4 +51,5 @@ $grandRevenue = array_sum(array_column($rows, 'revenue'));
     </table>
   </div>
   <?php endif; ?>
+</div>
 </div>

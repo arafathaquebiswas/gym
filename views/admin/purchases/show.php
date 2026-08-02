@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Purchase Details</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Purchase Details</h1>
+    </div>
+  </div>
 <?php
 /** @var array $purchase */
 /** @var array $items */
@@ -30,4 +42,5 @@
     </tbody>
   </table>
   <div class="d-flex justify-content-between fw-bold text-orange mt-3"><span>Total</span><span>৳<?= number_format((float) $purchase['total_amount']) ?></span></div>
+</div>
 </div>

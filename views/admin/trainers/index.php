@@ -8,7 +8,23 @@
 /** @var array $stats */
 $statusLabels = ['available' => 'Available', 'busy' => 'Busy', 'on_leave' => 'On Leave', 'offline' => 'Offline'];
 ?>
-<div class="row g-3 mb-4">
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Trainers</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Trainers</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="<?= url('/admin/trainers/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Trainer</a>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
     <div class="admin-card"><div class="text-white-50 small">Total</div><div class="fs-3 fw-bold text-orange"><?= (int) $stats['total'] ?></div></div>
   </div>
@@ -24,9 +40,11 @@ $statusLabels = ['available' => 'Available', 'busy' => 'Busy', 'on_leave' => 'On
 </div>
 
 <div class="admin-card">
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h6 class="mb-0">All Trainers (<?= (int) $total ?>)</h6>
-    <a href="<?= url('/admin/trainers/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Trainer</a>
+  <div class="admin-section-heading mb-3">
+    <div>
+      <h6 class="mb-0">All Trainers (<?= (int) $total ?>)</h6>
+      <p class="text-white-50 small mb-0">Manage trainer profiles, availability, and booking visibility.</p>
+    </div>
   </div>
 
   <form method="get" action="<?= url('/admin/trainers') ?>" class="admin-toolbar admin-form">
@@ -206,3 +224,4 @@ $statusLabels = ['available' => 'Available', 'busy' => 'Busy', 'on_leave' => 'On
   });
 })();
 </script>
+</div>

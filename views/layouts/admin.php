@@ -91,15 +91,38 @@ $childIsActive = function (array $child) use ($currentPath): bool {
     <link href="<?= asset('css/admin.css') ?>" rel="stylesheet">
 </head>
 <body class="admin-body">
-
 <div class="admin-shell">
-    <aside class="admin-sidebar">
+    <div class="admin-overlay" id="adminOverlay" hidden></div>
+    <aside class="admin-sidebar" id="adminSidebar">
         <a href="<?= url('/admin') ?>" class="admin-brand">
             <img src="<?= asset('images/logo/logo.png') ?>" alt="PowerSurge Gym" height="34">
             <span>Power<span class="text-orange">Surge</span> Admin</span>
         </a>
         <nav class="admin-nav">
-            <?php foreach ($navItems as [$key, $label, $icon, $href, $children]): ?>
+            <?php $navSection = null; foreach ($navItems as [$key, $label, $icon, $href, $children]): ?>
+                <?php
+                $sectionMap = [
+                    'dashboard' => 'Overview',
+                    'members' => 'Members & Training',
+                    'packages' => 'Members & Training',
+                    'trainers' => 'Members & Training',
+                    'products' => 'Store & Commerce',
+                    'pos' => 'Store & Commerce',
+                    'orders' => 'Store & Commerce',
+                    'reports' => 'Insights',
+                    'messages' => 'Insights',
+                    'reviews' => 'Insights',
+                    'audit-log' => 'Insights',
+                    'delivery-staff' => 'Staff & System',
+                    'roles' => 'Staff & System',
+                    'settings' => 'Staff & System',
+                ];
+                $sectionLabel = $sectionMap[$key] ?? null;
+                if ($sectionLabel && $sectionLabel !== $navSection) {
+                    $navSection = $sectionLabel;
+                    echo '<div class="admin-nav-section">' . e($sectionLabel) . '</div>';
+                }
+                ?>
                 <?php
                 $groupActive = $children ? array_reduce($children, fn ($carry, $c) => $carry || $childIsActive($c), false) : false;
                 $isActive = $groupActive
@@ -107,7 +130,7 @@ $childIsActive = function (array $child) use ($currentPath): bool {
                     || ($key === 'dashboard' && $currentPath === 'admin');
                 ?>
                 <?php if ($children): ?>
-                <a href="#navGroup<?= $key ?>" class="admin-nav-link <?= $isActive ? 'active' : '' ?> d-flex align-items-center" data-bs-toggle="collapse" role="button" aria-expanded="<?= $isActive ? 'true' : 'false' ?>">
+                <a href="#navGroup<?= $key ?>" class="admin-nav-link <?= $isActive ? 'active' : '' ?> d-flex align-items-center" data-nav-group="<?= e($key) ?>" data-bs-toggle="collapse" role="button" aria-expanded="<?= $isActive ? 'true' : 'false' ?>">
                     <i class="bi <?= e($icon) ?>"></i> <?= e($label) ?>
                     <i class="bi bi-chevron-down ms-auto small nav-group-chevron"></i>
                 </a>
@@ -136,9 +159,14 @@ $childIsActive = function (array $child) use ($currentPath): bool {
 
     <div class="admin-main">
         <header class="admin-topbar">
-            <h5 class="mb-0"><?= e($pageTitle ?? 'Dashboard') ?></h5>
+            <div class="admin-topbar-start">
+                <button class="admin-sidebar-toggle" type="button" aria-label="Toggle navigation" aria-controls="adminSidebar" aria-expanded="false">
+                    <i class="bi bi-list"></i>
+                </button>
+                <h5 class="mb-0"><?= e($pageTitle ?? 'Dashboard') ?></h5>
+            </div>
             <div class="admin-user">
-                <i class="bi bi-person-circle"></i> <?= e($currentUser['name'] ?? '') ?>
+                <span class="admin-user-pill"><i class="bi bi-person-circle"></i> <?= e($currentUser['name'] ?? '') ?></span>
                 <span class="badge-ps badge ms-2"><?= e(ucfirst(str_replace('_', ' ', $currentUser['role'] ?? ''))) ?></span>
             </div>
         </header>
@@ -160,10 +188,86 @@ $childIsActive = function (array $child) use ($currentPath): bool {
 
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+  var shell = document.querySelector('.admin-shell');
+  var sidebar = document.getElementById('adminSidebar');
+  var toggle = document.querySelector('.admin-sidebar-toggle');
+  var overlay = document.getElementById('adminOverlay');
+  if (!shell || !sidebar || !toggle || !overlay) return;
+
+  var storageKey = 'psAdminSidebarState';
+  var groupLinks = Array.from(document.querySelectorAll('.admin-nav-link[data-nav-group]'));
+
+  var drawerQuery = window.matchMedia('(max-width: 1023px)');
+
+  function setSidebarOpen(open) {
+    // The drawer only exists below the desktop breakpoint. Keeping this state
+    // scoped prevents a desktop overlay from ever covering the application.
+    if (!drawerQuery.matches) open = false;
+    shell.classList.toggle('admin-sidebar-open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    overlay.hidden = !open;
+  }
+
+  function restoreGroupState() {
+    var savedState = {};
+    try {
+      savedState = JSON.parse(localStorage.getItem(storageKey + ':groups') || '{}');
+    } catch (e) {}
+
+    groupLinks.forEach(function (link) {
+      var key = link.getAttribute('data-nav-group');
+      var collapse = document.getElementById('navGroup' + key);
+      if (!collapse) return;
+      var shouldExpand = savedState[key] === '1' || link.classList.contains('active') || link.getAttribute('aria-expanded') === 'true';
+      if (shouldExpand) {
+        collapse.classList.add('show');
+        link.setAttribute('aria-expanded', 'true');
+      } else {
+        collapse.classList.remove('show');
+        link.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  toggle.addEventListener('click', function () {
+    setSidebarOpen(!shell.classList.contains('admin-sidebar-open'));
+  });
+
+  overlay.addEventListener('click', function () {
+    setSidebarOpen(false);
+  });
+
+  groupLinks.forEach(function (link) {
+    link.addEventListener('click', function () {
+      var key = this.getAttribute('data-nav-group');
+      var collapse = document.getElementById('navGroup' + key);
+      var nextExpanded = this.getAttribute('aria-expanded') !== 'true';
+      if (collapse) {
+        this.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+      }
+      var savedState = {};
+      try {
+        savedState = JSON.parse(localStorage.getItem(storageKey + ':groups') || '{}');
+      } catch (e) {}
+      savedState[key] = nextExpanded ? '1' : '0';
+      localStorage.setItem(storageKey + ':groups', JSON.stringify(savedState));
+    });
+  });
+
+  drawerQuery.addEventListener('change', function () {
+    setSidebarOpen(false);
+  });
+  setSidebarOpen(false);
+  restoreGroupState();
+})();
+</script>
 <script src="<?= asset('js/payment-method-toggle.js') ?>"></script>
 <script src="<?= asset('js/membership-payment-fields.js') ?>"></script>
 <script src="<?= asset('js/password-toggle.js') ?>"></script>
 <script src="<?= asset('js/admin-details-toggle.js') ?>"></script>
+<script src="<?= asset('js/admin-bulk-actions.js') ?>"></script>
 <?php if (!empty($extraScripts)): foreach ($extraScripts as $script): ?>
 <script src="<?= asset($script) ?>"></script>
 <?php endforeach; endif; ?>

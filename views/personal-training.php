@@ -1,10 +1,12 @@
 <?php $pageTitle = 'Personal Training'; /** @var array $trainers */ /** @var array $teamPhotos */ ?>
 
-<section class="hero py-5 text-center">
+<section class="hero page-hero text-center">
   <div class="container">
-    <span class="hero-badge">Personal Training</span>
-    <h1>Train <span class="text-orange">1-on-1</span> With Our Coaches</h1>
-    <p class="lead mx-auto" style="max-width:650px">Get a program built for your body, your schedule, and your goals — guided by certified coaches every step of the way.</p>
+    <div class="hero-copy">
+      <span class="hero-badge">Personal Training</span>
+      <h1>Train <span class="text-orange">1-on-1</span> With Our Coaches</h1>
+      <p class="hero-subtitle">Get a program built for your body, your schedule, and your goals — guided by certified coaches every step of the way.</p>
+    </div>
   </div>
 </section>
 

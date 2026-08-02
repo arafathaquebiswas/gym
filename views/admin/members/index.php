@@ -1,3 +1,15 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Members</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Members</h1>
+    </div>
+  </div>
 <?php
 /** @var array $members */
 /** @var int $total */
@@ -25,9 +37,13 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'expired' => '
 </div>
 
 <div class="admin-card">
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <h6 class="mb-0">All Members (<?= (int) $total ?>)</h6>
-    <a href="<?= url('/admin/members/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Member</a>
+  <div class="admin-page-toolbar">
+    <div class="toolbar-group">
+      <h6 class="mb-0">All Members <span class="badge text-bg-secondary ms-2"><?= (int) $total ?></span></h6>
+    </div>
+    <div class="toolbar-group">
+      <a href="<?= url('/admin/members/create') ?>" class="btn btn-ps btn-sm"><i class="bi bi-plus-lg"></i> Add Member</a>
+    </div>
   </div>
 
   <form method="get" action="<?= url('/admin/members') ?>" class="admin-toolbar admin-form">
@@ -515,3 +531,4 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'expired' => '
   updateExtraFields();
 })();
 </script>
+</div>

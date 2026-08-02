@@ -1,3 +1,18 @@
+<div class="admin-page-shell">
+  <div class="admin-page-header">
+    <div>
+      <nav class="admin-breadcrumb" aria-label="Breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="<?= url('/admin') ?>">Dashboard</a></li>
+          <li class="breadcrumb-item active">Customer Report</li>
+        </ol>
+      </nav>
+      <h1 class="admin-page-title">Customer Report</h1>
+    </div>
+    <div class="admin-page-actions">
+      <a href="/admin/reports" class="btn btn-ps-outline btn-sm"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+  </div>
 <?php
 /** @var array $rows */
 /** @var int $repeatCustomers */
@@ -39,4 +54,5 @@
     </table>
   </div>
   <?php endif; ?>
+</div>
 </div>

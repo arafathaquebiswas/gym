@@ -5,11 +5,13 @@ $pageTitle = 'Gallery';
 $cats = ['gym' => 'Gym', 'events' => 'Events', 'competitions' => 'Competitions', 'transformation' => 'Transformation', 'team' => 'Team & Community'];
 ?>
 
-<section class="hero py-5 text-center">
+<section class="hero page-hero text-center">
   <div class="container">
-    <span class="hero-badge">Gallery</span>
-    <h1>Life Inside <span class="text-orange">PowerSurge</span></h1>
-    <p class="lead mx-auto" style="max-width:600px">Gym floor, events, competitions, and member transformations.</p>
+    <div class="hero-copy">
+      <span class="hero-badge">Gallery</span>
+      <h1>Life Inside <span class="text-orange">PowerSurge</span></h1>
+      <p class="hero-subtitle">Gym floor, events, competitions, and member transformations.</p>
+    </div>
   </div>
 </section>
 
