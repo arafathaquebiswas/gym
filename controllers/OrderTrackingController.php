@@ -9,6 +9,8 @@ final class OrderTrackingController extends Controller
 
     public function find(): void
     {
+        Security::requireCsrf();
+
         $orderNo = self::normalizeOrderNo($this->input('order_no'));
         $identity = trim($this->input('identity'));
 
@@ -34,6 +36,8 @@ final class OrderTrackingController extends Controller
     /** Re-verifies order_no+identity via POST (never a bare GET link) before streaming the PDF. */
     public function invoice(): void
     {
+        Security::requireCsrf();
+
         $orderNo = self::normalizeOrderNo($this->input('order_no'));
         $identity = trim($this->input('identity'));
         $order = $orderNo !== '' ? (new Order())->findByOrderNo($orderNo) : null;

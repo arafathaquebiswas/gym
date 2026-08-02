@@ -41,7 +41,7 @@ $defaultFulfillment = $deliveryOn ? 'delivery' : 'pickup';
               </div>
             </div>
             <?php else: ?>
-              <input type="hidden" name="fulfillment_method" value="<?= $defaultFulfillment ?>">
+              <input type="hidden" name="fulfillment_method" value="<?= e($defaultFulfillment) ?>">
               <p class="text-white-50 small mb-3"><?= $deliveryOn ? 'Home delivery only — store pickup is currently unavailable.' : 'Store pickup only — home delivery is currently unavailable.' ?></p>
             <?php endif; ?>
 

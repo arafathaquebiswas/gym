@@ -81,7 +81,8 @@ function order_delivery_label(array $order): string
         $gymAddress = $settingModel->get('gym_address', '');
         return $gymName . ($gymAddress ? ' — ' . $gymAddress : '');
     }
-    return $order['delivery_address'] . ', ' . $order['delivery_city'];
+    $addr = trim(($order['delivery_address'] ?? '') . ', ' . ($order['delivery_city'] ?? ''), ', ');
+    return $addr !== '' ? $addr : 'N/A';
 }
 
 /**

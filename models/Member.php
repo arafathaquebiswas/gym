@@ -202,12 +202,14 @@ final class Member extends Model
         }
         $graceDays = $settingModel->getInt('membership_grace_days', 0);
 
+        $graceDaysInt = (int) $graceDays;
+
         $this->db->exec(
             "UPDATE members m
              JOIN (SELECT member_id, MAX(id) AS latest_id FROM member_subscriptions GROUP BY member_id) x
                 ON x.member_id = m.id
              JOIN member_subscriptions ms ON ms.id = x.latest_id
-             SET m.status = IF(DATE_ADD(ms.end_date, INTERVAL $graceDays DAY) >= CURDATE(), 'active', 'expired')"
+             SET m.status = IF(DATE_ADD(ms.end_date, INTERVAL $graceDaysInt DAY) >= CURDATE(), 'active', 'expired')"
         );
 
         $this->db->exec(

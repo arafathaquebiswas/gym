@@ -8,10 +8,12 @@ final class PosController extends AdminController
     {
         $settingModel = new Setting();
 
+        $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
+
         $this->adminView('pos/index', [
             'pageTitle' => 'Point of Sale',
-            'productsJson' => json_encode((new Product())->allActiveInStock()),
-            'membersJson' => json_encode((new Member())->allForPicker()),
+            'productsJson' => json_encode((new Product())->allActiveInStock(), $jsonFlags),
+            'membersJson' => json_encode((new Member())->allForPicker(), $jsonFlags),
             'taxEnabled' => $settingModel->getBool('tax_enabled'),
             'taxPercent' => (float) $settingModel->get('tax_percent', '0'),
         ]);
