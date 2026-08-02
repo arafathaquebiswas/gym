@@ -211,6 +211,7 @@ $router->get('/delivery/profile', [DeliveryController::class, 'profile']);
 $router->post('/delivery/profile', [DeliveryController::class, 'profileUpdate']);
 $router->post('/delivery/password', [DeliveryController::class, 'passwordUpdate']);
 $router->get('/delivery/orders/{id}', [DeliveryController::class, 'orderDetail']);
+$router->get('/delivery/orders/{id}/delivery-label', [DeliveryController::class, 'deliveryLabel']);
 $router->post('/delivery/{id}/status', [DeliveryController::class, 'updateStatus']);
 
 $router->get('/admin/products/sales', [ProductAdminController::class, 'sales']);
@@ -233,6 +234,7 @@ $router->post('/admin/orders/{id}/assign-delivery-person', [OrderAdminController
 $router->post('/admin/orders/{id}/confirm-pickup', [OrderAdminController::class, 'confirmPickup']);
 $router->get('/admin/orders/{id}/receipt', [OrderAdminController::class, 'receipt']);
 $router->get('/admin/orders/{id}/pdf', [OrderAdminController::class, 'pdf']);
+$router->get('/admin/orders/{id}/delivery-label', [OrderAdminController::class, 'deliveryLabel']);
 
 // ---- Admin: Reports ---------------------------------------------------------------
 $router->get('/admin/reports', [ReportController::class, 'index']);

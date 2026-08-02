@@ -84,7 +84,12 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
           <td>৳<?= number_format((float) $order['total']) ?></td>
           <td><span class="badge text-bg-<?= $order['payment_status'] === 'paid' ? 'success' : 'secondary' ?>"><?= e(ucfirst($order['payment_status'])) ?></span></td>
           <td><span class="badge text-bg-<?= $statusColors[$order['status']] ?? 'secondary' ?>"><?= e(ucfirst(str_replace('_', ' ', $order['status']))) ?></span></td>
-          <td><a href="<?= url('/admin/orders/' . $order['id']) ?>" class="btn btn-ps-outline btn-sm">View</a></td>
+          <td>
+            <a href="<?= url('/admin/orders/' . $order['id']) ?>" class="btn btn-ps-outline btn-sm">View</a>
+            <?php if ($order['fulfillment_method'] === 'delivery'): ?>
+            <a href="<?= url('/admin/orders/' . $order['id'] . '/delivery-label') ?>" class="btn btn-ps btn-sm" target="_blank" title="Print Delivery Label"><i class="bi bi-tag"></i></a>
+            <?php endif; ?>
+          </td>
         </tr>
         <?php endforeach; ?>
       </tbody>

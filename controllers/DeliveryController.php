@@ -63,6 +63,45 @@ final class DeliveryController extends Controller
         ]);
     }
 
+    public function deliveryLabel(string $id): void
+    {
+        $order = (new Order())->find((int) $id);
+        if (!$order || (int) ($order['delivery_person_id'] ?? 0) !== (int) Auth::user()['id']) {
+            $this->abort404();
+        }
+
+        $items = (new OrderItem())->forOrder((int) $order['id']);
+
+        // Audit log — delivery label print
+        $user      = Auth::user();
+        $userAgent = substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 255);
+        $db        = Database::connection();
+        $stmt      = $db->prepare(
+            'INSERT INTO activity_logs
+             (user_id, action, description, ip_address, user_agent, created_at)
+             VALUES (:user_id, :action, :description, :ip, :user_agent, NOW())'
+        );
+        $stmt->execute([
+            'user_id'     => $user['id'],
+            'action'      => 'delivery_label_print',
+            'description' => sprintf(
+                'Delivery label printed for Order #%s by driver %s [%s] — %s',
+                $order['order_no'],
+                $user['name'],
+                $user['role'],
+                $userAgent
+            ),
+            'ip'          => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
+            'user_agent'  => $userAgent,
+        ]);
+
+        $this->deliveryView('delivery-label', [
+            'pageTitle' => 'Delivery Label — ' . $order['order_no'],
+            'order'     => $order,
+            'items'     => $items,
+        ]);
+    }
+
     public function history(): void
     {
         $driverId = (int) Auth::user()['id'];

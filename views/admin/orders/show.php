@@ -35,6 +35,9 @@ $isTerminal = in_array($order['status'], ['delivered', 'cancelled', 'returned'],
     <a href="<?= url('/admin/orders') ?>" class="btn btn-ps-outline btn-sm">All Orders</a>
     <a href="<?= url('/admin/orders/' . $order['id'] . '/receipt') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-printer"></i> Print</a>
     <a href="<?= url('/admin/orders/' . $order['id'] . '/pdf') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+    <?php if ($order['fulfillment_method'] === 'delivery'): ?>
+    <a href="<?= url('/admin/orders/' . $order['id'] . '/delivery-label') ?>" class="btn btn-ps btn-sm" target="_blank"><i class="bi bi-tag"></i> Delivery Label</a>
+    <?php endif; ?>
     <?php if ($customerPhone): ?><a href="tel:<?= e($customerPhone) ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-telephone"></i> Call Customer</a><?php endif; ?>
     <?php if ($customerEmail): ?><a href="mailto:<?= e($customerEmail) ?>" class="btn btn-ps btn-sm"><i class="bi bi-envelope"></i> Email Customer</a><?php endif; ?>
   </div>

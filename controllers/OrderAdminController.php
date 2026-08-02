@@ -302,6 +302,51 @@ final class OrderAdminController extends AdminController
         ]);
     }
 
+    public function deliveryLabel(string $id): void
+    {
+        // Only roles that handle delivery operations may access this label.
+        Auth::requireRole('super_admin', 'main_admin', 'admin', 'staff');
+
+        $order = (new Order())->find((int) $id);
+        if (!$order) {
+            $this->abort404();
+        }
+
+        $items = $this->orderItemsWithDetails((int) $id);
+
+        // Audit log — delivery label print/view
+        $user        = Auth::user();
+        $trackingNo  = $order['order_no'];
+        $userAgent   = substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 255);
+        $description = sprintf(
+            'Delivery label viewed/printed for Order #%s (Tracking: %s) by %s [%s] — %s',
+            $order['order_no'],
+            $trackingNo,
+            $user['name'],
+            $user['role'],
+            $userAgent
+        );
+        $db   = Database::connection();
+        $stmt = $db->prepare(
+            'INSERT INTO activity_logs
+             (user_id, action, description, ip_address, user_agent, created_at)
+             VALUES (:user_id, :action, :description, :ip, :user_agent, NOW())'
+        );
+        $stmt->execute([
+            'user_id'    => $user['id'],
+            'action'     => 'delivery_label_print',
+            'description'=> $description,
+            'ip'         => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
+            'user_agent' => $userAgent,
+        ]);
+
+        $this->adminView('orders/delivery-label', [
+            'pageTitle' => 'Delivery Label — ' . $order['order_no'],
+            'order'     => $order,
+            'items'     => $items,
+        ]);
+    }
+
     public function pdf(string $id): void
     {
         $order = (new Order())->find((int) $id);

@@ -25,7 +25,10 @@ $phone = $order['account_phone'] ?? $order['guest_phone'] ?? '';
       <?php endif; ?>
       <p class="text-white-50 small mb-3"><?= $order['fulfillment_method'] === 'pickup' ? 'Pickup at' : 'Delivering to' ?>: <?= e(order_delivery_label($order)) ?></p>
       <?php if ($order['fulfillment_method'] === 'delivery'): ?>
-      <p class="mb-3"><a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($order['delivery_address'] . ', ' . $order['delivery_city']) ?>" target="_blank" rel="noopener" class="btn btn-ps-outline btn-sm"><i class="bi bi-signpost-2"></i> Directions</a></p>
+      <p class="mb-3 d-flex gap-2 flex-wrap">
+        <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($order['delivery_address'] . ', ' . $order['delivery_city']) ?>" target="_blank" rel="noopener" class="btn btn-ps-outline btn-sm"><i class="bi bi-signpost-2"></i> Directions</a>
+        <a href="<?= url('/delivery/orders/' . $order['id'] . '/delivery-label') ?>" target="_blank" class="btn btn-ps btn-sm"><i class="bi bi-tag"></i> Print Delivery Label</a>
+      </p>
       <?php endif; ?>
 
       <hr>
