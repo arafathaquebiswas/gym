@@ -27,10 +27,13 @@ final class AdminDashboardController extends AdminController
             'SELECT COUNT(*) FROM membership_packages WHERE is_active = 1'
         )->fetchColumn();
 
-        $pendingRenewals = (int) $db->query(
+        $sevenDaysOut = date('Y-m-d', strtotime('+7 days'));
+        $stmtPendingRenewals = $db->prepare(
             "SELECT COUNT(*) FROM member_subscriptions
-             WHERE status = 'active' AND end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)"
-        )->fetchColumn();
+             WHERE status = 'active' AND end_date BETWEEN CURDATE() AND :seven_days_out"
+        );
+        $stmtPendingRenewals->execute(['seven_days_out' => $sevenDaysOut]);
+        $pendingRenewals = (int) $stmtPendingRenewals->fetchColumn();
 
         $attendanceToday = (int) $db->query(
             'SELECT COUNT(*) FROM attendance WHERE DATE(check_in) = CURDATE()'
@@ -69,18 +72,26 @@ final class AdminDashboardController extends AdminController
         $upcomingTrainerBookings = (new TrainerBooking())->upcomingCount();
 
         $memberStatusCounts = $db->query('SELECT status, COUNT(*) AS cnt FROM members GROUP BY status')->fetchAll();
-        $newMembersByMonth = $this->monthlySeries(
-            $db,
+
+        $elevenMonthsAgo = date('Y-m-d', strtotime('-11 months'));
+        $stmtNewMembers = $db->prepare(
             "SELECT DATE_FORMAT(join_date, '%Y-%m') AS ym, COUNT(*) AS cnt FROM members
-             WHERE join_date >= DATE_SUB(CURDATE(), INTERVAL 11 MONTH)
-             GROUP BY ym",
+             WHERE join_date >= :eleven_months_ago
+             GROUP BY ym"
+        );
+        $newMembersByMonth = $this->monthlySeries(
+            $stmtNewMembers, ['eleven_months_ago' => $elevenMonthsAgo],
             'ym', 'cnt'
         );
-        $revenueByDay = $this->dailySeries(
-            $db,
+
+        $twentyNineDaysAgo = date('Y-m-d', strtotime('-29 days'));
+        $stmtRevenueByDay = $db->prepare(
             "SELECT DATE(paid_at) AS d, SUM(amount) AS total FROM payments
-             WHERE status = 'completed' AND paid_at >= DATE_SUB(CURDATE(), INTERVAL 29 DAY)
-             GROUP BY d",
+             WHERE status = 'completed' AND paid_at >= :twenty_nine_days_ago
+             GROUP BY d"
+        );
+        $revenueByDay = $this->dailySeries(
+            $stmtRevenueByDay, ['twenty_nine_days_ago' => $twentyNineDaysAgo],
             'd', 'total'
         );
 
@@ -121,9 +132,10 @@ final class AdminDashboardController extends AdminController
     }
 
     /** Zero-filled monthly counts for the last 12 months (including the current one), regardless of which months actually had rows. */
-    private function monthlySeries(PDO $db, string $sql, string $keyColumn, string $valueColumn): array
+    private function monthlySeries(PDOStatement $stmt, array $params, string $keyColumn, string $valueColumn): array
     {
-        $rows = $db->query($sql)->fetchAll();
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
         $byMonth = array_column($rows, $valueColumn, $keyColumn);
 
         $labels = [];
@@ -138,9 +150,10 @@ final class AdminDashboardController extends AdminController
     }
 
     /** Zero-filled daily totals for the last 30 days (including today), regardless of which days actually had rows. */
-    private function dailySeries(PDO $db, string $sql, string $keyColumn, string $valueColumn): array
+    private function dailySeries(PDOStatement $stmt, array $params, string $keyColumn, string $valueColumn): array
     {
-        $rows = $db->query($sql)->fetchAll();
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll();
         $byDay = array_column($rows, $valueColumn, $keyColumn);
 
         $labels = [];

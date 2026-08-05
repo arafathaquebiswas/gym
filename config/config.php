@@ -18,9 +18,10 @@ define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_CHARSET', 'utf8mb4');
 
-// ---- App ------------------------------------------------------------------
 define('APP_NAME', 'PowerSurge Gym');
-define('APP_URL', getenv('APP_URL') ?: 'http://localhost:8000');
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost:3000';
+$scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+define('APP_URL', getenv('APP_URL') ?: "$scheme://$host");
 define('BASE_PATH', dirname(__DIR__));
 
 // ---- Uploads ----------------------------------------------------------------

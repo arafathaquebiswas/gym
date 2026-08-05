@@ -34,7 +34,7 @@ $yn = function (string $key, string $default = '1') use ($settings) {
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-backup">Backup &amp; Restore</a></li>
 </ul>
 
-<form method="post" action="<?= url('/admin/settings') ?>" enctype="multipart/form-data" class="admin-form">
+<form id="settingsForm" method="post" action="<?= url('/admin/settings') ?>" enctype="multipart/form-data" class="admin-form">
   <?= Security::csrfField() ?>
   <div class="tab-content">
 
@@ -422,40 +422,41 @@ $yn = function (string $key, string $default = '1') use ($settings) {
     <div class="tab-pane fade" id="tab-backup">
       <div class="admin-card">
         <h6 class="mb-3">Backup &amp; Restore</h6>
-        <p class="text-white-50 small">Backups are exported as a plain <code>.sql</code> file you can store anywhere. Restoring replaces <strong>all current data</strong> — a safety backup of the current state is saved automatically before any restore.</p>
+        <p class="text-white-50 small mb-4">Backups are exported as a plain <code>.sql</code> file you can store anywhere. Restoring replaces <strong>all current data</strong> — a safety backup of the current state is saved automatically before any restore.</p>
+        
+        <div class="mb-4">
+          <label class="form-label text-white-50 small d-block">Export Backups</label>
+          <div class="d-flex flex-wrap gap-2">
+            <a href="<?= url('/admin/settings/backup') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-download"></i> Download Database Backup (.sql)</a>
+            <a href="<?= url('/admin/settings/backup-media') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-file-earmark-zip"></i> Download Media Files (.zip)</a>
+          </div>
+        </div>
+
+        <hr class="border-secondary my-4">
+
+        <form method="post" action="<?= url('/admin/settings/restore') ?>" enctype="multipart/form-data" class="admin-form"
+              onsubmit="return confirm('This will REPLACE all current data with the uploaded backup. A safety backup is taken first, but this cannot be undone from the browser. Continue?');">
+          <?= Security::csrfField() ?>
+          <h6 class="text-danger mb-2"><i class="bi bi-exclamation-triangle"></i> Restore Database</h6>
+          <div class="row g-3 align-items-end">
+            <div class="col-md-5">
+              <label>Backup File (.sql)</label>
+              <input type="file" name="backup_file" class="form-control" accept=".sql" required>
+            </div>
+            <div class="col-md-4">
+              <label>Type <code>RESTORE</code> to confirm</label>
+              <input type="text" name="confirm_phrase" class="form-control" required placeholder="RESTORE">
+            </div>
+            <div class="col-md-3">
+              <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-upload"></i> Restore Database</button>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
+  </div>
 
-    <div class="mt-3">
-      <button type="submit" class="btn btn-ps">Save Settings</button>
-    </div>
+  <div class="mt-3" id="saveSettingsBtnRow">
+    <button type="submit" form="settingsForm" class="btn btn-ps">Save Settings</button>
   </div>
 </form>
-
-<div class="admin-card mt-4" id="backupToolsCard">
-  <h6 class="mb-3">Backup Tools</h6>
-  <div class="d-flex flex-wrap gap-3">
-    <a href="<?= url('/admin/settings/backup') ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-download"></i> Download Backup (.sql)</a>
-  </div>
-
-  <hr>
-
-  <form method="post" action="<?= url('/admin/settings/restore') ?>" enctype="multipart/form-data" class="admin-form"
-        onsubmit="return confirm('This will REPLACE all current data with the uploaded backup. A safety backup is taken first, but this cannot be undone from the browser. Continue?');">
-    <?= Security::csrfField() ?>
-    <div class="row g-3 align-items-end">
-      <div class="col-md-5">
-        <label>Backup File (.sql)</label>
-        <input type="file" name="backup_file" class="form-control" accept=".sql" required>
-      </div>
-      <div class="col-md-4">
-        <label>Type <code>RESTORE</code> to confirm</label>
-        <input type="text" name="confirm_phrase" class="form-control" required>
-      </div>
-      <div class="col-md-3">
-        <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-upload"></i> Restore Database</button>
-      </div>
-    </div>
-  </form>
-</div>
-</div>

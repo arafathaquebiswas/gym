@@ -211,18 +211,21 @@ final class Product extends Model
     /** Top sellers by combined online + in-store quantity over the last 90 days. */
     public function bestSellerIds(int $limit = 5): array
     {
+        $cutoff = date('Y-m-d H:i:s', strtotime('-90 days'));
         $stmt = $this->db->prepare(
             "SELECT product_id, SUM(qty) AS total_qty FROM (
                 SELECT oi.product_id, oi.qty FROM order_items oi
                 JOIN orders o ON o.id = oi.order_id
-                WHERE o.created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+                WHERE o.created_at >= :cutoff1
                 UNION ALL
                 SELECT si.product_id, si.qty FROM sale_items si
                 JOIN sales s ON s.id = si.sale_id
-                WHERE s.sale_date >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+                WHERE s.sale_date >= :cutoff2
             ) combined
             GROUP BY product_id ORDER BY total_qty DESC LIMIT :limit"
         );
+        $stmt->bindValue(':cutoff1', $cutoff);
+        $stmt->bindValue(':cutoff2', $cutoff);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return array_map('intval', array_column($stmt->fetchAll(), 'product_id'));
@@ -231,19 +234,22 @@ final class Product extends Model
     /** Top sellers by combined online + in-store quantity over the last 90 days, with names attached (dashboard tile). */
     public function topSellingForDashboard(int $limit = 5): array
     {
+        $cutoff = date('Y-m-d H:i:s', strtotime('-90 days'));
         $stmt = $this->db->prepare(
             "SELECT p.id, p.name, SUM(combined.qty) AS total_qty FROM (
                 SELECT oi.product_id, oi.qty FROM order_items oi
                 JOIN orders o ON o.id = oi.order_id
-                WHERE o.created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+                WHERE o.created_at >= :cutoff1
                 UNION ALL
                 SELECT si.product_id, si.qty FROM sale_items si
                 JOIN sales s ON s.id = si.sale_id
-                WHERE s.sale_date >= DATE_SUB(NOW(), INTERVAL 90 DAY)
+                WHERE s.sale_date >= :cutoff2
             ) combined
             JOIN products p ON p.id = combined.product_id
             GROUP BY p.id, p.name ORDER BY total_qty DESC LIMIT :limit"
         );
+        $stmt->bindValue(':cutoff1', $cutoff);
+        $stmt->bindValue(':cutoff2', $cutoff);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();

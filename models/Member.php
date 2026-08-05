@@ -200,23 +200,31 @@ final class Member extends Model
         if (!$settingModel->getBool('auto_expire_memberships', true)) {
             return;
         }
-        $graceDays = $settingModel->getInt('membership_grace_days', 0);
+        $graceDays = (int) $settingModel->getInt('membership_grace_days', 0);
+        $graceCutoff = date('Y-m-d', strtotime("-$graceDays days"));
 
-        $graceDaysInt = (int) $graceDays;
+        $this->db->prepare(
+            "UPDATE members SET status = 'active'
+             WHERE id IN (
+                 SELECT member_id FROM member_subscriptions
+                 WHERE end_date >= :cutoff1
+             )"
+        )->execute(['cutoff1' => $graceCutoff]);
+
+        $this->db->prepare(
+            "UPDATE members SET status = 'expired'
+             WHERE id IN (
+                 SELECT ms1.member_id FROM member_subscriptions ms1
+                 JOIN (SELECT member_id, MAX(end_date) AS max_end FROM member_subscriptions GROUP BY member_id) ms2
+                   ON ms1.member_id = ms2.member_id AND ms1.end_date = ms2.max_end
+                 WHERE ms1.end_date < :cutoff2
+             )"
+        )->execute(['cutoff2' => $graceCutoff]);
 
         $this->db->exec(
-            "UPDATE members m
-             JOIN (SELECT member_id, MAX(id) AS latest_id FROM member_subscriptions GROUP BY member_id) x
-                ON x.member_id = m.id
-             JOIN member_subscriptions ms ON ms.id = x.latest_id
-             SET m.status = IF(DATE_ADD(ms.end_date, INTERVAL $graceDaysInt DAY) >= CURDATE(), 'active', 'expired')"
-        );
-
-        $this->db->exec(
-            "UPDATE members m
-             LEFT JOIN member_subscriptions ms ON ms.member_id = m.id
-             SET m.status = 'pending'
-             WHERE ms.id IS NULL AND m.status != 'pending'"
+            "UPDATE members SET status = 'pending'
+             WHERE id NOT IN (SELECT DISTINCT member_id FROM member_subscriptions WHERE member_id IS NOT NULL)
+               AND status != 'pending'"
         );
     }
 

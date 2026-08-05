@@ -27,32 +27,38 @@ final class Permission
 
     public static function can(string $moduleKey, string $action = 'view'): bool
     {
-        // Main Admin & Super Admin are never subject to a lock scope or permission row — hard-coded, not
-        // data-driven, so they can never be misconfigured into locking themselves out.
-        if (Auth::hasRole('main_admin', 'super_admin', 'admin')) {
+        // 1. Only Main Admin is the absolute owner — never subject to a lock scope or permission row.
+        if (Auth::hasRole('main_admin')) {
             return true;
         }
+
         if (!Auth::check()) {
             return false;
         }
 
+        // 2. If Main Admin locked this module specifically to 'main_admin_only', nobody else can access it.
         $scope = self::lockScope($moduleKey);
+        if ($scope === 'main_admin_only') {
+            return false;
+        }
+
+        // 3. Check individual custom permissions assigned specifically to this user ID
+        $userId = (int) Auth::user()['id'];
+        $permissions = self::permissionsFor($userId);
+        $row = $permissions[$moduleKey] ?? null;
+
+        if ($row !== null) {
+            return (bool) ($row["can_$action"] ?? false);
+        }
+
+        // 4. Group Module Lock scope check for users without individual custom permission rows
         $allowedRoles = self::SCOPE_ROLES[$scope] ?? [];
         if (empty($allowedRoles) || !Auth::hasRole(...$allowedRoles)) {
             return false;
         }
 
-        $userId = (int) Auth::user()['id'];
-        $permissions = self::permissionsFor($userId);
-        $row = $permissions[$moduleKey] ?? null;
-
-        if ($row === null) {
-            // No explicit row: super_admin keeps its existing unrestricted behavior by default;
-            // staff must be explicitly granted every module.
-            return Auth::hasRole('super_admin');
-        }
-
-        return (bool) ($row["can_$action"] ?? false);
+        // Default fallback for unlocked modules: super_admin gets default access; staff requires explicit grant.
+        return Auth::hasRole('super_admin');
     }
 
     /** Same as can(), but 403s immediately when denied — the single-line gate every AdminController subclass calls. */

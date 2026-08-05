@@ -47,11 +47,11 @@ $pageTitle = 'Home';
 ?>
 <section class="py-4" style="<?= $ftStyle ?>">
   <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 text-white">
-    <h4 class="mb-0"><i class="bi bi-calendar-check"></i> <?= e($settings['free_trial_title'] ?: 'Free Trial Session') ?><?php if (!empty($settings['free_trial_subtitle'])): ?> — <?= e($settings['free_trial_subtitle']) ?><?php endif; ?></h4>
+    <h4 class="mb-0"><i class="bi bi-calendar-check"></i> <?= e(($settings['free_trial_title'] ?? '') ?: 'Free Trial Session') ?><?php if (!empty($settings['free_trial_subtitle'])): ?> — <?= e($settings['free_trial_subtitle']) ?><?php endif; ?></h4>
     <?php if ($ftLink): ?>
-      <a href="<?= str_starts_with($ftLink, 'http') || str_starts_with($ftLink, '/') ? e($ftLink) : url($ftLink) ?>" class="btn btn-light fw-bold"><?= e($settings['free_trial_button_text'] ?: 'Book Your Free Session') ?></a>
+      <a href="<?= str_starts_with($ftLink, 'http') || str_starts_with($ftLink, '/') ? e($ftLink) : url($ftLink) ?>" class="btn btn-light fw-bold"><?= e(($settings['free_trial_button_text'] ?? '') ?: 'Book Your Free Session') ?></a>
     <?php else: ?>
-      <button type="button" class="btn btn-light fw-bold" data-bs-toggle="modal" data-bs-target="#freeTrialModal"><?= e($settings['free_trial_button_text'] ?: 'Book Your Free Session') ?></button>
+      <button type="button" class="btn btn-light fw-bold" data-bs-toggle="modal" data-bs-target="#freeTrialModal"><?= e(($settings['free_trial_button_text'] ?? '') ?: 'Book Your Free Session') ?></button>
     <?php endif; ?>
   </div>
 </section>

@@ -97,11 +97,12 @@ $statusBadge = fn ($status) => $status === 'suspended' ? 'danger' : ($status ===
   <?php else: ?>
   <div class="table-responsive">
     <table class="admin-table">
-      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Phone</th><th>Status</th><th></th></tr></thead>
       <tbody>
         <?php foreach ($staff as $person): ?>
         <tr>
           <td><?= e($person['name']) ?></td>
+          <td><span class="badge text-bg-info"><?= e($person['role_name'] ?? 'Staff') ?></span></td>
           <td><?= e($person['email']) ?></td>
           <td><?= e($person['phone'] ?? '—') ?></td>
           <td><span class="badge text-bg-<?= $statusBadge($person['status']) ?>"><?= e(ucfirst($person['status'])) ?></span></td>

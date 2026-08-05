@@ -23,12 +23,21 @@ final class RoleAdminController extends AdminController
     public function index(): void
     {
         $userModel = new User();
-        $isMainAdmin = Auth::hasRole('main_admin');
+        $isMainAdmin = Auth::hasRole('main_admin', 'super_admin');
+
+        $db = Database::connection();
+        $allStaff = $db->query(
+            "SELECT u.*, r.name AS role_name, r.slug AS role_slug
+             FROM users u
+             JOIN roles r ON r.id = u.role_id
+             WHERE r.slug NOT IN ('main_admin', 'super_admin', 'member')
+             ORDER BY u.name ASC"
+        )->fetchAll();
 
         $data = [
             'pageTitle' => 'Role Management',
             'isMainAdmin' => $isMainAdmin,
-            'staff' => $userModel->findByRole('staff'),
+            'staff' => $allStaff,
             'modules' => Modules::ALL,
         ];
 
@@ -116,10 +125,10 @@ final class RoleAdminController extends AdminController
     {
         $userModel = new User();
         $target = $userModel->findById((int) $id);
-        if (!$target || !in_array($target['role_slug'], ['staff', 'super_admin'], true)) {
+        if (!$target || $target['role_slug'] === 'member') {
             $this->abort404();
         }
-        if ($target['role_slug'] === 'super_admin') {
+        if (in_array($target['role_slug'], ['super_admin', 'main_admin'], true)) {
             $this->requireMainAdmin();
         }
 
@@ -141,10 +150,10 @@ final class RoleAdminController extends AdminController
 
         $userModel = new User();
         $target = $userModel->findById((int) $id);
-        if (!$target || !in_array($target['role_slug'], ['staff', 'super_admin'], true)) {
+        if (!$target || $target['role_slug'] === 'member') {
             $this->abort404();
         }
-        if ($target['role_slug'] === 'super_admin') {
+        if (in_array($target['role_slug'], ['super_admin', 'main_admin'], true)) {
             $this->requireMainAdmin();
         }
 
@@ -259,16 +268,16 @@ final class RoleAdminController extends AdminController
 
     private function requireMainAdmin(): void
     {
-        if (!Auth::hasRole('main_admin')) {
+        if (!Auth::hasRole('main_admin', 'super_admin')) {
             http_response_code(403);
             die('403 - Permission Denied');
         }
     }
 
-    /** null = unrestricted (Main Admin can grant anything); array = the acting Super Admin's own reachable modules. */
+    /** null = unrestricted (Main Admin & Super Admin can grant anything); array = the acting Admin's own reachable modules. */
     private function grantableModuleKeys(): ?array
     {
-        if (Auth::hasRole('main_admin')) {
+        if (Auth::hasRole('main_admin', 'super_admin')) {
             return null;
         }
         return array_values(array_filter(array_keys(Modules::ALL), fn ($key) => Permission::can($key)));

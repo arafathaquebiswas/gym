@@ -3,7 +3,7 @@
         'name' => 'powersurge/gym-management',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => 'b333e767a6695a36b60b94ce50dafad60b99e3e0',
+        'reference' => 'a1e2584e3bdd93a543522a829d9f60ecf4196d4e',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -121,7 +121,7 @@
         'powersurge/gym-management' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => 'b333e767a6695a36b60b94ce50dafad60b99e3e0',
+            'reference' => 'a1e2584e3bdd93a543522a829d9f60ecf4196d4e',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

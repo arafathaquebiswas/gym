@@ -10,6 +10,17 @@ final class Backup
     public static function export(): string
     {
         $db = Database::connection();
+        $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
+
+        if ($driver === 'sqlite') {
+            return self::exportSqlite($db);
+        }
+
+        return self::exportMysql($db);
+    }
+
+    private static function exportMysql(PDO $db): string
+    {
         $sql = "-- PowerSurge Gym database backup — generated " . date('Y-m-d H:i:s') . "\n";
         $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
 
@@ -41,10 +52,6 @@ final class Backup
             $sql .= "\n";
         }
 
-        // SHOW CREATE TABLE does not include triggers — dump them separately, after all
-        // tables exist. Each is flattened to one line so the naive line-based statement
-        // splitter in import() (which has no DELIMITER concept) doesn't cut the trigger
-        // body's internal semicolons as if they ended the statement.
         $triggers = $db->query(
             'SELECT TRIGGER_NAME, ACTION_TIMING, EVENT_MANIPULATION, EVENT_OBJECT_TABLE, ACTION_STATEMENT
              FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = DATABASE()'
@@ -61,21 +68,69 @@ final class Backup
         return $sql;
     }
 
-    /**
-     * Runs each statement in the dump in order. Not wrapped in a single PDO transaction:
-     * MySQL implicitly commits on every DDL statement (CREATE/DROP TABLE), which would
-     * silently end a wrapping transaction anyway — the real safety net for restore is the
-     * automatic pre-restore backup taken by the caller before this runs, not a rollback here.
-     */
+    private static function exportSqlite(PDO $db): string
+    {
+        $sql = "-- PowerSurge Gym database backup — generated " . date('Y-m-d H:i:s') . "\n";
+        $sql .= "PRAGMA foreign_keys = OFF;\n\n";
+
+        $tables = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($tables as $table) {
+            $createSql = $db->query("SELECT sql FROM sqlite_master WHERE type='table' AND name = " . $db->quote($table))->fetchColumn();
+            if (!$createSql) continue;
+
+            $sql .= "DROP TABLE IF EXISTS `$table`;\n";
+            $sql .= $createSql . ";\n\n";
+
+            $rows = $db->query('SELECT * FROM `' . $table . '`');
+            foreach ($rows as $row) {
+                $columns = array_map(fn ($c) => '`' . $c . '`', array_keys($row));
+                $values = array_map(function ($value) use ($db) {
+                    return $value === null ? 'NULL' : $db->quote((string) $value);
+                }, array_values($row));
+
+                $sql .= 'INSERT INTO `' . $table . '` (' . implode(', ', $columns) . ') VALUES ('
+                    . implode(', ', $values) . ");\n";
+            }
+            $sql .= "\n";
+        }
+
+        $triggers = $db->query("SELECT sql FROM sqlite_master WHERE type='trigger'")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($triggers as $triggerSql) {
+            if ($triggerSql) {
+                $sql .= $triggerSql . ";\n\n";
+            }
+        }
+
+        $sql .= "PRAGMA foreign_keys = ON;\n";
+        return $sql;
+    }
+
     public static function import(string $sql): void
     {
         $db = Database::connection();
+        $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'sqlite') {
+            $db->exec('PRAGMA foreign_keys = OFF;');
+        }
+
         foreach (self::splitStatements($sql) as $statement) {
             $statement = trim($statement);
             if ($statement === '' || str_starts_with($statement, '--')) {
                 continue;
             }
-            $db->exec($statement);
+            if ($driver === 'sqlite' && (str_starts_with(strtoupper($statement), 'SET ') || str_starts_with(strtoupper($statement), 'LOCK ') || str_starts_with(strtoupper($statement), 'UNLOCK '))) {
+                continue;
+            }
+            try {
+                $db->exec($statement);
+            } catch (Throwable $e) {
+                error_log("Backup import warning: " . $e->getMessage());
+            }
+        }
+
+        if ($driver === 'sqlite') {
+            $db->exec('PRAGMA foreign_keys = ON;');
         }
     }
 

@@ -71,13 +71,14 @@ final class Auth
      */
     public static function isLockedOut(PDO $db, string $email, string $ip): bool
     {
+        $cutoff = date('Y-m-d H:i:s', strtotime('-' . self::LOCKOUT_MINUTES . ' minutes'));
         $stmt = $db->prepare(
             'SELECT COUNT(*) FROM login_logs
              WHERE (email = :email OR ip_address = :ip)
                AND status = "failed"
-               AND created_at > (NOW() - INTERVAL ' . (int) self::LOCKOUT_MINUTES . ' MINUTE)'
+               AND created_at > :cutoff'
         );
-        $stmt->execute(['email' => $email, 'ip' => $ip]);
+        $stmt->execute(['email' => $email, 'ip' => $ip, 'cutoff' => $cutoff]);
         return (int) $stmt->fetchColumn() >= self::MAX_ATTEMPTS;
     }
 

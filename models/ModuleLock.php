@@ -46,12 +46,13 @@ final class ModuleLock extends Model
         if (!in_array($scope, self::SCOPES, true)) {
             throw new InvalidArgumentException("Invalid module lock scope: $scope");
         }
+        $this->db->prepare('DELETE FROM module_locks WHERE module_key = :module_key')->execute(['module_key' => $moduleKey]);
         $this->db->prepare(
-            'INSERT INTO module_locks (module_key, scope, updated_by) VALUES (:module_key, :scope, :updated_by)
-             ON DUPLICATE KEY UPDATE scope = :scope2, updated_by = :updated_by2'
+            'INSERT INTO module_locks (module_key, scope, updated_by) VALUES (:module_key, :scope, :updated_by)'
         )->execute([
-            'module_key' => $moduleKey, 'scope' => $scope, 'updated_by' => $updatedBy,
-            'scope2' => $scope, 'updated_by2' => $updatedBy,
+            'module_key' => $moduleKey,
+            'scope' => $scope,
+            'updated_by' => $updatedBy,
         ]);
     }
 }
