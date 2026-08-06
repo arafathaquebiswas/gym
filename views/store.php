@@ -287,29 +287,13 @@ $pageQuery = array_filter([
     });
   }
 
-  // Match the sidebar to a real product card height so top and bottom edges align exactly.
-  var card = document.querySelector('.product-card');
-  if (!card) return;
-
-  function syncHeight() {
-    if (window.innerWidth < 992) {
-      form.style.removeProperty('--ps-shop-sidebar-h');
-      form.style.removeProperty('height');
-      return;
-    }
-    var height = card.offsetHeight;
-    if (height > 0) {
-      form.style.setProperty('--ps-shop-sidebar-h', height + 'px');
-      form.style.height = height + 'px';
-    }
-  }
-
-  syncHeight();
-  window.addEventListener('resize', syncHeight);
-  window.addEventListener('load', syncHeight);
-  var img = card.querySelector('img');
-  if (img && !img.complete) {
-    img.addEventListener('load', syncHeight);
+  // Mobile filter drawer toggle
+  var mobileToggle = document.getElementById('mobileFilterToggle');
+  var sidebarCol = document.querySelector('.sidebar-col');
+  if (mobileToggle && sidebarCol) {
+    mobileToggle.addEventListener('click', function () {
+      sidebarCol.classList.toggle('show-mobile');
+    });
   }
 })();
 </script>
