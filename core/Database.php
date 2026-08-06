@@ -42,8 +42,19 @@ final class Database
                     // its absence is reliable, whereas APP_ENV only reads correctly
                     // if the deployed env.php happens to set it.
                     if (!is_file(BASE_PATH . '/config/env.local.php')) {
+                        // Report the settings actually in effect. "Check env.php"
+                        // alone is not actionable when the likeliest cause is that
+                        // env.php is not the file being read.
                         throw new RuntimeException(
-                            'Database connection failed. Check the credentials in config/env.php.',
+                            sprintf(
+                                'Database connection failed. Settings in effect: driver=mysql, host=%s, port=%s, database=%s, user=%s. Loaded from: %s. (%s)',
+                                DB_HOST,
+                                DB_PORT,
+                                DB_NAME,
+                                DB_USER,
+                                defined('ENV_SOURCE') ? ENV_SOURCE : 'unknown',
+                                $e->getMessage()
+                            ),
                             0,
                             $e
                         );

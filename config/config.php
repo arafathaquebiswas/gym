@@ -19,9 +19,19 @@ $envFile = is_file(__DIR__ . '/env.local.php') ? __DIR__ . '/env.local.php'
          : (is_file(__DIR__ . '/env.php') ? __DIR__ . '/env.php' : null);
 
 $envValues = $envFile ? require $envFile : [];
+
+// Recorded so a failed connection can report which file its settings came from.
+// A file that exists but does not `return` an array is the same as no file at
+// all, and that is worth being able to see rather than having to infer.
+$envSource = $envFile === null
+    ? 'no env file found — using built-in defaults'
+    : ('config/' . basename($envFile) . (is_array($envValues) ? '' : ' (ignored: it does not return an array)'));
+
 if (!is_array($envValues)) {
     $envValues = [];
 }
+
+define('ENV_SOURCE', $envSource);
 
 /** Resolve one setting: real env var, then the env file, then the supplied default. */
 $env = static function (string $key, $default = null) use ($envValues) {
