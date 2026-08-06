@@ -55,6 +55,40 @@ $pageQuery = array_filter([
 
 <section class="section pt-0">
   <div class="container">
+    <div class="shop-results-bar d-flex flex-wrap align-items-center gap-2 mb-3">
+      <span class="text-white-50 small">
+        <?php if ($total > 0): ?>
+          Showing <strong class="text-white"><?= count($products) ?></strong> of <strong class="text-white"><?= (int) $total ?></strong> products
+        <?php else: ?>
+          No matching products
+        <?php endif; ?>
+      </span>
+      <?php
+      // Removable chip per active filter — each link is the current query minus that one key.
+      $chipLabels = [
+        'q' => fn ($v) => 'Search: "' . $v . '"',
+        'category' => fn ($v) => 'Category: ' . ($slugNames[$v] ?? $v),
+        'brand' => fn ($v) => 'Brand: ' . ($slugNames[$v] ?? $v),
+        'availability' => fn ($v) => ['in' => 'In stock', 'low' => 'Only a few left', 'out' => 'Out of stock'][$v] ?? $v,
+        'min_price' => fn ($v) => 'From ৳' . number_format((float) $v),
+        'max_price' => fn ($v) => 'Up to ৳' . number_format((float) $v),
+        'on_sale' => fn () => 'On sale',
+        'best_seller' => fn () => 'Best sellers',
+        'min_rating' => fn ($v) => $v . '★ & up',
+      ];
+      foreach ($chipLabels as $key => $label):
+        if (!isset($pageQuery[$key])) {
+            continue;
+        }
+        $rest = $pageQuery;
+        unset($rest[$key]);
+      ?>
+      <a class="filter-chip" href="<?= url('/store' . ($rest ? '?' . http_build_query($rest) : '')) ?>">
+        <?= e($label($pageQuery[$key])) ?> <i class="bi bi-x-lg"></i>
+      </a>
+      <?php endforeach; ?>
+    </div>
+
     <div class="row g-4">
       <div class="col-lg-3">
         <?php $this->partial('partials/store-filters', [
@@ -67,39 +101,6 @@ $pageQuery = array_filter([
         ]); ?>
       </div>
       <div class="col-lg-9">
-        <div class="shop-results-bar d-flex flex-wrap align-items-center gap-2 mb-3">
-          <span class="text-white-50 small">
-            <?php if ($total > 0): ?>
-              Showing <strong class="text-white"><?= count($products) ?></strong> of <strong class="text-white"><?= (int) $total ?></strong> products
-            <?php else: ?>
-              No matching products
-            <?php endif; ?>
-          </span>
-          <?php
-          // Removable chip per active filter — each link is the current query minus that one key.
-          $chipLabels = [
-            'q' => fn ($v) => 'Search: "' . $v . '"',
-            'category' => fn ($v) => 'Category: ' . ($slugNames[$v] ?? $v),
-            'brand' => fn ($v) => 'Brand: ' . ($slugNames[$v] ?? $v),
-            'availability' => fn ($v) => ['in' => 'In stock', 'low' => 'Only a few left', 'out' => 'Out of stock'][$v] ?? $v,
-            'min_price' => fn ($v) => 'From ৳' . number_format((float) $v),
-            'max_price' => fn ($v) => 'Up to ৳' . number_format((float) $v),
-            'on_sale' => fn () => 'On sale',
-            'best_seller' => fn () => 'Best sellers',
-            'min_rating' => fn ($v) => $v . '★ & up',
-          ];
-          foreach ($chipLabels as $key => $label):
-            if (!isset($pageQuery[$key])) {
-                continue;
-            }
-            $rest = $pageQuery;
-            unset($rest[$key]);
-          ?>
-          <a class="filter-chip" href="<?= url('/store' . ($rest ? '?' . http_build_query($rest) : '')) ?>">
-            <?= e($label($pageQuery[$key])) ?> <i class="bi bi-x-lg"></i>
-          </a>
-          <?php endforeach; ?>
-        </div>
         <?php if (empty($products)): ?>
           <div class="glass-card p-5 text-center text-white-50">
             <i class="bi bi-search fs-1 d-block mb-2 opacity-50"></i>
@@ -220,7 +221,7 @@ $pageQuery = array_filter([
   var form = document.getElementById('shopFilters');
   if (!form) return;
 
-  var scroller = form.querySelector('.shop-filters-scroll');
+  var scroller = form.querySelector('.sidebar-content, .shop-filters-scroll');
   var groups = Array.prototype.slice.call(form.querySelectorAll('.filter-group'));
   var store = window.sessionStorage;
 
@@ -264,25 +265,29 @@ $pageQuery = array_filter([
     });
   }
 
-  // Match the sidebar to a real product card rather than a guessed pixel value, so the two
-  // columns line up top and bottom whatever the cards end up containing.
+  // Match the sidebar to a real product card height so top and bottom edges align exactly.
   var card = document.querySelector('.product-card');
   if (!card) return;
 
   function syncHeight() {
     if (window.innerWidth < 992) {
       form.style.removeProperty('--ps-shop-sidebar-h');
+      form.style.removeProperty('height');
       return;
     }
-    var gridTop = card.getBoundingClientRect().top;
-    var sidebarTop = form.getBoundingClientRect().top;
-    // The results bar sits above the grid, so the sidebar starts higher than the first card.
-    var height = card.offsetHeight + Math.max(0, gridTop - sidebarTop);
-    form.style.setProperty('--ps-shop-sidebar-h', height + 'px');
+    var height = card.offsetHeight;
+    if (height > 0) {
+      form.style.setProperty('--ps-shop-sidebar-h', height + 'px');
+      form.style.height = height + 'px';
+    }
   }
 
   syncHeight();
   window.addEventListener('resize', syncHeight);
   window.addEventListener('load', syncHeight);
+  var img = card.querySelector('img');
+  if (img && !img.complete) {
+    img.addEventListener('load', syncHeight);
+  }
 })();
 </script>

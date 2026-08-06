@@ -510,26 +510,29 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
   --ps-product-image-h: 300px;
   /* Fallback only. store.php measures the first product card and overrides this per page load,
      so the sidebar's top and bottom edges land exactly on the first card's. */
-  --ps-shop-sidebar-h: 630px;
+  --ps-shop-sidebar-h: 760px;
 }
 
+.shop-sidebar,
 .shop-filters {
-  position: sticky;
-  top: 90px;
   display: flex;
   flex-direction: column;
-  height: min(var(--ps-shop-sidebar-h), calc(100vh - 110px));
+  height: var(--ps-shop-sidebar-h, 760px);
   padding: 1rem;
   border-radius: 14px;
   overflow: hidden;
 }
 
+.sidebar-header,
 .shop-filters-head { flex: 0 0 auto; padding-bottom: .75rem; border-bottom: 1px solid var(--ps-border); }
-.shop-filters-foot { flex: 0 0 auto; padding-top: .75rem; border-top: 1px solid var(--ps-border); }
+
+.sidebar-footer,
+.shop-filters-foot { flex-shrink: 0; padding-top: .75rem; border-top: 1px solid var(--ps-border); }
 
 /* The only part that scrolls — the search/sort header and Apply button stay put. */
+.sidebar-content,
 .shop-filters-scroll {
-  flex: 1 1 auto;
+  flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
   margin: 0 -.35rem;
@@ -537,8 +540,11 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
   scrollbar-width: thin;
   scrollbar-color: rgba(255,106,26,.55) transparent;
 }
+.sidebar-content::-webkit-scrollbar,
 .shop-filters-scroll::-webkit-scrollbar { width: 6px; }
+.sidebar-content::-webkit-scrollbar-thumb,
 .shop-filters-scroll::-webkit-scrollbar-thumb { background: rgba(255,106,26,.55); border-radius: 3px; }
+.sidebar-content::-webkit-scrollbar-track,
 .shop-filters-scroll::-webkit-scrollbar-track { background: transparent; }
 
 .filter-count {
@@ -556,10 +562,12 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
 }
 .filter-group > summary::-webkit-details-marker { display: none; }
 .filter-group > summary::after {
-  content: '\F282'; font-family: 'bootstrap-icons'; font-size: .7rem;
+  content: '\F285'; font-family: 'bootstrap-icons'; font-size: .7rem;
   color: var(--ps-text-muted); transition: transform .2s ease;
 }
-.filter-group[open] > summary::after { transform: rotate(180deg); }
+.filter-group[open] > summary::after {
+  content: '\F282'; transform: none;
+}
 .filter-group > summary:hover { color: var(--ps-orange-light); }
 
 .filter-list { list-style: none; margin: .25rem 0 .35rem; padding: 0; }
@@ -593,7 +601,9 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
 
 @media (max-width: 991px) {
   /* Below the two-column breakpoint the sidebar is just a block above the grid — no fixed height, no inner scroll. */
-  .shop-filters { position: static; height: auto; max-height: none; margin-bottom: 1.5rem; }
+  .shop-sidebar,
+  .shop-filters { position: static; height: auto !important; max-height: none; margin-bottom: 1.5rem; }
+  .sidebar-content,
   .shop-filters-scroll { overflow: visible; max-height: none; }
 }
 

@@ -28,8 +28,8 @@ $openGroup = match (true) {
 };
 $isOpen = fn (string $group) => $openGroup === $group ? 'open' : '';
 ?>
-<form method="get" action="<?= url('/store') ?>" class="shop-filters glass-card" id="shopFilters">
-  <div class="shop-filters-head">
+<form method="get" action="<?= url('/store') ?>" class="shop-sidebar shop-filters glass-card" id="shopFilters">
+  <div class="sidebar-header shop-filters-head">
     <div class="d-flex align-items-center justify-content-between mb-2">
       <h6 class="mb-0 fw-bold"><i class="bi bi-sliders text-orange me-1"></i> Filters<?= $activeCount ? ' <span class="filter-count">' . $activeCount . '</span>' : '' ?></h6>
       <?php if ($activeCount || $f['search']): ?>
@@ -50,7 +50,7 @@ $isOpen = fn (string $group) => $openGroup === $group ? 'open' : '';
     </select>
   </div>
 
-  <div class="shop-filters-scroll">
+  <div class="sidebar-content shop-filters-scroll">
     <details class="filter-group" data-group="category" <?= $isOpen('category') ?>>
       <summary>Category</summary>
       <ul class="filter-list">
@@ -106,6 +106,28 @@ $isOpen = fn (string $group) => $openGroup === $group ? 'open' : '';
         </div>
       </div>
     </details>
+
+    <?php if (!empty($brands)): ?>
+    <details class="filter-group" data-group="brand" <?= $isOpen('brand') ?>>
+      <summary>Brand</summary>
+      <ul class="filter-list">
+        <li>
+          <label class="filter-opt">
+            <input type="radio" name="brand" value="" <?= !$f['brand'] ? 'checked' : '' ?>>
+            <span>All Brands</span>
+          </label>
+        </li>
+        <?php foreach ($brands as $brand): ?>
+        <li>
+          <label class="filter-opt">
+            <input type="radio" name="brand" value="<?= e($brand['slug']) ?>" <?= $f['brand'] === $brand['slug'] ? 'checked' : '' ?>>
+            <span><?= e($brand['name']) ?></span>
+          </label>
+        </li>
+        <?php endforeach; ?>
+      </ul>
+    </details>
+    <?php endif; ?>
 
     <details class="filter-group" data-group="availability" <?= $isOpen('availability') ?>>
       <summary>Availability</summary>
@@ -172,31 +194,9 @@ $isOpen = fn (string $group) => $openGroup === $group ? 'open' : '';
       </ul>
     </details>
     <?php endif; ?>
-
-    <?php if (!empty($brands)): ?>
-    <details class="filter-group" data-group="brand" <?= $isOpen('brand') ?>>
-      <summary>Brand</summary>
-      <ul class="filter-list">
-        <li>
-          <label class="filter-opt">
-            <input type="radio" name="brand" value="" <?= !$f['brand'] ? 'checked' : '' ?>>
-            <span>All Brands</span>
-          </label>
-        </li>
-        <?php foreach ($brands as $brand): ?>
-        <li>
-          <label class="filter-opt">
-            <input type="radio" name="brand" value="<?= e($brand['slug']) ?>" <?= $f['brand'] === $brand['slug'] ? 'checked' : '' ?>>
-            <span><?= e($brand['name']) ?></span>
-          </label>
-        </li>
-        <?php endforeach; ?>
-      </ul>
-    </details>
-    <?php endif; ?>
   </div>
 
-  <div class="shop-filters-foot">
+  <div class="sidebar-footer shop-filters-foot">
     <button type="submit" class="btn btn-ps btn-sm w-100"><i class="bi bi-funnel me-1"></i> Apply Filters</button>
   </div>
 </form>
