@@ -3,13 +3,41 @@ $pageTitle = 'Store';
 /** @var array $products */
 /** @var array $categories */
 /** @var array $brands */
-/** @var string|null $activeCategory */
-/** @var string|null $activeBrand */
-/** @var string|null $search */
-/** @var bool $inStockOnly */
-/** @var string|null $sort */
+/** @var array $filters */
+/** @var array $priceRange */
+/** @var array $facets */
+/** @var bool $hasReviews */
 /** @var array $bestSellerIds */
 /** @var array $popularIds */
+/** @var int $total */
+/** @var int $page */
+/** @var int $totalPages */
+
+// slug => display name, so the active-filter chips read "Category: Protein", not "Category: protein-powder".
+$slugNames = [];
+foreach ($categories as $cat) {
+    $slugNames[$cat['slug']] = $cat['name'];
+    foreach ($cat['children'] ?? [] as $child) {
+        $slugNames[$child['slug']] = $child['name'];
+    }
+}
+foreach ($brands as $brandRow) {
+    $slugNames[$brandRow['slug']] = $brandRow['name'];
+}
+
+// Every non-empty filter, so pagination links keep the current result set.
+$pageQuery = array_filter([
+    'category' => $filters['category'],
+    'brand' => $filters['brand'],
+    'q' => $filters['search'],
+    'availability' => $filters['availability'],
+    'min_price' => $filters['min_price'] !== null ? (int) $filters['min_price'] : null,
+    'max_price' => $filters['max_price'] !== null ? (int) $filters['max_price'] : null,
+    'on_sale' => $filters['on_sale'] ? '1' : null,
+    'best_seller' => $filters['best_seller'] ? '1' : null,
+    'min_rating' => $filters['min_rating'] !== null ? (int) $filters['min_rating'] : null,
+    'sort' => $filters['sort'],
+], fn ($v) => $v !== null && $v !== '');
 ?>
 
 <section class="hero page-hero text-center">
@@ -29,66 +57,55 @@ $pageTitle = 'Store';
   <div class="container">
     <div class="row g-4">
       <div class="col-lg-3">
-        <div class="glass-card p-3 mb-4 store-sidebar-sticky">
-          <form method="get" action="<?= url('/store') ?>" class="form-ps">
-            <label>Search</label>
-            <div class="input-group mb-3">
-              <input type="text" name="q" value="<?= e($search ?? '') ?>" class="form-control" placeholder="Search products...">
-              <button class="btn btn-ps" type="submit"><i class="bi bi-search"></i></button>
-            </div>
-            <?php if ($activeCategory): ?><input type="hidden" name="category" value="<?= e($activeCategory) ?>"><?php endif; ?>
-            <?php if ($activeBrand): ?><input type="hidden" name="brand" value="<?= e($activeBrand) ?>"><?php endif; ?>
-            <label>Sort By</label>
-            <select name="sort" class="form-select form-select-sm mb-3" onchange="this.form.submit()">
-              <option value="">Newest</option>
-              <option value="price_low" <?= $sort === 'price_low' ? 'selected' : '' ?>>Price: Low to High</option>
-              <option value="price_high" <?= $sort === 'price_high' ? 'selected' : '' ?>>Price: High to Low</option>
-            </select>
-            <div class="form-check">
-              <input type="checkbox" name="in_stock" value="1" class="form-check-input" id="inStockOnly" <?= $inStockOnly ? 'checked' : '' ?> onchange="this.form.submit()">
-              <label class="form-check-label small" for="inStockOnly">In stock only</label>
-            </div>
-          </form>
-          <h6 class="mt-3 mb-2">Categories</h6>
-          <ul class="list-unstyled mb-0">
-            <li class="mb-2"><a href="<?= url('/store' . ($activeBrand ? '?brand=' . urlencode($activeBrand) : '')) ?>" class="<?= !$activeCategory ? 'text-orange fw-semibold' : 'text-white-50' ?>">All Products</a></li>
-            <?php foreach ($categories as $cat): ?>
-            <li class="mb-2">
-              <a href="<?= url('/store?' . http_build_query(array_filter(['category' => $cat['slug'], 'brand' => $activeBrand]))) ?>" class="<?= $activeCategory === $cat['slug'] ? 'text-orange fw-semibold' : 'text-white-50' ?>">
-                <?= e($cat['name']) ?>
-              </a>
-              <?php if (!empty($cat['children'])): ?>
-              <ul class="list-unstyled ms-3 mt-1 mb-0">
-                <?php foreach ($cat['children'] as $child): ?>
-                <li class="mb-1">
-                  <a href="<?= url('/store?' . http_build_query(array_filter(['category' => $child['slug'], 'brand' => $activeBrand]))) ?>" class="small <?= $activeCategory === $child['slug'] ? 'text-orange fw-semibold' : 'text-white-50' ?>">
-                    <?= e($child['name']) ?>
-                  </a>
-                </li>
-                <?php endforeach; ?>
-              </ul>
-              <?php endif; ?>
-            </li>
-            <?php endforeach; ?>
-          </ul>
-          <?php if (!empty($brands)): ?>
-          <h6 class="mt-3 mb-2">Brands</h6>
-          <ul class="list-unstyled mb-0">
-            <li class="mb-2"><a href="<?= url('/store' . ($activeCategory ? '?category=' . urlencode($activeCategory) : '')) ?>" class="<?= !$activeBrand ? 'text-orange fw-semibold' : 'text-white-50' ?>">All Brands</a></li>
-            <?php foreach ($brands as $brand): ?>
-            <li class="mb-2">
-              <a href="<?= url('/store?' . http_build_query(array_filter(['brand' => $brand['slug'], 'category' => $activeCategory]))) ?>" class="<?= $activeBrand === $brand['slug'] ? 'text-orange fw-semibold' : 'text-white-50' ?>">
-                <?= e($brand['name']) ?>
-              </a>
-            </li>
-            <?php endforeach; ?>
-          </ul>
-          <?php endif; ?>
-        </div>
+        <?php $this->partial('partials/store-filters', [
+          'categories' => $categories,
+          'brands' => $brands,
+          'filters' => $filters,
+          'priceRange' => $priceRange,
+          'facets' => $facets,
+          'hasReviews' => $hasReviews,
+        ]); ?>
       </div>
       <div class="col-lg-9">
+        <div class="shop-results-bar d-flex flex-wrap align-items-center gap-2 mb-3">
+          <span class="text-white-50 small">
+            <?php if ($total > 0): ?>
+              Showing <strong class="text-white"><?= count($products) ?></strong> of <strong class="text-white"><?= (int) $total ?></strong> products
+            <?php else: ?>
+              No matching products
+            <?php endif; ?>
+          </span>
+          <?php
+          // Removable chip per active filter — each link is the current query minus that one key.
+          $chipLabels = [
+            'q' => fn ($v) => 'Search: "' . $v . '"',
+            'category' => fn ($v) => 'Category: ' . ($slugNames[$v] ?? $v),
+            'brand' => fn ($v) => 'Brand: ' . ($slugNames[$v] ?? $v),
+            'availability' => fn ($v) => ['in' => 'In stock', 'low' => 'Only a few left', 'out' => 'Out of stock'][$v] ?? $v,
+            'min_price' => fn ($v) => 'From ৳' . number_format((float) $v),
+            'max_price' => fn ($v) => 'Up to ৳' . number_format((float) $v),
+            'on_sale' => fn () => 'On sale',
+            'best_seller' => fn () => 'Best sellers',
+            'min_rating' => fn ($v) => $v . '★ & up',
+          ];
+          foreach ($chipLabels as $key => $label):
+            if (!isset($pageQuery[$key])) {
+                continue;
+            }
+            $rest = $pageQuery;
+            unset($rest[$key]);
+          ?>
+          <a class="filter-chip" href="<?= url('/store' . ($rest ? '?' . http_build_query($rest) : '')) ?>">
+            <?= e($label($pageQuery[$key])) ?> <i class="bi bi-x-lg"></i>
+          </a>
+          <?php endforeach; ?>
+        </div>
         <?php if (empty($products)): ?>
-          <div class="glass-card p-5 text-center text-white-50">No products found. Try a different search or category.</div>
+          <div class="glass-card p-5 text-center text-white-50">
+            <i class="bi bi-search fs-1 d-block mb-2 opacity-50"></i>
+            No products match these filters.
+            <div class="mt-3"><a href="<?= url('/store') ?>" class="btn btn-ps btn-sm">Clear all filters</a></div>
+          </div>
         <?php else: ?>
         <div class="row g-4">
           <?php foreach ($products as $product): ?>
@@ -116,9 +133,19 @@ $pageTitle = 'Store';
                   <?php endif; ?>
                   <h6 class="product-title mb-1 text-white fw-bold"><?= e($product['name']) ?></h6>
                   <div class="product-rating-row d-flex align-items-center gap-1 my-1">
-                    <span class="text-warning small"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i></span>
-                    <span class="text-white fw-bold small ms-1">4.8</span>
-                    <span class="text-white-50 small">(<?= (int) ($product['reviews_count'] ?? (18 + (($product['id'] * 13) % 150))) ?>)</span>
+                    <?php $reviewCount = (int) ($product['review_count'] ?? 0); ?>
+                    <?php if ($reviewCount > 0): ?>
+                      <?php $avg = round((float) $product['avg_rating'], 1); ?>
+                      <span class="text-warning small">
+                        <?php for ($s = 1; $s <= 5; $s++): ?>
+                          <i class="bi bi-star<?= $avg >= $s ? '-fill' : ($avg >= $s - 0.5 ? '-half' : '') ?>"></i>
+                        <?php endfor; ?>
+                      </span>
+                      <span class="text-white fw-bold small ms-1"><?= number_format($avg, 1) ?></span>
+                      <span class="text-white-50 small">(<?= $reviewCount ?>)</span>
+                    <?php else: ?>
+                      <span class="text-white-50 small"><i class="bi bi-star me-1"></i>No reviews yet</span>
+                    <?php endif; ?>
                   </div>
                 </div>
                 <div>
@@ -174,9 +201,7 @@ $pageTitle = 'Store';
           <ul class="pagination pagination-ps justify-content-center">
             <?php for ($p = 1; $p <= $totalPages; $p++): ?>
               <li class="page-item <?= $p === $page ? 'active' : '' ?>">
-                <a class="page-link" href="<?= url('/store?' . http_build_query(array_filter([
-                  'page' => $p, 'category' => $activeCategory, 'brand' => $activeBrand, 'q' => $search, 'sort' => $sort, 'in_stock' => $inStockOnly ? '1' : null,
-                ]))) ?>"><?= $p ?></a>
+                <a class="page-link" href="<?= url('/store?' . http_build_query(['page' => $p] + $pageQuery)) ?>"><?= $p ?></a>
               </li>
             <?php endfor; ?>
           </ul>
@@ -187,3 +212,46 @@ $pageTitle = 'Store';
     </div>
   </div>
 </section>
+
+<script>
+// Filters apply on change (the Apply button is the no-JS fallback), and the sidebar keeps
+// its open sections + scroll position across the page reload each filter causes.
+(function () {
+  var form = document.getElementById('shopFilters');
+  if (!form) return;
+
+  var scroller = form.querySelector('.shop-filters-scroll');
+  var store = window.sessionStorage;
+
+  form.addEventListener('change', function (event) {
+    if (event.target.matches('input[type="radio"], input[type="checkbox"], select')) {
+      form.submit();
+    }
+  });
+
+  form.querySelectorAll('.price-chip').forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      form.querySelector('[name="min_price"]').value = chip.dataset.min || '';
+      form.querySelector('[name="max_price"]').value = chip.dataset.max || '';
+      form.submit();
+    });
+  });
+
+  form.querySelectorAll('.filter-group').forEach(function (group, index) {
+    var key = 'psFilterGroup' + index;
+    var saved = store.getItem(key);
+    if (saved) group.open = saved === 'open';
+    group.addEventListener('toggle', function () {
+      store.setItem(key, group.open ? 'open' : 'closed');
+    });
+  });
+
+  if (scroller) {
+    var savedScroll = store.getItem('psFilterScroll');
+    if (savedScroll) scroller.scrollTop = parseInt(savedScroll, 10) || 0;
+    form.addEventListener('submit', function () {
+      store.setItem('psFilterScroll', String(scroller.scrollTop));
+    });
+  }
+})();
+</script>

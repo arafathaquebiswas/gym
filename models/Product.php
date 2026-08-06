@@ -12,7 +12,19 @@ final class Product extends Model
 
     public const STATUSES = ['draft', 'published', 'hidden'];
 
-    public function paginate(int $page, int $perPage, ?string $categorySlug = null, ?string $search = null, bool $inStockOnly = false, ?string $sort = null, ?string $brandSlug = null): array
+    /** @var array<int,int>|null */
+    private ?array $discountMapCache = null;
+
+    /** How many top-selling products carry the "Best Seller" badge — the storefront filter matches the badge exactly. */
+    public const BEST_SELLER_LIMIT = 10;
+
+    /**
+     * Storefront listing.
+     *
+     * @param array{category?:?string,brand?:?string,search?:?string,availability?:?string,min_price?:mixed,
+     *              max_price?:mixed,on_sale?:bool,best_seller?:bool,min_rating?:mixed,sort?:?string} $filters
+     */
+    public function paginate(int $page, int $perPage, array $filters = []): array
     {
         $page = max(1, $page);
         $offset = ($page - 1) * $perPage;
@@ -20,29 +32,60 @@ final class Product extends Model
         $where = ["p.status = 'published'"];
         $params = [];
 
-        if ($categorySlug) {
+        if (!empty($filters['category'])) {
             // Browsing a parent category (e.g. "Supplements") must also surface products filed
             // under its subcategories (e.g. "Protein", "Creatine") — not just products assigned
             // to the parent itself. Leaf categories with no children are unaffected (the OR's
             // subquery simply matches nothing extra).
             $where[] = '(c.slug = :category_slug OR c.parent_id = (SELECT id FROM product_categories WHERE slug = :category_slug_parent))';
-            $params['category_slug'] = $categorySlug;
-            $params['category_slug_parent'] = $categorySlug;
+            $params['category_slug'] = $filters['category'];
+            $params['category_slug_parent'] = $filters['category'];
         }
-        if ($brandSlug) {
+        if (!empty($filters['brand'])) {
             $where[] = 'b.slug = :brand_slug';
-            $params['brand_slug'] = $brandSlug;
+            $params['brand_slug'] = $filters['brand'];
         }
-        if ($search) {
+        if (!empty($filters['search'])) {
             $where[] = '(p.name LIKE :search_name OR b.name LIKE :search_brand)';
-            $params['search_name'] = '%' . $search . '%';
-            $params['search_brand'] = '%' . $search . '%';
+            $params['search_name'] = '%' . $filters['search'] . '%';
+            $params['search_brand'] = '%' . $filters['search'] . '%';
         }
-        if ($inStockOnly) {
-            $where[] = 'p.stock_qty > 0';
+
+        // Availability mirrors the three badge states on the card: plenty / only-a-few-left / sold out.
+        $where[] = match ($filters['availability'] ?? '') {
+            'in' => 'p.stock_qty > 0',
+            'low' => 'p.stock_qty > 0 AND p.stock_qty <= COALESCE(p.min_stock, 5)',
+            'out' => 'p.stock_qty <= 0',
+            default => '1 = 1',
+        };
+
+        if (isset($filters['min_price']) && $filters['min_price'] !== '' && $filters['min_price'] !== null) {
+            $where[] = 'p.selling_price >= :min_price';
+            $params['min_price'] = (float) $filters['min_price'];
         }
+        if (isset($filters['max_price']) && $filters['max_price'] !== '' && $filters['max_price'] !== null) {
+            $where[] = 'p.selling_price <= :max_price';
+            $params['max_price'] = (float) $filters['max_price'];
+        }
+
+        // Discounts are resolved in PHP (flash sale > product offer > category offer > brand offer),
+        // so the only way to filter/sort on them in SQL is to resolve the live set up front.
+        $saleRanking = $this->liveDiscountMap();
+        if (!empty($filters['on_sale'])) {
+            $where[] = $this->idListClause(array_keys($saleRanking), 'sale', $params);
+        }
+        if (!empty($filters['best_seller'])) {
+            $where[] = $this->idListClause($this->bestSellerIds(self::BEST_SELLER_LIMIT), 'bs', $params);
+        }
+        if (!empty($filters['min_rating'])) {
+            $where[] = 'COALESCE(r.avg_rating, 0) >= :min_rating';
+            $params['min_rating'] = (float) $filters['min_rating'];
+        }
+
         $whereSql = implode(' AND ', $where);
-        $joinSql = 'JOIN product_categories c ON c.id = p.category_id LEFT JOIN brands b ON b.id = p.brand_id';
+        $joinSql = 'JOIN product_categories c ON c.id = p.category_id
+             LEFT JOIN brands b ON b.id = p.brand_id
+             LEFT JOIN (' . self::REVIEW_SUMMARY_SQL . ') r ON r.product_id = p.id';
 
         $countStmt = $this->db->prepare(
             "SELECT COUNT(*) FROM products p $joinSql WHERE $whereSql"
@@ -53,12 +96,16 @@ final class Product extends Model
         $sortMap = [
             'price_low' => 'p.selling_price ASC',
             'price_high' => 'p.selling_price DESC',
+            'name' => 'p.name ASC',
+            'rating' => 'COALESCE(r.avg_rating, 0) DESC, COALESCE(r.review_count, 0) DESC',
+            'discount' => $this->discountOrderClause($saleRanking),
             'newest' => 'p.created_at DESC',
         ];
-        $orderBy = $sortMap[$sort ?? ''] ?? 'p.created_at DESC';
+        $orderBy = $sortMap[$filters['sort'] ?? ''] ?? 'p.created_at DESC';
 
         $stmt = $this->db->prepare(
-            "SELECT p.*, c.name AS category_name, c.slug AS category_slug, b.name AS brand_name, b.slug AS brand_slug
+            "SELECT p.*, c.name AS category_name, c.slug AS category_slug, b.name AS brand_name, b.slug AS brand_slug,
+                    COALESCE(r.review_count, 0) AS review_count, r.avg_rating
              FROM products p $joinSql
              WHERE $whereSql
              ORDER BY $orderBy
@@ -582,6 +629,145 @@ final class Product extends Model
         $startOk = empty($entity['offer_start_date']) || new DateTimeImmutable($entity['offer_start_date']) <= $now;
         $endOk = empty($entity['offer_end_date']) || new DateTimeImmutable($entity['offer_end_date']) > $now;
         return $startOk && $endOk;
+    }
+
+    /** Approved-only review aggregate, joined into storefront listings so cards never fire a query each. */
+    private const REVIEW_SUMMARY_SQL = "SELECT product_id, AVG(rating) AS avg_rating, COUNT(*) AS review_count
+              FROM product_reviews WHERE status = 'approved' GROUP BY product_id";
+
+    /** Cheapest / dearest published product, for the price-filter bounds. */
+    public function priceRange(): array
+    {
+        $row = $this->db->query(
+            "SELECT MIN(selling_price) AS min_price, MAX(selling_price) AS max_price
+             FROM products WHERE status = 'published'"
+        )->fetch();
+
+        return [
+            'min' => (int) floor((float) ($row['min_price'] ?? 0)),
+            'max' => (int) ceil((float) ($row['max_price'] ?? 0)),
+        ];
+    }
+
+    /** Published-product counts per stock state, for the availability filter's badges. */
+    public function stockFacets(): array
+    {
+        $row = $this->db->query(
+            "SELECT
+                SUM(CASE WHEN stock_qty > COALESCE(min_stock, 5) THEN 1 ELSE 0 END) AS plenty,
+                SUM(CASE WHEN stock_qty > 0 AND stock_qty <= COALESCE(min_stock, 5) THEN 1 ELSE 0 END) AS low,
+                SUM(CASE WHEN stock_qty <= 0 THEN 1 ELSE 0 END) AS sold_out,
+                SUM(CASE WHEN stock_qty > 0 THEN 1 ELSE 0 END) AS in_stock
+             FROM products WHERE status = 'published'"
+        )->fetch();
+
+        return [
+            'in' => (int) ($row['in_stock'] ?? 0),
+            'low' => (int) ($row['low'] ?? 0),
+            'out' => (int) ($row['sold_out'] ?? 0),
+            'plenty' => (int) ($row['plenty'] ?? 0),
+        ];
+    }
+
+    /**
+     * product_id => live discount percent, for every published product currently on offer.
+     * Resolved once per request rather than per product so the storefront filter stays a single query.
+     *
+     * @return array<int,int>
+     */
+    public function liveDiscountMap(): array
+    {
+        if ($this->discountMapCache !== null) {
+            return $this->discountMapCache;
+        }
+
+        $rows = $this->db->query(
+            "SELECT id, category_id, brand_id, selling_price, offer_price, offer_enabled, offer_start_date, offer_end_date
+             FROM products WHERE status = 'published'"
+        )->fetchAll();
+
+        $flashSale = new FlashSale();
+        $categories = $this->offerPercentByIdMap('product_categories');
+        $brands = $this->offerPercentByIdMap('brands');
+
+        $map = [];
+        foreach ($rows as $row) {
+            $regular = (float) $row['selling_price'];
+            if ($regular <= 0) {
+                continue;
+            }
+
+            $sale = $flashSale->liveForProduct($row);
+            if ($sale) {
+                $percent = (float) $sale['discount_percent'];
+            } elseif (self::productOfferLive($row)) {
+                $percent = (($regular - (float) $row['offer_price']) / $regular) * 100;
+            } else {
+                $percent = $categories[(int) $row['category_id']] ?? $brands[(int) $row['brand_id']] ?? 0.0;
+            }
+
+            if ($percent > 0) {
+                $map[(int) $row['id']] = (int) round($percent);
+            }
+        }
+
+        arsort($map);
+        $this->discountMapCache = $map;
+        return $map;
+    }
+
+    private static function productOfferLive(array $product): bool
+    {
+        if (empty($product['offer_enabled']) || empty($product['offer_price'])) {
+            return false;
+        }
+        $now = new DateTimeImmutable();
+        $startOk = empty($product['offer_start_date']) || new DateTimeImmutable($product['offer_start_date']) <= $now;
+        $endOk = empty($product['offer_end_date']) || new DateTimeImmutable($product['offer_end_date']) > $now;
+        return $startOk && $endOk && (float) $product['offer_price'] < (float) $product['selling_price'];
+    }
+
+    /** @return array<int,float> id => offer percent, only for rows whose offer window is currently open */
+    private function offerPercentByIdMap(string $table): array
+    {
+        $map = [];
+        foreach ($this->db->query("SELECT * FROM $table")->fetchAll() as $row) {
+            if (self::offerWindowLive($row)) {
+                $map[(int) $row['id']] = (float) $row['offer_percent'];
+            }
+        }
+        return $map;
+    }
+
+    /**
+     * `p.id IN (:prefix_0, ...)` with the values bound into $params. An empty list must match
+     * nothing — "on sale" with no live offers is an empty result, not an unfiltered one.
+     */
+    private function idListClause(array $ids, string $prefix, array &$params): string
+    {
+        if (!$ids) {
+            return '1 = 0';
+        }
+        $placeholders = [];
+        foreach (array_values($ids) as $i => $id) {
+            $placeholders[] = ":{$prefix}_{$i}";
+            $params["{$prefix}_{$i}"] = (int) $id;
+        }
+        return 'p.id IN (' . implode(', ', $placeholders) . ')';
+    }
+
+    /** Deepest discount first, then everything else by recency. Portable CASE — MySQL's FIELD() has no SQLite equivalent. */
+    private function discountOrderClause(array $saleRanking): string
+    {
+        if (!$saleRanking) {
+            return 'p.created_at DESC';
+        }
+        $cases = '';
+        $rank = 0;
+        foreach (array_keys($saleRanking) as $id) {
+            $cases .= ' WHEN ' . (int) $id . ' THEN ' . $rank++;
+        }
+        return "CASE p.id$cases ELSE 9999 END ASC, p.created_at DESC";
     }
 
     private function buildFilterClause(array $filters): array

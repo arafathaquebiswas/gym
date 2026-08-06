@@ -321,7 +321,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
 
 /* ---------- Product card ---------- */
 .product-card { padding: 1.25rem; height: 100%; }
-.product-card .product-thumb { aspect-ratio: 1; margin-bottom: 1rem; }
+.product-card .product-thumb { margin-bottom: 1rem; }
 .product-card .price { color: var(--ps-orange); font-weight: 700; font-size: 1.25rem; }
 .product-card .cat-tag { color: var(--ps-text-muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
 
@@ -506,12 +506,95 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
 .pagination-ps .page-item.active .page-link { background: var(--ps-orange); border-color: var(--ps-orange); color: #fff; }
 
 /* ---------- Store Front UI Extensions ---------- */
-.store-sidebar-sticky {
+:root {
+  /* One product card's height: 300px image + 14px gap + ~250px of copy/price/button + card padding.
+     The sidebar matches it so the top and bottom of the two columns line up. */
+  --ps-product-image-h: 300px;
+  --ps-shop-sidebar-h: 630px;
+}
+
+.shop-filters {
   position: sticky;
   top: 90px;
-  max-height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  height: min(var(--ps-shop-sidebar-h), calc(100vh - 110px));
+  padding: 1rem;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.shop-filters-head { flex: 0 0 auto; padding-bottom: .75rem; border-bottom: 1px solid var(--ps-border); }
+.shop-filters-foot { flex: 0 0 auto; padding-top: .75rem; border-top: 1px solid var(--ps-border); }
+
+/* The only part that scrolls — the search/sort header and Apply button stay put. */
+.shop-filters-scroll {
+  flex: 1 1 auto;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 -.35rem;
+  padding: .5rem .35rem;
   scrollbar-width: thin;
+  scrollbar-color: rgba(255,106,26,.55) transparent;
+}
+.shop-filters-scroll::-webkit-scrollbar { width: 6px; }
+.shop-filters-scroll::-webkit-scrollbar-thumb { background: rgba(255,106,26,.55); border-radius: 3px; }
+.shop-filters-scroll::-webkit-scrollbar-track { background: transparent; }
+
+.filter-count {
+  display: inline-block; min-width: 1.25rem; padding: 0 .35rem; margin-left: .15rem;
+  background: var(--ps-orange); color: #fff; border-radius: 999px;
+  font-size: .7rem; line-height: 1.25rem; text-align: center; font-weight: 700;
+}
+
+.filter-group { border-bottom: 1px solid rgba(255,255,255,.06); padding: .5rem 0; }
+.filter-group:last-child { border-bottom: 0; }
+.filter-group > summary {
+  cursor: pointer; list-style: none; font-size: .82rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em; color: #fff;
+  padding: .3rem 0; display: flex; align-items: center; justify-content: space-between;
+}
+.filter-group > summary::-webkit-details-marker { display: none; }
+.filter-group > summary::after {
+  content: '\F282'; font-family: 'bootstrap-icons'; font-size: .7rem;
+  color: var(--ps-text-muted); transition: transform .2s ease;
+}
+.filter-group[open] > summary::after { transform: rotate(180deg); }
+.filter-group > summary:hover { color: var(--ps-orange-light); }
+
+.filter-list { list-style: none; margin: .25rem 0 .35rem; padding: 0; }
+.filter-sublist { margin: .1rem 0 .1rem .95rem; }
+.filter-body { padding: .35rem 0 .5rem; }
+
+.filter-opt {
+  display: flex; align-items: center; gap: .5rem; width: 100%;
+  padding: .28rem .4rem; border-radius: 8px; cursor: pointer;
+  font-size: .85rem; color: var(--ps-text-muted); transition: background .15s ease, color .15s ease;
+}
+.filter-opt:hover { background: rgba(255,255,255,.05); color: #fff; }
+.filter-opt input { accent-color: var(--ps-orange); flex: 0 0 auto; margin: 0; }
+.filter-opt input:checked ~ span { color: var(--ps-orange); font-weight: 600; }
+.filter-opt span { flex: 1 1 auto; }
+.filter-facet {
+  flex: 0 0 auto; font-style: normal; font-size: .7rem; font-weight: 600;
+  color: var(--ps-text-muted); background: rgba(255,255,255,.06);
+  padding: .05rem .4rem; border-radius: 999px;
+}
+
+.price-chip, .filter-chip {
+  background: rgba(255,255,255,.05); border: 1px solid var(--ps-border);
+  color: var(--ps-text-muted); border-radius: 999px; padding: .2rem .6rem;
+  font-size: .72rem; cursor: pointer; transition: all .15s ease; text-decoration: none;
+}
+.price-chip:hover, .filter-chip:hover { border-color: var(--ps-orange); color: var(--ps-orange); }
+.price-chip.active { background: rgba(255,106,26,.18); border-color: var(--ps-orange); color: var(--ps-orange-light); }
+.filter-chip { display: inline-flex; align-items: center; gap: .35rem; }
+.filter-chip i { font-size: .6rem; }
+
+@media (max-width: 991px) {
+  /* Below the two-column breakpoint the sidebar is just a block above the grid — no fixed height, no inner scroll. */
+  .shop-filters { position: static; height: auto; max-height: none; margin-bottom: 1.5rem; }
+  .shop-filters-scroll { overflow: visible; max-height: none; }
 }
 
 .product-card {
@@ -534,7 +617,8 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
 .product-card .product-thumb {
   position: relative;
   width: 100%;
-  height: 220px;
+  /* Fixed box — the image never dictates card height, so every card in a row lines up. */
+  height: var(--ps-product-image-h);
   border-radius: 10px;
   overflow: hidden;
   background: #ffffff;
@@ -596,6 +680,13 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
   transform: scale(1.1);
 }
 
+/* Whatever the copy above runs to — long names, extra badges — the CTA sits on the card's floor. */
+.product-card > form,
+.product-card > .btn {
+  margin-top: auto;
+  flex: 0 0 auto;
+}
+
 .product-card .btn-ps {
   transition: all 0.25s ease;
   box-shadow: 0 4px 12px rgba(255, 106, 26, 0.2);
@@ -644,6 +735,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
   .hero-stats { flex-direction: column; gap: .9rem; margin-top: 1.75rem; }
   .glass-card { padding: 1.25rem; }
   .product-card, .blog-card .blog-body, .testimonial-card { padding: 1.1rem; }
+  :root { --ps-product-image-h: 190px; }
   .form-ps .row { --bs-gutter-x: .9rem; }
   .form-ps .btn { width: 100%; }
   .table-responsive { margin-bottom: .25rem; }

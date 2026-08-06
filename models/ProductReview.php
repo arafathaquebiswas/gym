@@ -32,6 +32,14 @@ final class ProductReview extends Model
         ];
     }
 
+    /** The storefront hides its rating filter/sort entirely until at least one review is live. */
+    public function hasApprovedReviews(): bool
+    {
+        return (int) $this->db->query(
+            "SELECT COUNT(*) FROM product_reviews WHERE status = 'approved'"
+        )->fetchColumn() > 0;
+    }
+
     public function find(int $id): ?array
     {
         $stmt = $this->db->prepare(

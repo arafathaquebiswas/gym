@@ -16,13 +16,26 @@ final class StoreController extends Controller
         $categoryModel = new ProductCategory();
 
         $page = max(1, (int) $this->input('page', '1'));
-        $category = $this->input('category') ?: null;
-        $brand = $this->input('brand') ?: null;
-        $search = $this->input('q') ?: null;
-        $inStockOnly = $this->input('in_stock') === '1';
-        $sort = $this->input('sort') ?: null;
+        $priceRange = $productModel->priceRange();
+        $hasReviews = (new ProductReview())->hasApprovedReviews();
 
-        $result = $productModel->paginate($page, 12, $category, $search, $inStockOnly, $sort, $brand);
+        $filters = [
+            'category' => $this->input('category') ?: null,
+            'brand' => $this->input('brand') ?: null,
+            'search' => $this->input('q') ?: null,
+            // Legacy ?in_stock=1 links (older bookmarks, the nav) still mean "in stock only".
+            'availability' => in_array($this->input('availability'), ['in', 'low', 'out'], true)
+                ? $this->input('availability')
+                : ($this->input('in_stock') === '1' ? 'in' : null),
+            'min_price' => $this->numericInput('min_price'),
+            'max_price' => $this->numericInput('max_price'),
+            'on_sale' => $this->input('on_sale') === '1',
+            'best_seller' => $this->input('best_seller') === '1',
+            'min_rating' => $hasReviews ? $this->numericInput('min_rating') : null,
+            'sort' => $this->input('sort') ?: null,
+        ];
+
+        $result = $productModel->paginate($page, 12, $filters);
 
         $this->view('store', [
             'products' => $result['items'],
@@ -32,12 +45,14 @@ final class StoreController extends Controller
             'totalPages' => (int) ceil($result['total'] / $result['per_page']),
             'categories' => $categoryModel->allActiveForStorefront(),
             'brands' => (new Brand())->all(),
-            'activeCategory' => $category,
-            'activeBrand' => $brand,
-            'search' => $search,
-            'inStockOnly' => $inStockOnly,
-            'sort' => $sort,
-            'bestSellerIds' => $productModel->bestSellerIds(),
+            'filters' => $filters,
+            'priceRange' => $priceRange,
+            'hasReviews' => $hasReviews,
+            'facets' => $productModel->stockFacets() + [
+                'on_sale' => count($productModel->liveDiscountMap()),
+                'best_seller' => count($productModel->bestSellerIds(Product::BEST_SELLER_LIMIT)),
+            ],
+            'bestSellerIds' => $productModel->bestSellerIds(Product::BEST_SELLER_LIMIT),
             'popularIds' => $productModel->popularIds(),
         ]);
     }

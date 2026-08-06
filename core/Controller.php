@@ -69,6 +69,13 @@ abstract class Controller
         return trim((string) ($_POST[$key] ?? $_GET[$key] ?? $default));
     }
 
+    /** A numeric query/form value, or null when absent or non-numeric — so a junk value filters nothing. */
+    protected function numericInput(string $key): ?float
+    {
+        $value = $this->input($key);
+        return $value !== '' && is_numeric($value) ? (float) $value : null;
+    }
+
     protected function isPost(): bool
     {
         return $_SERVER['REQUEST_METHOD'] === 'POST';
