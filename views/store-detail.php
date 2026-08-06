@@ -46,7 +46,7 @@ $extraScripts = ['js/pricing-countdown.js'];
       </div>
       <div class="col-lg-6">
         <span class="cat-tag"><?= e($product['category_name']) ?></span>
-        <?php if (strtotime($product['created_at']) >= strtotime('-14 days')): ?><span class="badge bg-info text-dark">New Arrival</span><?php endif; ?>
+        <?php if (!empty($product['created_at']) && strtotime($product['created_at']) >= strtotime('-30 days')): ?><span class="badge bg-info text-dark font-weight-semibold">New Arrival</span><?php endif; ?>
         <?php if ($isBestSeller): ?><span class="badge bg-primary">Best Seller</span><?php endif; ?>
         <?php if ($isPopular): ?><span class="badge" style="background:#ff6a1a">Popular</span><?php endif; ?>
         <h1 class="mt-2 mb-1"><?= e($product['name']) ?></h1>

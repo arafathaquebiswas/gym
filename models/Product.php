@@ -193,9 +193,9 @@ final class Product extends Model
     {
         $stmt = $this->db->query(
             "SELECT p.id, p.name, p.sku, p.barcode, p.selling_price, p.offer_price, p.offer_enabled,
-                    p.offer_start_date, p.offer_end_date, p.stock_qty, p.image, c.name AS category_name
+                    p.offer_start_date, p.offer_end_date, p.stock_qty, p.min_stock, p.image, c.name AS category_name
              FROM products p JOIN product_categories c ON c.id = p.category_id
-             WHERE p.status != 'draft' AND p.stock_qty > 0
+             WHERE p.status != 'draft'
              ORDER BY p.name ASC"
         );
         $products = array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
@@ -208,27 +208,44 @@ final class Product extends Model
         return $products;
     }
 
-    /** Top sellers by combined online + in-store quantity over the last 90 days. */
-    public function bestSellerIds(int $limit = 5): array
+    /** Top sellers by combined online + in-store completed sales. Only products with actual completed sales get selected. */
+    public function bestSellerIds(int $limit = 10): array
     {
-        $cutoff = date('Y-m-d H:i:s', strtotime('-90 days'));
         $stmt = $this->db->prepare(
             "SELECT product_id, SUM(qty) AS total_qty FROM (
                 SELECT oi.product_id, oi.qty FROM order_items oi
                 JOIN orders o ON o.id = oi.order_id
-                WHERE o.created_at >= :cutoff1
+                WHERE o.status IN ('completed', 'delivered')
                 UNION ALL
                 SELECT si.product_id, si.qty FROM sale_items si
                 JOIN sales s ON s.id = si.sale_id
-                WHERE s.sale_date >= :cutoff2
             ) combined
-            GROUP BY product_id ORDER BY total_qty DESC LIMIT :limit"
+            GROUP BY product_id
+            HAVING total_qty > 0
+            ORDER BY total_qty DESC
+            LIMIT :limit"
         );
-        $stmt->bindValue(':cutoff1', $cutoff);
-        $stmt->bindValue(':cutoff2', $cutoff);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return array_map('intval', array_column($stmt->fetchAll(), 'product_id'));
+    }
+
+    /** Full product models for Best Seller section */
+    public function bestSellerProducts(int $limit = 6): array
+    {
+        $ids = $this->bestSellerIds($limit);
+        if (!$ids) {
+            return [];
+        }
+        $inSql = implode(',', array_map('intval', $ids));
+        $stmt = $this->db->query(
+            "SELECT p.*, c.name AS category_name, c.slug AS category_slug, b.name AS brand_name, b.slug AS brand_slug
+             FROM products p
+             JOIN product_categories c ON c.id = p.category_id
+             LEFT JOIN brands b ON b.id = p.brand_id
+             WHERE p.id IN ($inSql) AND p.status = 'published'"
+        );
+        return array_map([$this, 'withComputedOffer'], $stmt->fetchAll());
     }
 
     /** Top sellers by combined online + in-store quantity over the last 90 days, with names attached (dashboard tile). */
@@ -268,10 +285,12 @@ final class Product extends Model
 
     public function relatedProducts(int $productId, int $categoryId, int $limit = 4): array
     {
+        $driver = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $randFunc = ($driver === 'sqlite') ? 'RANDOM()' : 'RAND()';
         $stmt = $this->db->prepare(
             "SELECT * FROM products
              WHERE category_id = :category_id AND id != :product_id AND status = 'published'
-             ORDER BY RAND() LIMIT :limit"
+             ORDER BY $randFunc LIMIT :limit"
         );
         $stmt->bindValue(':category_id', $categoryId, PDO::PARAM_INT);
         $stmt->bindValue(':product_id', $productId, PDO::PARAM_INT);
@@ -509,44 +528,48 @@ final class Product extends Model
             $product['discount_source'] = 'flash_sale';
             $product['discount_label'] = $flashSale['name'];
             $product['display_price'] = round((float) $product['selling_price'] * (1 - (float) $flashSale['discount_percent'] / 100), 2);
-            // MySQL DATETIME ("Y-m-d H:i:s") isn't reliably parsed by `new Date()` in every browser — ISO 8601 ("T" separator) is.
             $product['offer_ends_at'] = str_replace(' ', 'T', $flashSale['ends_at']);
-            return $product;
+        } else {
+            $now = new DateTimeImmutable();
+            $startOk = empty($product['offer_start_date']) || new DateTimeImmutable($product['offer_start_date']) <= $now;
+            $endOk = empty($product['offer_end_date']) || new DateTimeImmutable($product['offer_end_date']) > $now;
+            if ((bool) $product['offer_enabled'] && !empty($product['offer_price']) && $startOk && $endOk) {
+                $product['offer_is_live'] = true;
+                $product['discount_source'] = 'product_offer';
+                $product['display_price'] = (float) $product['offer_price'];
+                $product['offer_ends_at'] = $product['offer_end_date'];
+            } else {
+                $category = !empty($product['category_id']) ? (new ProductCategory())->find((int) $product['category_id']) : null;
+                if ($category && self::offerWindowLive($category)) {
+                    $product['offer_is_live'] = true;
+                    $product['discount_source'] = 'category_offer';
+                    $product['discount_label'] = $category['name'] . ' Sale';
+                    $product['display_price'] = round((float) $product['selling_price'] * (1 - (float) $category['offer_percent'] / 100), 2);
+                    $product['offer_ends_at'] = $category['offer_end_date'];
+                } else {
+                    $brand = !empty($product['brand_id']) ? (new Brand())->find((int) $product['brand_id']) : null;
+                    if ($brand && self::offerWindowLive($brand)) {
+                        $product['offer_is_live'] = true;
+                        $product['discount_source'] = 'brand_offer';
+                        $product['discount_label'] = $brand['name'] . ' Sale';
+                        $product['display_price'] = round((float) $product['selling_price'] * (1 - (float) $brand['offer_percent'] / 100), 2);
+                        $product['offer_ends_at'] = $brand['offer_end_date'];
+                    } else {
+                        $product['offer_is_live'] = false;
+                        $product['display_price'] = $product['selling_price'];
+                    }
+                }
+            }
         }
 
-        $now = new DateTimeImmutable();
-        $startOk = empty($product['offer_start_date']) || new DateTimeImmutable($product['offer_start_date']) <= $now;
-        $endOk = empty($product['offer_end_date']) || new DateTimeImmutable($product['offer_end_date']) > $now;
-        if ((bool) $product['offer_enabled'] && !empty($product['offer_price']) && $startOk && $endOk) {
-            $product['offer_is_live'] = true;
-            $product['discount_source'] = 'product_offer';
-            $product['display_price'] = (float) $product['offer_price'];
-            $product['offer_ends_at'] = $product['offer_end_date'];
-            return $product;
+        $regular = (float) ($product['selling_price'] ?? 0);
+        $display = (float) ($product['display_price'] ?? $regular);
+        if (!empty($product['offer_is_live']) && $regular > 0 && $display < $regular) {
+            $product['discount_percent'] = (int) round((($regular - $display) / $regular) * 100);
+        } else {
+            $product['discount_percent'] = 0;
         }
 
-        $category = !empty($product['category_id']) ? (new ProductCategory())->find((int) $product['category_id']) : null;
-        if ($category && self::offerWindowLive($category)) {
-            $product['offer_is_live'] = true;
-            $product['discount_source'] = 'category_offer';
-            $product['discount_label'] = $category['name'] . ' Sale';
-            $product['display_price'] = round((float) $product['selling_price'] * (1 - (float) $category['offer_percent'] / 100), 2);
-            $product['offer_ends_at'] = $category['offer_end_date'];
-            return $product;
-        }
-
-        $brand = !empty($product['brand_id']) ? (new Brand())->find((int) $product['brand_id']) : null;
-        if ($brand && self::offerWindowLive($brand)) {
-            $product['offer_is_live'] = true;
-            $product['discount_source'] = 'brand_offer';
-            $product['discount_label'] = $brand['name'] . ' Sale';
-            $product['display_price'] = round((float) $product['selling_price'] * (1 - (float) $brand['offer_percent'] / 100), 2);
-            $product['offer_ends_at'] = $brand['offer_end_date'];
-            return $product;
-        }
-
-        $product['offer_is_live'] = false;
-        $product['display_price'] = $product['selling_price'];
         return $product;
     }
 

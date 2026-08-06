@@ -183,37 +183,46 @@ $pageTitle = 'Home';
 <?php if (Feature::on('store')): ?>
 <section class="section bg-ps-black">
   <div class="container text-center">
-    <h2 class="section-title">From the Store</h2>
-    <p class="section-subtitle mx-auto">Supplements and gear to fuel your training.</p>
+    <h2 class="section-title"><i class="bi bi-fire text-orange me-2"></i>Featured &amp; Best Sellers</h2>
+    <p class="section-subtitle mx-auto">Top supplements and gym gear to fuel your training.</p>
     <div class="row g-4">
       <?php foreach (array_slice($products, 0, 4) as $product): ?>
       <div class="col-6 col-lg-3">
         <div class="glass-card product-card text-start">
           <a href="<?= url('/store/' . $product['slug']) ?>" class="text-decoration-none">
             <div class="product-thumb"><?= media_tile($product['image'], $product['name'], 'bi-box-seam') ?></div>
-            <div class="cat-tag"><?= e($product['brand_name'] ?? '') ?></div>
-            <h6 class="mb-1 text-white"><?= e($product['name']) ?></h6>
+            <div class="d-flex gap-1 flex-wrap mb-1">
+              <?php if (!empty($product['brand_name'])): ?><div class="cat-tag"><?= e($product['brand_name']) ?></div><?php endif; ?>
+              <?php if (!empty($product['is_featured'])): ?><span class="badge bg-warning text-dark fw-bold"><i class="bi bi-fire"></i> Best Seller</span><?php endif; ?>
+            </div>
+            <h6 class="mb-1 text-white fw-bold"><?= e($product['name']) ?></h6>
             <?php if (!empty($product['offer_is_live'])): ?>
-              <div class="price">৳<?= number_format((float) $product['display_price']) ?> <small class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></small></div>
+              <div class="price d-flex align-items-center flex-wrap gap-1">
+                <span class="text-orange fw-bold fs-5">৳<?= number_format((float) $product['display_price']) ?></span>
+                <small class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></small>
+                <?php if (!empty($product['discount_percent'])): ?>
+                  <span class="badge bg-danger fw-bold ms-1"><?= (int) $product['discount_percent'] ?>% OFF</span>
+                <?php endif; ?>
+              </div>
             <?php else: ?>
-              <div class="price">৳<?= number_format((float) $product['selling_price']) ?></div>
+              <div class="price text-white fw-bold fs-5">৳<?= number_format((float) $product['selling_price']) ?></div>
             <?php endif; ?>
           </a>
-          <?php if ((int) $product['stock_qty'] > 0 || ($product['allow_preorder'] && Feature::on('preorder'))): ?>
+          <?php if ((int) $product['stock_qty'] > 0): ?>
           <form method="post" action="<?= url('/cart/add') ?>" class="mt-2">
             <?= Security::csrfField() ?>
             <input type="hidden" name="product_id" value="<?= (int) $product['id'] ?>">
             <input type="hidden" name="qty" value="1">
-            <button type="submit" class="btn btn-ps-outline btn-sm w-100"><i class="bi bi-cart-plus"></i> Add to Cart</button>
+            <button type="submit" class="btn btn-ps-outline btn-sm w-100"><i class="bi bi-cart-plus"></i> Add to Cart (<?= (int) $product['stock_qty'] ?> in stock)</button>
           </form>
           <?php else: ?>
-          <span class="badge bg-danger mt-2">Out of Stock</span>
+          <span class="badge bg-danger mt-2 d-inline-block"><i class="bi bi-x-circle-fill me-1"></i> Out of Stock</span>
           <?php endif; ?>
         </div>
       </div>
       <?php endforeach; ?>
     </div>
-    <a href="<?= url('/store') ?>" class="btn btn-ps mt-4">Visit Store</a>
+    <a href="<?= url('/store') ?>" class="btn btn-ps mt-4">Visit Full Store</a>
   </div>
 </section>
 <?php endif; ?>

@@ -242,9 +242,13 @@
   memberSelect.addEventListener('change', () => { memberIdField.value = memberSelect.value; });
 
   function priceHtml(p) {
-    return p.offer_is_live
-      ? money(p.display_price) + '<s>' + money(p.selling_price) + '</s>'
-      : money(p.selling_price);
+    if (p.offer_is_live && Number(p.display_price) < Number(p.selling_price)) {
+      const pct = p.discount_percent || Math.round(((Number(p.selling_price) - Number(p.display_price)) / Number(p.selling_price)) * 100);
+      return `<small class="text-white-50 text-decoration-line-through me-1">${money(p.selling_price)}</small>
+              <span class="fw-bold text-warning">${money(p.display_price)}</span>
+              ${pct > 0 ? `<span class="badge bg-danger ms-1" style="font-size:0.65rem;">${pct}% OFF</span>` : ''}`;
+    }
+    return money(p.selling_price);
   }
 
   function renderChips() {
@@ -299,15 +303,20 @@
 
     grid.innerHTML = matches.slice(0, 90).map(p => {
       const isFav = favorites.includes(p.id);
+      const isOutOfStock = Number(p.stock_qty) <= 0;
+      const isLowStock = !isOutOfStock && Number(p.stock_qty) <= Number(p.min_stock || 5);
+      const stockClass = isOutOfStock ? 'text-danger fw-bold' : (isLowStock ? 'text-warning fw-bold' : 'text-success fw-semibold');
+      const stockBadgeText = isOutOfStock ? 'Out of Stock (0)' : `${p.stock_qty} in stock`;
+
       return `
-      <div class="pos-tile" data-id="${p.id}" onclick="window.posAddToCart(${p.id})">
+      <div class="pos-tile ${isOutOfStock ? 'opacity-75' : ''}" data-id="${p.id}" onclick="window.posAddToCart(${p.id})">
         <button type="button" class="pos-tile-fav ${isFav ? 'active' : ''}" data-action="fav" data-id="${p.id}" title="Favorite"><i class="bi ${isFav ? 'bi-star-fill' : 'bi-star'}"></i></button>
         <div class="pos-tile-thumb">${p.image_url ? `<img src="${escapeHtml(p.image_url)}" alt="">` : '<i class="bi bi-box-seam"></i>'}</div>
         ${p.offer_is_live ? '<span class="pos-tile-offer-badge">OFFER</span>' : ''}
         <div class="pos-tile-name">${escapeHtml(p.name)}</div>
         <div class="pos-tile-price">${priceHtml(p)}</div>
-        <div class="pos-tile-stock ${p.stock_qty <= 5 ? 'low' : ''}">${p.stock_qty} in stock</div>
-        <button type="button" class="btn btn-ps btn-sm pos-tile-add" data-action="add" data-id="${p.id}">Add to Cart</button>
+        <div class="pos-tile-stock ${stockClass}">${stockBadgeText}</div>
+        <button type="button" class="btn btn-ps btn-sm pos-tile-add" data-action="add" data-id="${p.id}" ${isOutOfStock ? 'disabled' : ''}>${isOutOfStock ? 'Out of Stock' : 'Add to Cart'}</button>
         <button type="button" class="pos-tile-details" data-action="details" data-id="${p.id}">Details</button>
       </div>
     `;

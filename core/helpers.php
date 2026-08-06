@@ -104,5 +104,5 @@ function media_tile(?string $relativePath, string $alt, string $iconClass = 'bi-
     if ($fallbackImage) {
         return '<img src="' . e($fallbackImage) . '" alt="' . e($alt) . '" class="photo-tile ' . e($class) . '" loading="lazy">';
     }
-    return '<div class="img-placeholder h-100"><i class="bi ' . e($iconClass) . '"></i></div>';
+    return '<div class="media-tile-fallback d-flex flex-column align-items-center justify-content-center h-100 text-center w-100 p-2" style="background:#f1f5f9; color:#94a3b8; border-radius:8px;"><i class="bi bi-camera-fill mb-1" style="font-size:1.8rem; color:#cbd5e1;"></i><span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:#64748b;">No Image Available</span></div>';
 }

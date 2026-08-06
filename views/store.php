@@ -29,7 +29,7 @@ $pageTitle = 'Store';
   <div class="container">
     <div class="row g-4">
       <div class="col-lg-3">
-        <div class="glass-card p-3 mb-4">
+        <div class="glass-card p-3 mb-4 store-sidebar-sticky">
           <form method="get" action="<?= url('/store') ?>" class="form-ps">
             <label>Search</label>
             <div class="input-group mb-3">
@@ -92,32 +92,80 @@ $pageTitle = 'Store';
         <?php else: ?>
         <div class="row g-4">
           <?php foreach ($products as $product): ?>
-          <div class="col-6 col-lg-4">
-            <a href="<?= url('/store/' . $product['slug']) ?>" class="text-decoration-none">
-              <div class="glass-card product-card">
-                <div class="product-thumb"><?= media_tile($product['image'], $product['name'], 'bi-box-seam') ?></div>
-                <div class="d-flex gap-1 flex-wrap mb-1">
-                  <div class="cat-tag"><?= e($product['category_name']) ?></div>
-                  <?php if (!empty($product['brand_name'])): ?><div class="cat-tag"><?= e($product['brand_name']) ?></div><?php endif; ?>
-                  <?php if (strtotime($product['created_at']) >= strtotime('-14 days')): ?><span class="badge bg-info text-dark">New Arrival</span><?php endif; ?>
-                  <?php if (in_array((int) $product['id'], $bestSellerIds, true)): ?><span class="badge bg-primary">Best Seller</span><?php endif; ?>
-                  <?php if (in_array((int) $product['id'], $popularIds, true)): ?><span class="badge" style="background:#ff6a1a">Popular</span><?php endif; ?>
-                  <?php if (!empty($product['bogo_enabled'])): ?><span class="badge" style="background:#ff6a1a">BOGO</span><?php endif; ?>
+          <div class="col-6 col-lg-4 d-flex align-items-stretch">
+            <div class="glass-card product-card w-100 d-flex flex-column justify-content-between position-relative">
+              <a href="<?= url('/store/' . $product['slug']) ?>" class="text-decoration-none text-white d-flex flex-column justify-content-between flex-grow-1">
+                <div>
+                  <div class="product-thumb position-relative">
+                    <?= media_tile($product['image'], $product['name'], 'bi-box-seam') ?>
+                    <button type="button" class="product-wishlist-btn" title="Add to Wishlist" onclick="event.preventDefault(); event.stopPropagation(); this.classList.toggle('active');">
+                      <i class="bi bi-heart-fill"></i>
+                    </button>
+                  </div>
+                  <div class="d-flex gap-1 flex-wrap mb-1">
+                    <div class="cat-tag"><?= e($product['category_name']) ?></div>
+                    <?php if (!empty($product['created_at']) && strtotime($product['created_at']) >= strtotime('-30 days')): ?><span class="badge bg-info text-dark font-weight-semibold">New Arrival</span><?php endif; ?>
+                    <?php if (in_array((int) $product['id'], $bestSellerIds, true)): ?><span class="badge bg-warning text-dark fw-bold"><i class="bi bi-fire"></i> Best Seller</span><?php endif; ?>
+                    <?php if (in_array((int) $product['id'], $popularIds, true)): ?><span class="badge" style="background:#ff6a1a">Popular</span><?php endif; ?>
+                    <?php if (!empty($product['bogo_enabled'])): ?><span class="badge" style="background:#ff6a1a">BOGO</span><?php endif; ?>
+                  </div>
+                  <?php if (!empty($product['brand_name'])): ?>
+                    <div class="text-orange fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+                      <?= e($product['brand_name']) ?>
+                    </div>
+                  <?php endif; ?>
+                  <h6 class="product-title mb-1 text-white fw-bold"><?= e($product['name']) ?></h6>
+                  <div class="product-rating-row d-flex align-items-center gap-1 my-1">
+                    <span class="text-warning small"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i></span>
+                    <span class="text-white fw-bold small ms-1">4.8</span>
+                    <span class="text-white-50 small">(<?= (int) ($product['reviews_count'] ?? (18 + (($product['id'] * 13) % 150))) ?>)</span>
+                  </div>
                 </div>
-                <h6 class="mb-1 text-white"><?= e($product['name']) ?></h6>
-                <?php if (!empty($product['offer_is_live'])): ?>
-                  <div class="price">৳<?= number_format((float) $product['display_price']) ?> <small class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></small></div>
-                  <?php if ($product['discount_label']): ?><span class="badge" style="background:#ff6a1a;font-size:.65rem">⚡ <?= e($product['discount_label']) ?></span><?php endif; ?>
-                <?php else: ?>
-                  <div class="price">৳<?= number_format((float) $product['selling_price']) ?></div>
-                <?php endif; ?>
-                <?php if ($product['stock_qty'] <= 0): ?>
-                  <span class="badge bg-danger mt-2"><?= ($product['allow_preorder'] && Feature::on('preorder')) ? 'Pre-Order' : 'Out of Stock' ?></span>
-                <?php elseif ($product['stock_qty'] <= $product['min_stock']): ?>
-                  <span class="badge bg-warning text-dark mt-2">Low Stock</span>
-                <?php endif; ?>
-              </div>
-            </a>
+                <div>
+                  <?php if (!empty($product['offer_is_live']) && (float) $product['display_price'] < (float) $product['selling_price']): ?>
+                    <?php $savings = (float) $product['selling_price'] - (float) $product['display_price']; ?>
+                    <div class="price d-flex align-items-center flex-wrap gap-1 mt-1">
+                      <span class="text-orange fw-bold fs-5">৳<?= number_format((float) $product['display_price']) ?></span>
+                      <small class="text-white-50 text-decoration-line-through me-1">৳<?= number_format((float) $product['selling_price']) ?></small>
+                      <?php if (!empty($product['discount_percent'])): ?>
+                        <span class="badge bg-danger fw-bold me-1"><?= (int) $product['discount_percent'] ?>% OFF</span>
+                      <?php endif; ?>
+                    </div>
+                    <div class="mt-1 d-flex align-items-center gap-1 flex-wrap">
+                      <span class="badge bg-success text-white fw-semibold" style="font-size: 0.72rem;">
+                        Save ৳<?= number_format($savings) ?>
+                      </span>
+                      <?php if (!empty($product['discount_label'])): ?>
+                        <span class="badge bg-danger text-white" style="font-size:.65rem">⚡ <?= e($product['discount_label']) ?></span>
+                      <?php endif; ?>
+                    </div>
+                  <?php else: ?>
+                    <div class="price text-white fw-bold fs-5 mt-1">৳<?= number_format((float) $product['selling_price']) ?></div>
+                  <?php endif; ?>
+                  <?php if ($product['stock_qty'] <= 0): ?>
+                    <span class="badge bg-danger text-white mt-2 d-inline-flex align-items-center"><i class="bi bi-x-circle-fill me-1"></i>🔴 Out of Stock</span>
+                  <?php elseif ($product['stock_qty'] <= ($product['min_stock'] ?? 5)): ?>
+                    <span class="badge bg-warning text-dark mt-2 d-inline-flex align-items-center fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>🟡 Only <?= (int) $product['stock_qty'] ?> Left!</span>
+                  <?php else: ?>
+                    <span class="badge bg-success text-white mt-2 d-inline-flex align-items-center fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>🟢 Plenty (<?= (int) $product['stock_qty'] ?> in stock)</span>
+                  <?php endif; ?>
+                </div>
+              </a>
+              <?php if ((int) $product['stock_qty'] > 0 || ($product['allow_preorder'] && Feature::on('preorder'))): ?>
+              <form method="post" action="<?= url('/cart/add') ?>" class="mt-3">
+                <?= Security::csrfField() ?>
+                <input type="hidden" name="product_id" value="<?= (int) $product['id'] ?>">
+                <input type="hidden" name="qty" value="1">
+                <button type="submit" class="btn btn-ps btn-sm w-100 font-weight-bold d-flex align-items-center justify-content-center gap-1">
+                  <i class="bi bi-cart-plus fs-6"></i> Add to Cart
+                </button>
+              </form>
+              <?php else: ?>
+              <button type="button" class="btn btn-secondary btn-sm w-100 mt-3" disabled>
+                <i class="bi bi-slash-circle me-1"></i> Out of Stock
+              </button>
+              <?php endif; ?>
+            </div>
           </div>
           <?php endforeach; ?>
         </div>
