@@ -14,5 +14,8 @@ spl_autoload_register(function (string $class): void {
     }
 });
 
+// Registered before anything else can fail, so nothing reaches a visitor raw.
+ErrorHandler::register();
+
 Security::startSecureSession();
 Security::sendSecurityHeaders();

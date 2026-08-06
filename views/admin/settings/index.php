@@ -60,7 +60,7 @@ $yn = function (string $key, string $default = '1') use ($settings) {
           </div>
           <div class="col-md-6">
             <label>Facebook URL</label>
-            <input type="url" name="facebook_url" class="form-control" value="<?= $v('facebook_url') ?>">
+            <input type="url" name="facebook_url" class="form-control" value="<?= $v('facebook_url', 'https://www.facebook.com/profile.php?id=100063639069967') ?>">
           </div>
           <div class="col-md-6">
             <label>Instagram URL</label>

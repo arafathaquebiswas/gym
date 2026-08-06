@@ -8,14 +8,13 @@
         </h5>
         <p><?= e($settings['gym_tagline'] ?? 'Train Hard. Surge Ahead.') ?></p>
         <div class="mt-3">
-          <?php if (!empty($settings['facebook_url'])): ?>
-          <a href="<?= e($settings['facebook_url']) ?>" class="social-btn"><i class="bi bi-facebook"></i></a>
-          <?php endif; ?>
+          <?php $fbUrl = !empty($settings['facebook_url']) ? $settings['facebook_url'] : 'https://www.facebook.com/profile.php?id=100063639069967'; ?>
+          <a href="<?= e($fbUrl) ?>" class="social-btn" target="_blank" rel="noopener" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
           <?php if (!empty($settings['instagram_url'])): ?>
-          <a href="<?= e($settings['instagram_url']) ?>" class="social-btn"><i class="bi bi-instagram"></i></a>
+          <a href="<?= e($settings['instagram_url']) ?>" class="social-btn" target="_blank" rel="noopener" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
           <?php endif; ?>
           <?php if (!empty($settings['whatsapp_number'])): ?>
-          <a href="https://wa.me/<?= e(preg_replace('/\D/', '', $settings['whatsapp_number'])) ?>" class="social-btn"><i class="bi bi-whatsapp"></i></a>
+          <a href="https://wa.me/<?= e(preg_replace('/\D/', '', $settings['whatsapp_number'])) ?>" class="social-btn" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a>
           <?php endif; ?>
         </div>
       </div>

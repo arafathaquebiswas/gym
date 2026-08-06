@@ -3,7 +3,7 @@
 RewriteEngine On
 
 # Block direct access to internal application folders
-RewriteRule ^(config|core|models|controllers|database|vendor)/ - [F,L]
+RewriteRule ^(config|core|models|controllers|database|vendor|views|logs)/ - [F,L]
 
 # Never serve dotfiles (.env, .git, etc.)
 RewriteRule (^|/)\. - [F,L]

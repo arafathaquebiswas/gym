@@ -189,7 +189,7 @@ INSERT INTO settings (setting_key, setting_value) VALUES
 ('gym_email', ''),
 ('gym_address', ''),
 ('business_hours', 'Sat–Thu: 7:00 AM – 11:00 PM | Fri: 5:00 PM – 10:00 PM'),
-('facebook_url', ''),
+('facebook_url', 'https://www.facebook.com/profile.php?id=100063639069967'),
 ('instagram_url', 'https://instagram.com/powersurge_gym_01'),
 ('whatsapp_number', '+8801904485009'),
 ('currency', 'BDT'),
