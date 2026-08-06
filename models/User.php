@@ -4,10 +4,11 @@ final class User extends Model
 {
     public function findByEmail(string $email): ?array
     {
+        $email = strtolower(trim($email));
         $stmt = $this->db->prepare(
             'SELECT u.*, r.slug AS role_slug, r.name AS role_name
              FROM users u JOIN roles r ON r.id = u.role_id
-             WHERE u.email = :email LIMIT 1'
+             WHERE LOWER(u.email) = :email LIMIT 1'
         );
         $stmt->execute(['email' => $email]);
         $user = $stmt->fetch();
@@ -38,7 +39,8 @@ final class User extends Model
 
     public function emailExists(string $email): bool
     {
-        $stmt = $this->db->prepare('SELECT COUNT(*) FROM users WHERE email = :email');
+        $email = strtolower(trim($email));
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM users WHERE LOWER(email) = :email');
         $stmt->execute(['email' => $email]);
         return (int) $stmt->fetchColumn() > 0;
     }
@@ -55,6 +57,8 @@ final class User extends Model
 
     public function create(string $name, string $email, string $phone, string $password, string $roleSlug = 'member'): int
     {
+        $email = strtolower(trim($email));
+
         // Resolved up front rather than inline as a sub-select: an unknown slug
         // would otherwise insert NULL and surface as a bare NOT NULL violation
         // on users.role_id, which names neither the role nor the real cause.
@@ -112,6 +116,9 @@ final class User extends Model
         $fields = array_intersect_key($data, array_flip(self::WRITABLE_FIELDS));
         if (!$fields) {
             return;
+        }
+        if (isset($fields['email'])) {
+            $fields['email'] = strtolower(trim($fields['email']));
         }
         $set = implode(', ', array_map(fn ($c) => "$c = :$c", array_keys($fields)));
         $fields['id'] = $id;
