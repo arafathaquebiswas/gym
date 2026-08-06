@@ -123,7 +123,7 @@ $pageTitle = 'Home';
   </div>
 </section>
 
-TRAINERS
+
 <?php if (Feature::trainerDisplayOn()): ?>
 <section class="section">
   <div class="container text-center">
