@@ -49,10 +49,24 @@ profile/password-change screen; until then, update the `password_hash`
 column directly with a fresh `password_hash()` value).
 
 ## 3. Configure
-Edit `config/config.php` (DB credentials, `APP_URL`, SMTP settings). All
-values can also be supplied via environment variables (`DB_HOST`, `DB_USER`,
-`DB_PASS`, `SMTP_HOST`, etc.) — useful on Hostinger where you set these in
-the hosting panel instead of committing secrets to a file.
+Credentials are **not** kept in `config/config.php` (that file is committed).
+Copy `config/env.example.php` and fill it in — both copies are git-ignored:
+
+| File | Where it lives | Purpose |
+|---|---|---|
+| `config/env.local.php` | your machine only | development settings; never uploaded |
+| `config/env.php` | the server | the live site's settings |
+
+`config.php` reads real environment variables first, then `env.local.php`,
+then `env.php`, then falls back to development defaults. Because
+`env.local.php` is never uploaded, the server resolves to `env.php` on its
+own — and this works under PHP-CLI (Hostinger cron jobs) as well as the web
+server, which hostname sniffing would not.
+
+Set `'APP_ENV' => 'production'` on the live site. That switches off on-screen
+error output (logging to `logs/php-error.log` instead) and makes a failed
+database connection raise an error rather than silently falling back to the
+local SQLite file.
 
 Without SMTP configured, `Mailer::send()` no-ops and logs to
 `logs/php-error.log` — the contact form and registration still work, they
@@ -76,10 +90,19 @@ Visit http://localhost:8000
 1. Upload the entire project to `public_html` (or a subdomain's document
    root) via File Manager or FTP — the whole repo, not just a `/public`
    subfolder, since `.htaccess` protects the internal folders in place.
-2. Create a MySQL database + user from hPanel, then import
-   `database/schema.sql` and `database/seed.sql` via phpMyAdmin.
-3. Update `config/config.php` with the Hostinger DB credentials and your
-   real domain in `APP_URL`.
+   Do **not** upload `database/gym.sqlite`.
+2. Import `database/hostinger_import.sql` through phpMyAdmin, selecting the
+   database hPanel already created for you.
+
+   Do not run `database/schema.sql` directly on shared hosting: it starts with
+   `CREATE DATABASE` / `USE`, and a shared-hosting MySQL user has no privilege
+   to create databases, so phpMyAdmin rejects it with
+   `#1044 - Access denied for user '...' to database '...'`. Hostinger has
+   already created the database — you only ever import *into* it.
+   `hostinger_import.sql` is that same schema with those two statements removed,
+   plus the catalogue/content data and no demo transactions.
+3. Upload `config/env.php` with the Hostinger DB name, user and password, and
+   your real domain in `APP_URL` (see step 3 above).
 4. Run `composer install` via Hostinger's SSH access (or upload the
    `vendor/` folder from your machine if SSH isn't available).
 5. Confirm PHP version is 8.1+ in hPanel → Advanced → PHP Configuration.

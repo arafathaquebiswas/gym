@@ -29,7 +29,18 @@ final class Database
                         PDO::ATTR_EMULATE_PREPARES => false,
                     ]);
                 } catch (PDOException $e) {
-                    // Fall back to SQLite if MySQL fails
+                    // In production a failed connection must be loud. Falling back
+                    // would serve the live site from an empty SQLite file — and
+                    // setup_sqlite.php would seed it with default admin accounts.
+                    if (defined('APP_ENV') && APP_ENV === 'production') {
+                        error_log('Database connection failed: ' . $e->getMessage());
+                        throw new RuntimeException(
+                            'Database connection failed. Check the credentials in config/env.php.',
+                            0,
+                            $e
+                        );
+                    }
+                    // Development only: fall back to SQLite so local work continues.
                     $driver = 'sqlite';
                 }
             }

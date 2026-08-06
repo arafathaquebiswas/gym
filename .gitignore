@@ -1,0 +1,19 @@
+# Credentials — never commit
+config/env.php
+config/env.local.php
+
+# Databases and dumps: these carry admin password hashes and customer data
+database/gym.sqlite
+database/hostinger_import.sql
+
+# Runtime
+logs/*.log
+.DS_Store
+
+# Member/customer uploads (keep the folder scaffolding, not the files)
+uploads/**
+!uploads/**/
+!uploads/**/.gitkeep
+!uploads/.htaccess
+
+# vendor/ is deliberately committed: Hostinger shared hosting has no composer.

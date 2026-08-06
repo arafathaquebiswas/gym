@@ -807,6 +807,8 @@ CREATE TABLE orders (
     INDEX idx_orders_delivery_person (delivery_person_id)
 ) ENGINE=InnoDB;
 
+-- coupon_usages declares order_id in its CREATE TABLE above, but the FK could not be
+-- attached there because `orders` did not exist yet. Add only the constraint here.
 ALTER TABLE coupon_usages
     ADD CONSTRAINT fk_coupon_usages_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
 
@@ -824,11 +826,6 @@ CREATE TABLE order_items (
     CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
     INDEX idx_order_items_order (order_id)
 ) ENGINE=InnoDB;
-
--- coupon_usages is defined earlier (before orders existed) — add the online-order link now.
-ALTER TABLE coupon_usages
-    ADD COLUMN order_id INT UNSIGNED NULL AFTER subscription_id,
-    ADD CONSTRAINT fk_coupon_usages_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL;
 
 CREATE TABLE shopping_cart (
     id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -1019,6 +1016,23 @@ CREATE TABLE free_trial_registrations (
     phone       VARCHAR(30) NOT NULL,
     email       VARCHAR(150) NULL,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- Mirrors the DDL in models/Notification.php::ensureTableExists(), which
+-- creates this table at runtime if it is missing.
+CREATE TABLE notifications (
+    id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT UNSIGNED NOT NULL,
+    title       VARCHAR(200) NOT NULL,
+    message     TEXT NOT NULL,
+    link        VARCHAR(255) NULL,
+    type        VARCHAR(50) NOT NULL DEFAULT 'order',
+    category    VARCHAR(50) NOT NULL DEFAULT 'order',
+    is_read     TINYINT(1) NOT NULL DEFAULT 0,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_notif_user_read (user_id, is_read, created_at),
+    INDEX idx_notif_user_cat  (user_id, category, created_at)
 ) ENGINE=InnoDB;
 
 SET FOREIGN_KEY_CHECKS = 1;
