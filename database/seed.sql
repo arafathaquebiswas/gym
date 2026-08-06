@@ -6,13 +6,19 @@
 USE gym_powersurge;
 
 -- ---- Roles ----------------------------------------------------
+-- Every slug the application resolves must exist here. User::create() looks a
+-- role up by slug, so a missing row makes account creation for that role fail
+-- outright — keep this list in step with the roles referenced in PHP.
 INSERT INTO roles (slug, name) VALUES
 ('super_admin', 'Super Admin'),
 ('admin', 'Admin'),
 ('receptionist', 'Receptionist'),
 ('trainer', 'Trainer'),
 ('store_manager', 'Store Manager'),
-('member', 'Member');
+('member', 'Member'),
+('delivery', 'Delivery Staff'),
+('main_admin', 'Main Admin'),
+('staff', 'Staff');
 
 -- ---- Default Super Admin ---------------------------------------
 -- Default password: Admin@12345  (CHANGE IMMEDIATELY AFTER FIRST LOGIN)

@@ -43,14 +43,35 @@ final class User extends Model
         return (int) $stmt->fetchColumn() > 0;
     }
 
+    /** The role id for a slug, or null when no such role exists. */
+    public function roleId(string $slug): ?int
+    {
+        $stmt = $this->db->prepare('SELECT id FROM roles WHERE slug = :slug LIMIT 1');
+        $stmt->execute(['slug' => $slug]);
+        $id = $stmt->fetchColumn();
+
+        return $id === false ? null : (int) $id;
+    }
+
     public function create(string $name, string $email, string $phone, string $password, string $roleSlug = 'member'): int
     {
+        // Resolved up front rather than inline as a sub-select: an unknown slug
+        // would otherwise insert NULL and surface as a bare NOT NULL violation
+        // on users.role_id, which names neither the role nor the real cause.
+        $roleId = $this->roleId($roleSlug);
+        if ($roleId === null) {
+            throw new RuntimeException(
+                "Cannot create the account: the '$roleSlug' role is missing from the roles table. "
+                . 'Apply database/migrations/20260806_add_missing_roles.sql.'
+            );
+        }
+
         $stmt = $this->db->prepare(
             'INSERT INTO users (role_id, name, email, phone, password_hash, status, created_at)
-             VALUES ((SELECT id FROM roles WHERE slug = :role), :name, :email, :phone, :password, "active", NOW())'
+             VALUES (:role_id, :name, :email, :phone, :password, \'active\', NOW())'
         );
         $stmt->execute([
-            'role' => $roleSlug,
+            'role_id' => $roleId,
             'name' => $name,
             'email' => $email,
             'phone' => $phone,
