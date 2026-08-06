@@ -73,7 +73,10 @@ final class Sale extends Model
                     'unit_price' => $line['unit_price'],
                     'subtotal' => round($line['unit_price'] * $line['qty'], 2),
                 ]);
-                // trg_sale_items_after_insert decrements products.stock_qty automatically.
+
+                $this->db->prepare('UPDATE products SET stock_qty = stock_qty - :qty WHERE id = :product_id')
+                    ->execute(['qty' => (int) $line['qty'], 'product_id' => (int) $line['product_id']]);
+
                 $stockMovementModel->record((int) $line['product_id'], -(int) $line['qty'], 'sale', $saleId, 'POS sale', $soldBy);
                 if ($productBefore) {
                     LowStockAlerter::checkAndNotify($productBefore, (int) $productBefore['stock_qty'] - (int) $line['qty']);

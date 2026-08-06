@@ -27,7 +27,7 @@ $phone = $order['account_phone'] ?? $order['guest_phone'] ?? '';
       <?php if ($order['fulfillment_method'] === 'delivery'): ?>
       <p class="mb-3 d-flex gap-2 flex-wrap">
         <a href="https://www.google.com/maps/dir/?api=1&destination=<?= urlencode($order['delivery_address'] . ', ' . $order['delivery_city']) ?>" target="_blank" rel="noopener" class="btn btn-ps-outline btn-sm"><i class="bi bi-signpost-2"></i> Directions</a>
-        <a href="<?= url('/delivery/orders/' . $order['id'] . '/delivery-label') ?>" target="_blank" class="btn btn-ps btn-sm"><i class="bi bi-tag"></i> Print Delivery Label</a>
+        <button type="button" onclick="printUrlSilently('<?= url('/delivery/orders/' . $order['id'] . '/delivery-label') ?>', this)" class="btn btn-ps btn-sm"><i class="bi bi-tag"></i> Print Delivery Label</button>
       </p>
       <?php endif; ?>
 

@@ -597,8 +597,22 @@ final class Order extends Model
 
     private function generateOrderNo(): string
     {
-        $stmt = $this->db->query('SELECT COUNT(*) FROM orders WHERE DATE(created_at) = CURDATE()');
+        $dateStr = date('Ymd');
+        $stmt = $this->db->query("SELECT COUNT(*) FROM orders WHERE order_no LIKE 'ORD-$dateStr-%'");
         $seq = (int) $stmt->fetchColumn() + 1;
-        return 'ORD-' . date('Ymd') . '-' . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+        $orderNo = 'ORD-' . $dateStr . '-' . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+
+        while ($this->orderNoExists($orderNo)) {
+            $seq++;
+            $orderNo = 'ORD-' . $dateStr . '-' . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+        }
+        return $orderNo;
+    }
+
+    private function orderNoExists(string $orderNo): bool
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM orders WHERE order_no = :order_no');
+        $stmt->execute(['order_no' => $orderNo]);
+        return (int) $stmt->fetchColumn() > 0;
     }
 }

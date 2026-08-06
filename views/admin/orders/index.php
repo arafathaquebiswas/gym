@@ -89,8 +89,9 @@ $statusColors = ['pending' => 'secondary', 'confirmed' => 'info', 'preparing' =>
           <td><span class="badge text-bg-<?= $statusColors[$order['status']] ?? 'secondary' ?>"><?= e(ucfirst(str_replace('_', ' ', $order['status']))) ?></span></td>
           <td>
             <a href="<?= url('/admin/orders/' . $order['id']) ?>" class="btn btn-ps-outline btn-sm">View</a>
+            <button type="button" onclick="printUrlSilently('<?= url('/admin/orders/' . $order['id'] . '/receipt') ?>', this)" class="btn btn-ps-outline btn-sm" title="Print Invoice"><i class="bi bi-printer"></i></button>
             <?php if ($order['fulfillment_method'] === 'delivery'): ?>
-            <a href="<?= url('/admin/orders/' . $order['id'] . '/delivery-label') ?>" class="btn btn-ps btn-sm" target="_blank" title="Print Delivery Label"><i class="bi bi-tag"></i></a>
+            <button type="button" onclick="printUrlSilently('<?= url('/admin/orders/' . $order['id'] . '/delivery-label') ?>', this)" class="btn btn-ps btn-sm" title="Print Delivery Label"><i class="bi bi-tag"></i></button>
             <?php endif; ?>
           </td>
         </tr>

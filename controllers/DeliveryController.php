@@ -95,11 +95,9 @@ final class DeliveryController extends Controller
             'user_agent'  => $userAgent,
         ]);
 
-        $this->deliveryView('delivery-label', [
-            'pageTitle' => 'Delivery Label — ' . $order['order_no'],
-            'order'     => $order,
-            'items'     => $items,
-        ]);
+        $pageTitle = 'Delivery Label — ' . $order['order_no'];
+        extract(['pageTitle' => $pageTitle, 'order' => $order, 'items' => $items]);
+        require BASE_PATH . '/views/admin/orders/delivery-label.php';
     }
 
     public function history(): void

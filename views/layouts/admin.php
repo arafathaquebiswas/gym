@@ -472,9 +472,103 @@ $childIsActive = function (array $child) use ($currentPath): bool {
       .catch(function() {});
   }
 
-  fetchNotifications();
-  setInterval(fetchNotifications, 20000);
-})();
+window.printUrlSilently = function(url, btnElement) {
+  var originalHtml = '';
+  if (btnElement) {
+    originalHtml = btnElement.innerHTML;
+    btnElement.disabled = true;
+    btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Printing...';
+  }
+
+  var iframe = document.getElementById('ps-silent-print-iframe');
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.id = 'ps-silent-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '-9999px';
+    iframe.style.bottom = '-9999px';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+  }
+
+  var hasPrinted = false;
+  function triggerPrint() {
+    if (hasPrinted) return;
+    hasPrinted = true;
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (err) {
+      console.error('Silent print error:', err);
+      window.open(url, '_blank');
+    } finally {
+      if (btnElement) {
+        setTimeout(function() {
+          btnElement.disabled = false;
+          btnElement.innerHTML = originalHtml;
+        }, 1000);
+      }
+    }
+  }
+
+  iframe.onload = function() {
+    setTimeout(triggerPrint, 300);
+  };
+
+  iframe.src = url;
+};
+</script>
+
+<!-- Universal Print Modal -->
+<div class="modal fade" id="psPrintModal" tabindex="-1" aria-labelledby="psPrintModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content bg-dark text-white border-secondary shadow-lg">
+      <div class="modal-header border-secondary bg-slate-900 py-2 px-3 justify-content-between">
+        <h6 class="modal-title font-weight-bold text-white d-flex align-items-center gap-2 mb-0" id="psPrintModalLabel">
+          <i class="bi bi-printer-fill text-warning fs-5"></i> <span id="psPrintModalTitle">Print Document</span>
+        </h6>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-warning font-weight-bold px-3 shadow-sm" id="psPrintModalBtn">
+            <i class="bi bi-printer-fill me-1"></i> Print Now (A4)
+          </button>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+      </div>
+      <div class="modal-body p-0" style="height: 78vh;">
+        <iframe id="psPrintModalIframe" style="width: 100%; height: 100%; border: 0; background: #f1f5f9;"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.openPrintModal = function(url, title) {
+  var modalEl = document.getElementById('psPrintModal');
+  var iframe = document.getElementById('psPrintModalIframe');
+  var titleEl = document.getElementById('psPrintModalTitle');
+  var printBtn = document.getElementById('psPrintModalBtn');
+
+  if (!modalEl || !iframe) return;
+
+  if (titleEl) titleEl.textContent = title || 'Print Document';
+
+  var printUrl = url + (url.indexOf('?') === -1 ? '?' : '&') + 'autoprint=1';
+  iframe.src = printUrl;
+
+  printBtn.onclick = function() {
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch(e) {
+      window.open(printUrl, '_blank');
+    }
+  };
+
+  var bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bsModal.show();
+};
 </script>
 </body>
 </html>

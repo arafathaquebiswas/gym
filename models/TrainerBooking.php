@@ -103,7 +103,7 @@ final class TrainerBooking extends Model
         $stmt = $this->db->prepare(
             "SELECT b.*, t.name AS trainer_name, t.slug AS trainer_slug
              FROM trainer_booking b JOIN trainers t ON t.id = b.trainer_id
-             WHERE b.member_id = :member_id AND b.status = 'confirmed' AND b.booking_date >= CURDATE()
+             WHERE b.member_id = :member_id AND b.status = 'confirmed' AND b.booking_date >= CURRENT_DATE
              ORDER BY b.booking_date ASC, b.start_time ASC"
         );
         $stmt->execute(['member_id' => $memberId]);
@@ -118,7 +118,7 @@ final class TrainerBooking extends Model
              FROM trainer_booking b
              JOIN members m ON m.id = b.member_id
              JOIN users u ON u.id = m.user_id
-             WHERE b.trainer_id = :trainer_id AND b.status = 'confirmed' AND b.booking_date >= CURDATE()
+             WHERE b.trainer_id = :trainer_id AND b.status = 'confirmed' AND b.booking_date >= CURRENT_DATE
              ORDER BY b.booking_date ASC, b.start_time ASC"
         );
         $stmt->execute(['trainer_id' => $trainerId]);
@@ -129,7 +129,7 @@ final class TrainerBooking extends Model
     public function upcomingCount(): int
     {
         return (int) $this->db->query(
-            "SELECT COUNT(*) FROM trainer_booking WHERE status = 'confirmed' AND booking_date >= CURDATE()"
+            "SELECT COUNT(*) FROM trainer_booking WHERE status = 'confirmed' AND booking_date >= CURRENT_DATE"
         )->fetchColumn();
     }
 }

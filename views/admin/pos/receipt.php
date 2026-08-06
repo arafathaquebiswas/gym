@@ -244,11 +244,13 @@ $paymentStatusLabel = strtoupper((string) $sale['payment_status']);
       border: none !important;
     }
     .invoice-wrapper {
-      width: 190mm !important;
-      max-width: 190mm !important;
-      margin: 0 auto !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
       padding: 0 !important;
       box-shadow: none !important;
+      border: none !important;
+      background: #ffffff !important;
     }
     .invoice-table thead {
       display: table-header-group !important;

@@ -127,11 +127,12 @@ foreach ($items as $item) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Delivery Label — <?= e($orderNo) ?></title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <style>
     /* ── Screen wrapper ─────────────────────────────────── */
     @media screen {
-      body { background: #f3f4f6; font-family: 'Inter', Arial, sans-serif; margin: 0; padding: 20px; }
+      body { background: #f1f5f9; font-family: 'Inter', Arial, sans-serif; margin: 0; padding: 0; }
       .dl-no-print { display: flex; gap: 10px; max-width: 794px; margin: 0 auto 16px; }
       .dl-wrap { max-width: 794px; margin: 0 auto; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.12); border-radius: 6px; padding: 20px; }
     }
@@ -171,6 +172,8 @@ foreach ($items as $item) {
         padding: 0 !important;
         box-shadow: none !important;
         border-radius: 0 !important;
+        border: none !important;
+        background: #ffffff !important;
       }
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
@@ -362,16 +365,25 @@ foreach ($items as $item) {
 <body>
 
 <!-- ── Screen-only toolbar ─────────────────────────────────────────────── -->
-<div class="dl-no-print">
-  <a href="<?= url('/admin/orders/' . $orderId) ?>" class="btn btn-ps-outline btn-sm">
-    <i class="bi bi-arrow-left"></i> Back to Order
-  </a>
-  <button type="button" class="btn btn-ps btn-sm" onclick="window.print()">
-    <i class="bi bi-printer"></i> Print Delivery Label
-  </button>
-  <button type="button" class="btn btn-ps-outline btn-sm" onclick="downloadPdf()">
-    <i class="bi bi-file-earmark-pdf"></i> Download PDF
-  </button>
+<div class="print-control-bar dl-no-print" style="background: #0f172a; color: #fff; padding: 12px 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 24px;">
+  <div class="container-fluid max-w-6xl d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-3">
+      <a href="<?= url('/admin/orders/' . $orderId) ?>" class="btn btn-sm btn-outline-light d-inline-flex align-items-center gap-1">
+        <i class="bi bi-arrow-left"></i> Back to Order
+      </a>
+      <span class="badge bg-secondary font-monospace px-2.5 py-1.5 fs-7">
+        Label #<?= e($labelNo) ?>
+      </span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button type="button" onclick="window.print()" class="btn btn-sm btn-warning font-weight-bold d-inline-flex align-items-center gap-1.5 shadow-sm px-3">
+        <i class="bi bi-printer-fill"></i> Print Delivery Label
+      </button>
+      <button type="button" onclick="downloadPdf()" class="btn btn-sm btn-outline-light d-inline-flex align-items-center gap-1">
+        <i class="bi bi-file-earmark-pdf"></i> Download PDF
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Label wrapper ───────────────────────────────────────────────────── -->
@@ -568,13 +580,16 @@ foreach ($items as $item) {
 
 <script>
 function downloadPdf() {
-  // Trigger browser Save-as-PDF via print dialog
-  // The @page CSS ensures A4 format with correct margins
   var btn = document.querySelector('[onclick="downloadPdf()"]');
   if (btn) { btn.innerHTML = '<i class="bi bi-hourglass"></i> Opening PDF...'; }
   setTimeout(function() { window.print(); }, 200);
 }
-</script>
 
+if (window.location.search.indexOf('autoprint=1') !== -1 || window.location.search.indexOf('print=1') !== -1) {
+  window.onload = function() {
+    setTimeout(function() { window.print(); }, 250);
+  };
+}
+</script>
 </body>
 </html>

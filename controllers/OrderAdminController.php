@@ -295,11 +295,9 @@ final class OrderAdminController extends AdminController
             }
         }
 
-        $this->adminView('orders/receipt', [
-            'pageTitle' => 'Invoice — ' . $order['order_no'],
-            'order' => $order,
-            'items' => $items,
-        ]);
+        $pageTitle = 'Invoice — ' . $order['order_no'];
+        extract(['pageTitle' => $pageTitle, 'order' => $order, 'items' => $items]);
+        require BASE_PATH . '/views/admin/orders/receipt.php';
     }
 
     public function deliveryLabel(string $id): void
@@ -340,11 +338,9 @@ final class OrderAdminController extends AdminController
             'user_agent' => $userAgent,
         ]);
 
-        $this->adminView('orders/delivery-label', [
-            'pageTitle' => 'Delivery Label — ' . $order['order_no'],
-            'order'     => $order,
-            'items'     => $items,
-        ]);
+        $pageTitle = 'Delivery Label — ' . $order['order_no'];
+        extract(['pageTitle' => $pageTitle, 'order' => $order, 'items' => $items]);
+        require BASE_PATH . '/views/admin/orders/delivery-label.php';
     }
 
     public function pdf(string $id): void

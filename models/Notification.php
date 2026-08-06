@@ -25,37 +25,41 @@ final class Notification extends Model
     private function ensureTableExists(): void
     {
         try {
-            $this->db->exec(
-                "CREATE TABLE IF NOT EXISTS notifications (
-                    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                    user_id INT UNSIGNED NOT NULL,
-                    title VARCHAR(200) NOT NULL,
-                    message TEXT NOT NULL,
-                    link VARCHAR(255) NULL,
-                    type VARCHAR(50) NOT NULL DEFAULT 'order',
-                    category VARCHAR(50) NOT NULL DEFAULT 'order',
-                    is_read TINYINT(1) NOT NULL DEFAULT 0,
-                    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    INDEX idx_notif_user_read (user_id, is_read, created_at),
-                    INDEX idx_notif_user_cat  (user_id, category, created_at)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
-            );
-
-            // Migrate: add category column if missing (safe ALTER)
-            $cols = array_column(
-                $this->db->query("SHOW COLUMNS FROM notifications")->fetchAll(),
-                'Field'
-            );
-            if (!in_array('category', $cols, true)) {
+            $driver = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
                 $this->db->exec(
-                    "ALTER TABLE notifications ADD COLUMN category VARCHAR(50) NOT NULL DEFAULT 'order'
-                     AFTER type,
-                     ADD INDEX idx_notif_user_cat (user_id, category, created_at)"
+                    "CREATE TABLE IF NOT EXISTS notifications (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        title TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        link TEXT NULL,
+                        type TEXT NOT NULL DEFAULT 'order',
+                        category TEXT NOT NULL DEFAULT 'order',
+                        is_read INTEGER NOT NULL DEFAULT 0,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    )"
+                );
+            } else {
+                $this->db->exec(
+                    "CREATE TABLE IF NOT EXISTS notifications (
+                        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                        user_id INT UNSIGNED NOT NULL,
+                        title VARCHAR(200) NOT NULL,
+                        message TEXT NOT NULL,
+                        link VARCHAR(255) NULL,
+                        type VARCHAR(50) NOT NULL DEFAULT 'order',
+                        category VARCHAR(50) NOT NULL DEFAULT 'order',
+                        is_read TINYINT(1) NOT NULL DEFAULT 0,
+                        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                        INDEX idx_notif_user_read (user_id, is_read, created_at),
+                        INDEX idx_notif_user_cat  (user_id, category, created_at)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;"
                 );
             }
         } catch (Throwable) {
-            // Ignore: table already exists or constraint conflict
+            // Ignore: table already exists
         }
     }
 

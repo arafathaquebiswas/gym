@@ -89,11 +89,9 @@ final class PosController extends AdminController
 
         $items = $this->saleItemsWithDetails((int) $id);
 
-        $this->adminView('pos/receipt', [
-            'pageTitle' => 'Receipt — ' . $sale['invoice_no'],
-            'sale' => $sale,
-            'items' => $items,
-        ]);
+        $pageTitle = 'Receipt — ' . $sale['invoice_no'];
+        extract(['pageTitle' => $pageTitle, 'sale' => $sale, 'items' => $items]);
+        require BASE_PATH . '/views/admin/pos/receipt.php';
     }
 
     public function pdf(string $id): void

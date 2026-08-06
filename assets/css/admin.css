@@ -617,8 +617,14 @@ tr.collapse.show { display: table-row; }
     margin: 12mm 12mm 15mm 12mm;
   }
 
-  /* 5. Force Printable Item Visibility */
-  .admin-shell *, .invoice-wrapper * {
+  /* 5. Force Printable Item Visibility & Clean White Background */
+  .admin-shell *, .invoice-wrapper *, .dl-wrap * {
     visibility: visible !important;
+  }
+  .invoice-wrapper, .dl-wrap, .admin-card {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
   }
 }

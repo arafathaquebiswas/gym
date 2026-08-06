@@ -56,7 +56,7 @@
           <td><?= money((float) $sale['discount']) ?></td>
           <td class="fw-semibold"><?= money((float) $sale['total']) ?></td>
           <td><span class="badge text-bg-secondary"><?= e(strtoupper(str_replace('_', ' ', $sale['payment_method']))) ?></span></td>
-          <td><a href="<?= url('/admin/pos/receipt/' . $sale['id']) ?>" class="btn btn-ps-outline btn-sm"><i class="bi bi-receipt"></i></a></td>
+          <td><button type="button" onclick="printUrlSilently('<?= url('/admin/pos/receipt/' . $sale['id']) ?>', this)" class="btn btn-ps-outline btn-sm" title="Print Receipt"><i class="bi bi-printer"></i></button></td>
         </tr>
         <?php endforeach; ?>
       </tbody>

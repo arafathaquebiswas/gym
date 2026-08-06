@@ -95,6 +95,60 @@ $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'
   drawerQuery.addEventListener('change', function () { setDrawerOpen(false); });
   setDrawerOpen(false);
 })();
+
+window.printUrlSilently = function(url, btnElement) {
+  var originalHtml = '';
+  if (btnElement) {
+    originalHtml = btnElement.innerHTML;
+    btnElement.disabled = true;
+    btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Printing...';
+  }
+
+  var iframe = document.getElementById('ps-silent-print-iframe');
+  if (!iframe) {
+    iframe = document.createElement('iframe');
+    iframe.id = 'ps-silent-print-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '-9999px';
+    iframe.style.bottom = '-9999px';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+  }
+
+  var hasPrinted = false;
+  function triggerPrint() {
+    if (hasPrinted) return;
+    hasPrinted = true;
+    try {
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    } catch (err) {
+      console.error('Silent print error:', err);
+      window.open(url, '_blank');
+    } finally {
+      if (btnElement) {
+        setTimeout(function() {
+          btnElement.disabled = false;
+          btnElement.innerHTML = originalHtml;
+        }, 1000);
+      }
+    }
+  }
+
+  iframe.onload = function() {
+    setTimeout(triggerPrint, 300);
+  };
+
+  iframe.src = url;
+
+  setTimeout(function() {
+    if (!hasPrinted) {
+      triggerPrint();
+    }
+  }, 1800);
+};
 </script>
 </body>
 </html>
