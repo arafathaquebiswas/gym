@@ -53,12 +53,7 @@ final class Permission
 
         // 4. Group Module Lock scope check for users without individual custom permission rows
         $allowedRoles = self::SCOPE_ROLES[$scope] ?? [];
-        if (empty($allowedRoles) || !Auth::hasRole(...$allowedRoles)) {
-            return false;
-        }
-
-        // Default fallback for unlocked modules: super_admin gets default access; staff requires explicit grant.
-        return Auth::hasRole('super_admin');
+        return !empty($allowedRoles) && Auth::hasRole(...$allowedRoles);
     }
 
     /** Same as can(), but 403s immediately when denied — the single-line gate every AdminController subclass calls. */
