@@ -51,6 +51,15 @@ final class SettingsAdminController extends AdminController
         $settingModel = new Setting();
         $pairs = [];
         foreach (self::KEYS as $key) {
+            // Only touch settings this request actually submitted. The form posts every
+            // field, so a normal save is unaffected — but a request that omits one must
+            // leave it alone rather than blank it. Getting this wrong empties settings
+            // wholesale, and an empty value is not the same as an absent one: Setting::get()
+            // falls back to its default only when the key is missing, so a blanked
+            // feature flag reads as OFF and silently disables a whole module.
+            if (!array_key_exists($key, $_POST)) {
+                continue;
+            }
             if ($key === 'smtp_pass' && $this->rawInput('smtp_pass') === '') {
                 continue; // Leave the stored password untouched if the field was left blank.
             }
