@@ -259,6 +259,7 @@ CREATE TABLE members (
     address             VARCHAR(255) NULL,
     height_cm           DECIMAL(5,2) NULL,
     weight_kg           DECIMAL(5,2) NULL,
+    target_weight_kg    DECIMAL(5,2) NULL,
     fitness_goal        VARCHAR(150) NULL,
     medical_notes       TEXT NULL,
     notify_email        TINYINT(1) NOT NULL DEFAULT 1,
@@ -270,6 +271,10 @@ CREATE TABLE members (
     reported_payment_method    ENUM('bkash','nagad','rocket','card','bank_transfer') NULL,
     reported_payment_reference VARCHAR(100) NULL,
     reported_payer_number      VARCHAR(30) NULL,
+    -- Coupon claimed on the online registration form. Recorded rather than charged:
+    -- registration takes no payment, so staff honour this at the office.
+    registration_coupon_code     VARCHAR(50) NULL,
+    registration_coupon_discount DECIMAL(10,2) NULL,
     locker_number       VARCHAR(20) NULL,
     status              ENUM('pending','active','suspended','frozen','expired') NOT NULL DEFAULT 'pending',
     qr_code             VARCHAR(255) NULL,

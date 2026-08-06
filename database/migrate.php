@@ -39,16 +39,15 @@ if ($path === false || !str_starts_with($path, __DIR__ . DIRECTORY_SEPARATOR) ||
 $db = Database::connection();
 echo 'Driver: ' . $db->getAttribute(PDO::ATTR_DRIVER_NAME) . PHP_EOL;
 
-// Split on statement boundaries, dropping comment-only and blank fragments.
-$statements = array_filter(array_map('trim', explode(';', file_get_contents($path))), static function (string $s): bool {
-    foreach (explode("\n", $s) as $line) {
-        $line = trim($line);
-        if ($line !== '' && !str_starts_with($line, '--')) {
-            return true;
-        }
-    }
-    return false;
-});
+// Strip -- line comments before splitting on ';'. A semicolon inside prose would
+// otherwise cut a statement in half and feed the tail to the database as SQL.
+// (Naive about '--' inside string literals; no migration here has one.)
+$sql = preg_replace('/^\s*--.*$/m', '', file_get_contents($path));
+
+$statements = array_filter(
+    array_map('trim', explode(';', $sql)),
+    static fn (string $statement): bool => $statement !== ''
+);
 
 $db->beginTransaction();
 try {

@@ -2,7 +2,20 @@
 /** @var array $packages */
 /** @var array $trainers */
 $pageTitle = 'Register for Membership';
+
+// Server-side messages from a rejected submit, shown against the field that caused
+// them. field_error() is already escaped and cached, so calling it per field is safe.
+$errClass = static fn (string $field): string => field_error($field) !== '' ? ' is-invalid' : '';
+$errMsg = static function (string $field): string {
+    $message = field_error($field);
+    return $message === '' ? '' : '<div class="invalid-feedback d-block">' . $message . '</div>';
+};
 ?>
+
+<style>
+  .required-star { color: #ff5a5a; }
+  .optional-hint { font-weight: 400; }
+</style>
 
 <section class="section">
   <div class="container">
@@ -13,71 +26,100 @@ $pageTitle = 'Register for Membership';
             <h3 class="mb-1">Online Membership Registration</h3>
             <p class="text-white-50 mb-0">No account or password needed — submit your details below, then visit or contact the POWERSURGE GYM & NUTRITION office to complete your payment and activate your membership.</p>
           </div>
-          <form method="post" action="<?= url('/register') ?>" class="form-ps needs-validation" novalidate>
+          <form method="post" action="<?= url('/register') ?>" class="form-ps needs-validation" enctype="multipart/form-data" novalidate>
             <input type="hidden" name="_csrf" value="<?= e(Security::csrfToken()) ?>">
+
+            <p class="text-white-50 small mb-3">Fields marked <span class="required-star">*</span> are required. Everything else is optional.</p>
 
             <h6 class="text-white-50 text-uppercase small mb-3">Personal Information</h6>
             <div class="row">
               <div class="col-md-6 mb-3">
-                <label>Full Name *</label>
-                <input type="text" name="name" class="form-control" value="<?= old('name') ?>" required>
+                <label for="regName">Full Name <span class="required-star">*</span></label>
+                <input type="text" id="regName" name="name" class="form-control<?= $errClass('name') ?>" value="<?= old('name') ?>" required>
+                <?= $errMsg('name') ?>
               </div>
               <div class="col-md-6 mb-3">
-                <label>Phone Number *</label>
-                <input type="text" name="phone" class="form-control" value="<?= old('phone') ?>" required>
+                <label for="regPhone">Phone Number <span class="required-star">*</span></label>
+                <input type="tel" id="regPhone" name="phone" class="form-control<?= $errClass('phone') ?>" value="<?= old('phone') ?>" inputmode="tel" placeholder="e.g. 017XXXXXXXX" required>
+                <?= $errMsg('phone') ?>
               </div>
               <div class="col-md-6 mb-3">
-                <label>Email <small class="text-white-50">(optional)</small></label>
-                <input type="email" name="email" class="form-control" value="<?= old('email') ?>">
+                <label for="regEmergency">Emergency Contact Number <span class="required-star">*</span></label>
+                <input type="tel" id="regEmergency" name="emergency_contact" class="form-control<?= $errClass('emergency_contact') ?>" value="<?= old('emergency_contact') ?>" inputmode="tel" placeholder="Someone we can reach in an emergency" required>
+                <?= $errMsg('emergency_contact') ?>
               </div>
               <div class="col-md-6 mb-3">
-                <label>Gender</label>
-                <select name="gender" class="form-select">
-                  <option value="">—</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
+                <label for="regEmail">Email <small class="text-white-50 optional-hint">(optional)</small></label>
+                <input type="email" id="regEmail" name="email" class="form-control<?= $errClass('email') ?>" value="<?= old('email') ?>">
+                <?= $errMsg('email') ?>
+              </div>
+              <div class="col-12 mb-3">
+                <label for="regAddress">Address <span class="required-star">*</span></label>
+                <input type="text" id="regAddress" name="address" class="form-control<?= $errClass('address') ?>" value="<?= old('address') ?>" placeholder="House / road / area, city" required>
+                <?= $errMsg('address') ?>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="regGender">Gender <small class="text-white-50 optional-hint">(optional)</small></label>
+                <select name="gender" id="regGender" class="form-select">
+                  <?php foreach (['' => '—', 'male' => 'Male', 'female' => 'Female', 'other' => 'Other'] as $value => $label): ?>
+                    <option value="<?= $value ?>" <?= old('gender') === $value && $value !== '' ? 'selected' : '' ?>><?= $label ?></option>
+                  <?php endforeach; ?>
                 </select>
               </div>
               <div class="col-md-6 mb-3">
-                <label>Date of Birth</label>
-                <input type="date" name="dob" class="form-control">
+                <label for="regDob">Date of Birth <small class="text-white-50 optional-hint">(optional)</small></label>
+                <input type="date" id="regDob" name="dob" class="form-control" value="<?= old('dob') ?>">
               </div>
               <div class="col-md-6 mb-3">
-                <label>Emergency Contact</label>
-                <input type="text" name="emergency_contact" class="form-control">
+                <label for="regCurrentWeight">Current Weight (kg) <small class="text-white-50 optional-hint">(optional)</small></label>
+                <input type="number" id="regCurrentWeight" name="current_weight" class="form-control<?= $errClass('current_weight') ?>" value="<?= old('current_weight') ?>" step="0.1" min="1" max="500" inputmode="decimal" placeholder="e.g. 78.5">
+                <?= $errMsg('current_weight') ?>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="regTargetWeight">Target Weight (kg) <small class="text-white-50 optional-hint">(optional)</small></label>
+                <input type="number" id="regTargetWeight" name="target_weight" class="form-control<?= $errClass('target_weight') ?>" value="<?= old('target_weight') ?>" step="0.1" min="1" max="500" inputmode="decimal" placeholder="e.g. 72">
+                <?= $errMsg('target_weight') ?>
               </div>
               <div class="col-12 mb-3">
-                <label>Address</label>
-                <input type="text" name="address" class="form-control">
+                <label for="regPhoto">Profile Picture <small class="text-white-50 optional-hint">(optional)</small></label>
+                <input type="file" id="regPhoto" name="photo" class="form-control<?= $errClass('photo') ?>" accept="image/jpeg,image/png,image/webp">
+                <div class="form-text text-white-50">JPG, PNG or WebP, up to <?= round(MAX_UPLOAD_SIZE / 1024 / 1024, 1) ?>MB. Leave this empty and we'll use the POWERSURGE logo until you bring a photo to the office.</div>
+                <?= $errMsg('photo') ?>
               </div>
             </div>
 
             <h6 class="text-white-50 text-uppercase small mb-3 mt-2">Membership Interest</h6>
             <div class="row">
               <div class="col-md-6 mb-3">
-                <label>Preferred Package *</label>
-                <select name="preferred_package_id" class="form-select" required>
-                  <option value="" disabled selected>Select a package</option>
+                <label for="regPackage">Preferred Package <span class="required-star">*</span></label>
+                <select name="preferred_package_id" id="regPackage" class="form-select<?= $errClass('preferred_package_id') ?>" required>
+                  <option value="" disabled <?= old('preferred_package_id') === '' ? 'selected' : '' ?>>Select a package</option>
                   <?php foreach ($packages as $package): ?>
-                    <option value="<?= (int) $package['id'] ?>"><?= e($package['name']) ?> (৳<?= number_format((float) $package['display_price']) ?>)</option>
+                    <option value="<?= (int) $package['id'] ?>" <?= old('preferred_package_id') === (string) $package['id'] ? 'selected' : '' ?>><?= e($package['name']) ?> (৳<?= number_format((float) $package['display_price']) ?>)</option>
                   <?php endforeach; ?>
                 </select>
+                <?= $errMsg('preferred_package_id') ?>
               </div>
               <?php if (!empty($trainers)): ?>
               <div class="col-md-6 mb-3">
-                <label>Preferred Trainer <small class="text-white-50">(optional)</small></label>
-                <select name="trainer_id" class="form-select">
+                <label for="regTrainer">Preferred Trainer <small class="text-white-50 optional-hint">(optional)</small></label>
+                <select name="trainer_id" id="regTrainer" class="form-select">
                   <option value="">— No preference —</option>
                   <?php foreach ($trainers as $trainer): ?>
-                    <option value="<?= (int) $trainer['id'] ?>"><?= e($trainer['name']) ?></option>
+                    <option value="<?= (int) $trainer['id'] ?>" <?= old('trainer_id') === (string) $trainer['id'] ? 'selected' : '' ?>><?= e($trainer['name']) ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
               <?php endif; ?>
+              <div class="col-md-6 mb-3">
+                <label for="regCoupon">Coupon Code <small class="text-white-50 optional-hint">(optional)</small></label>
+                <input type="text" id="regCoupon" name="coupon_code" class="form-control text-uppercase<?= $errClass('coupon_code') ?>" value="<?= old('coupon_code') ?>" autocapitalize="characters" autocomplete="off" placeholder="Have one? Enter it here">
+                <div class="form-text text-white-50">Leave blank if you don't have a coupon — it won't affect your registration.</div>
+                <?= $errMsg('coupon_code') ?>
+              </div>
               <div class="col-12 mb-3">
-                <label>Notes <small class="text-white-50">(optional)</small></label>
-                <textarea name="notes" class="form-control" rows="2" placeholder="Anything you'd like the gym to know before your visit"></textarea>
+                <label for="regNotes">Notes <small class="text-white-50 optional-hint">(optional)</small></label>
+                <textarea name="notes" id="regNotes" class="form-control" rows="2" placeholder="Anything you'd like the gym to know before your visit"><?= old('notes') ?></textarea>
               </div>
             </div>
 

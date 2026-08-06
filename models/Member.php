@@ -9,11 +9,12 @@ final class Member extends Model
      */
     private const WRITABLE_FIELDS = [
         'dob', 'gender', 'blood_group', 'emergency_contact', 'address',
-        'height_cm', 'weight_kg', 'fitness_goal', 'medical_notes',
+        'height_cm', 'weight_kg', 'target_weight_kg', 'fitness_goal', 'medical_notes',
         'join_date', 'trainer_id', 'locker_number', 'photo',
         'notify_email', 'notify_promotions',
         'preferred_package_id', 'registration_notes',
         'reported_payment_method', 'reported_payment_reference', 'reported_payer_number',
+        'registration_coupon_code', 'registration_coupon_discount',
     ];
 
     private const BASE_SELECT = "SELECT m.*, u.name, u.email, u.phone, u.status AS account_status,

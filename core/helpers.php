@@ -31,9 +31,32 @@ function upload_url(string $path): string
     return url('uploads/' . ltrim($path, '/'));
 }
 
+/**
+ * What the visitor typed on a submit that was rejected, so the form can be
+ * re-rendered without losing their work. Read once and then dropped — left in
+ * the session it would keep repopulating the form on every later visit.
+ */
 function old(string $key, string $default = ''): string
 {
-    return e($_SESSION['_old'][$key] ?? $default);
+    static $values = null;
+    if ($values === null) {
+        $values = $_SESSION['_old'] ?? [];
+        unset($_SESSION['_old']);
+    }
+
+    return e((string) ($values[$key] ?? $default));
+}
+
+/** The validation message for one field from a rejected submit, or ''. Consumed like old(). */
+function field_error(string $key): string
+{
+    static $errors = null;
+    if ($errors === null) {
+        $errors = $_SESSION['_errors'] ?? [];
+        unset($_SESSION['_errors']);
+    }
+
+    return e((string) ($errors[$key] ?? ''));
 }
 
 function flash(string $type, string $message): void
