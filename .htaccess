@@ -23,6 +23,8 @@ RewriteRule ^ index.php [L]
 # Disable directory listing
 Options -Indexes
 
-# Reasonable upload limits (uploads/ handling comes in a later phase)
-php_value upload_max_filesize 4M
-php_value post_max_size 8M
+# Upload limits. Payment screenshots are allowed up to 5MB (see
+# MembershipRegistrationController::SCREENSHOT_MAX_BYTES), so the PHP ceiling has to
+# clear that with room for the rest of the form fields alongside it.
+php_value upload_max_filesize 6M
+php_value post_max_size 12M

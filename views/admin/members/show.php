@@ -88,6 +88,36 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
           Not verified — confirm before activating.
         </div>
       <?php endif; ?>
+      <?php if (!empty($member['payment_status'])): ?>
+        <?php
+          $payColors = ['pending' => 'warning', 'verified' => 'success', 'rejected' => 'danger'];
+          $payMethods = ['bkash' => 'bKash', 'nagad' => 'Nagad'];
+          $payAmount = max(0, (float) ($member['registration_amount'] ?? 0) - (float) ($member['registration_coupon_discount'] ?? 0));
+        ?>
+        <div class="mt-3 p-3 rounded" style="background:rgba(255,255,255,.04)">
+          <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+            <span class="badge bg-<?= $payColors[$member['payment_status']] ?? 'secondary' ?>">
+              <?= e(Member::PAYMENT_STATUSES[$member['payment_status']] ?? $member['payment_status']) ?>
+            </span>
+            <span class="small text-white-50">
+              <?= e($payMethods[$member['payment_method']] ?? $member['payment_method']) ?>
+              · TrxID <strong class="text-white"><?= e($member['transaction_id'] ?? '—') ?></strong>
+              · ৳<?= number_format($payAmount, 2) ?>
+            </span>
+          </div>
+          <?php if (!empty($member['payment_screenshot'])): ?>
+            <a href="<?= url($member['payment_screenshot']) ?>" target="_blank" rel="noopener">
+              <img src="<?= url($member['payment_screenshot']) ?>" alt="Payment screenshot" style="height:90px;border-radius:6px">
+            </a>
+          <?php endif; ?>
+          <?php if (!empty($member['rejection_reason'])): ?>
+            <div class="small text-danger mt-2">Rejected: <?= e($member['rejection_reason']) ?></div>
+          <?php endif; ?>
+          <?php if ($member['payment_status'] !== 'verified'): ?>
+            <div class="small mt-2"><a href="<?= url('/admin/registrations') ?>">Review this payment</a> — the membership cannot be activated until it is verified.</div>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
       <?php if (!empty($member['registration_notes'])): ?>
         <div class="mt-2 small"><span class="text-white-50">Notes</span><br><span class="text-white"><?= nl2br(e($member['registration_notes'])) ?></span></div>
       <?php endif; ?>

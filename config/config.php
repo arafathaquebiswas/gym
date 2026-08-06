@@ -56,6 +56,11 @@ define('DB_PASS', $env('DB_PASS', ''));
 define('DB_CHARSET', 'utf8mb4');
 
 define('APP_NAME', 'POWERSURGE GYM & NUTRITION');
+
+// Merchant number shown on the online-payment step of membership registration,
+// alongside the QR at assets/images/payment/bkash-qr.png. Overridable per
+// environment so a test deployment can point somewhere harmless.
+define('PAYMENT_MERCHANT_NUMBER', $env('PAYMENT_MERCHANT_NUMBER', '01612839232'));
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost:3000';
 $scheme = (($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') ? 'https' : 'http';
 define('APP_URL', $env('APP_URL', "$scheme://$host"));

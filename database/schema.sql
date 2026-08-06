@@ -275,6 +275,24 @@ CREATE TABLE members (
     -- registration takes no payment, so staff honour this at the office.
     registration_coupon_code     VARCHAR(50) NULL,
     registration_coupon_discount DECIMAL(10,2) NULL,
+    -- Package price as quoted at registration, so the figure shown to an admin later
+    -- cannot drift when a package offer starts or ends.
+    registration_amount          DECIMAL(10,2) NULL,
+    -- Online payment (bKash/Nagad) submitted with the registration, pending admin
+    -- verification against the uploaded screenshot. All NULL for "Pay at Gym" —
+    -- payment_status NULL means there is no online payment to verify, which is what
+    -- keeps walk-in registrations out of the verification queue.
+    -- VARCHAR not ENUM so the ALTER TABLE migration parses on SQLite too; values are
+    -- validated in PHP. verified_by references users(id) without a foreign key, so
+    -- removing a staff account cannot cascade into payment history.
+    payment_method      VARCHAR(20) NULL,   -- bkash | nagad
+    payment_type        VARCHAR(20) NULL,   -- qr | mobile
+    transaction_id      VARCHAR(60) NULL UNIQUE,
+    payment_screenshot  VARCHAR(255) NULL,
+    payment_status      VARCHAR(20) NULL,   -- pending | verified | rejected
+    verified_by         INT UNSIGNED NULL,
+    verified_at         DATETIME NULL,
+    rejection_reason    VARCHAR(255) NULL,
     locker_number       VARCHAR(20) NULL,
     status              ENUM('pending','active','suspended','frozen','expired') NOT NULL DEFAULT 'pending',
     qr_code             VARCHAR(255) NULL,

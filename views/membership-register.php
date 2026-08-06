@@ -123,50 +123,108 @@ $errMsg = static function (string $field): string {
               </div>
             </div>
 
-            <h6 class="text-white-50 text-uppercase small mb-3 mt-2">Already Paid Online? <small class="text-white-50 text-normal text-lowercase">(optional)</small></h6>
-            <div class="form-check mb-3">
-              <input class="form-check-input" type="checkbox" id="alreadyPaid" onchange="document.getElementById('paidFields').classList.toggle('d-none', !this.checked)">
-              <label class="form-check-label text-white-50" for="alreadyPaid">I've already sent a payment (e.g. via bKash/Nagad/Rocket/bank) for this membership</label>
-            </div>
-            <div id="paidFields" class="row d-none">
-              <p class="text-white-50 small col-12">This just helps our staff find and verify your payment faster — it doesn't activate your membership automatically. We'll still confirm it with you at the office.</p>
+            <h6 class="text-white-50 text-uppercase small mb-3 mt-2">Payment</h6>
+            <?php $payOnline = old('payment_mode') === 'online'; ?>
+            <div class="row">
               <div class="col-md-6 mb-3">
-                <label>Payment Method</label>
-                <select name="reported_payment_method" id="reportedMethod" class="form-select">
-                  <option value="">— Select —</option>
-                  <option value="bkash">bKash</option>
-                  <option value="nagad">Nagad</option>
-                  <option value="rocket">Rocket</option>
-                  <option value="card">Card</option>
-                  <option value="bank_transfer">Bank Transfer</option>
-                </select>
-              </div>
-              <div class="col-md-6 mb-3 d-none" id="reportedPayerWrap">
-                <label>bKash/Nagad/Rocket Number Used</label>
-                <input type="text" name="reported_payer_number" id="reportedPayerNumber" class="form-control" placeholder="e.g. 017XXXXXXXX">
+                <div class="form-check p-3 border rounded h-100" style="border-color:rgba(255,255,255,.15)!important">
+                  <input class="form-check-input" type="radio" name="payment_mode" value="gym" id="payAtGym" <?= $payOnline ? '' : 'checked' ?>>
+                  <label class="form-check-label" for="payAtGym">
+                    <strong>Pay at Gym</strong>
+                    <span class="d-block text-white-50 small">Register now, pay when you visit the office.</span>
+                  </label>
+                </div>
               </div>
               <div class="col-md-6 mb-3">
-                <label>Transaction ID / Reference Number</label>
-                <input type="text" name="reported_payment_reference" class="form-control" placeholder="e.g. bKash TrxID or bank reference">
+                <div class="form-check p-3 border rounded h-100" style="border-color:rgba(255,255,255,.15)!important">
+                  <input class="form-check-input" type="radio" name="payment_mode" value="online" id="payOnline" <?= $payOnline ? 'checked' : '' ?>>
+                  <label class="form-check-label" for="payOnline">
+                    <strong>Online Payment</strong>
+                    <span class="d-block text-white-50 small">Pay now with bKash or Nagad and upload your receipt.</span>
+                  </label>
+                </div>
               </div>
-              <p class="text-white-50 small col-12 mb-0">For bKash, Nagad, or Rocket, please provide both the sender number and the Transaction ID — our staff need both to find and verify your payment.</p>
             </div>
+
+            <div id="onlinePaymentFields" class="<?= $payOnline ? '' : 'd-none' ?>">
+              <div class="row align-items-center g-3 mb-3 p-3 rounded" style="background:rgba(255,255,255,.04)">
+                <div class="col-sm-auto text-center">
+                  <?php $qr = BASE_PATH . '/assets/images/payment/bkash-qr.png'; ?>
+                  <?php if (is_file($qr)): ?>
+                    <img src="<?= asset('images/payment/bkash-qr.png') ?>" alt="bKash QR code for POWERSURGE GYM & NUTRITION" class="img-fluid rounded bg-white p-2" style="max-width:190px">
+                  <?php else: ?>
+                    <div class="d-flex align-items-center justify-content-center rounded bg-white text-dark text-center p-3" style="width:190px;height:190px">
+                      <span class="small">QR code image not uploaded yet — please pay to the merchant number below.</span>
+                    </div>
+                  <?php endif; ?>
+                </div>
+                <div class="col-sm">
+                  <p class="mb-2">Merchant number: <strong class="fs-5"><?= e(PAYMENT_MERCHANT_NUMBER) ?></strong></p>
+                  <p class="small mb-2" style="color:#ff6b6b"><strong>Use "Payment" only — "Send Money" is not accepted.</strong> <span class="text-white-50">শুধু মাত্র Payment করুন, Send Money প্রযোজ্য নয়।</span></p>
+                  <p class="text-white-50 small mb-2">Please make the payment using the QR code above. After completing the payment, enter your Transaction ID (TrxID) and upload a screenshot of the successful payment.</p>
+                  <p class="text-white-50 small mb-2">A 1.3% charge applies to bKash and Nagad payments. <span class="text-white-50">বিকাশ বা নগদ পেমেন্ট এর জন্য ১.৩% চার্জ প্রযোজ্য।</span></p>
+                  <p class="small mb-0" style="color:#ffc107">⚠️ Only complete (successful) payment screenshots are accepted. Membership will be activated only after admin verification.</p>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="regPaymentMethod">Payment Method <span class="required-star">*</span></label>
+                  <select name="payment_method" id="regPaymentMethod" class="form-select<?= $errClass('payment_method') ?>">
+                    <option value="">— Select —</option>
+                    <?php foreach (['bkash' => 'bKash', 'nagad' => 'Nagad'] as $value => $label): ?>
+                      <option value="<?= $value ?>" <?= old('payment_method') === $value ? 'selected' : '' ?>><?= $label ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <?= $errMsg('payment_method') ?>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="regPaymentType">Payment Type <span class="required-star">*</span></label>
+                  <select name="payment_type" id="regPaymentType" class="form-select<?= $errClass('payment_type') ?>">
+                    <option value="">— Select —</option>
+                    <?php foreach (['qr' => 'QR Payment', 'mobile' => 'Mobile Number Payment'] as $value => $label): ?>
+                      <option value="<?= $value ?>" <?= old('payment_type') === $value ? 'selected' : '' ?>><?= $label ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <?= $errMsg('payment_type') ?>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="regTrxId">Transaction ID (TrxID) <span class="required-star">*</span></label>
+                  <input type="text" id="regTrxId" name="transaction_id" class="form-control text-uppercase<?= $errClass('transaction_id') ?>" value="<?= old('transaction_id') ?>" autocapitalize="characters" autocomplete="off" placeholder="e.g. 9A7BCD123EF">
+                  <?= $errMsg('transaction_id') ?>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="regScreenshot">Payment Screenshot <span class="required-star">*</span></label>
+                  <input type="file" id="regScreenshot" name="payment_screenshot" class="form-control<?= $errClass('payment_screenshot') ?>" accept="image/jpeg,image/png,image/webp">
+                  <div class="form-text text-white-50">JPG, JPEG, PNG or WebP, up to 5MB. You'll need to pick the file again if the form comes back with an error.</div>
+                  <?= $errMsg('payment_screenshot') ?>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-white-50 small text-center mt-3 mb-0">Prefer to pay in person? Choose <strong>Pay at Gym</strong> above — simply visit the POWERSURGE GYM &amp; NUTRITION office and pay there once you arrive.</p>
+
             <script>
             (function () {
-              var method = document.getElementById('reportedMethod');
-              var payerWrap = document.getElementById('reportedPayerWrap');
-              var payerInput = document.getElementById('reportedPayerNumber');
-              if (!method || !payerWrap || !payerInput) return;
-              var MFS = ['bkash', 'nagad', 'rocket'];
-              method.addEventListener('change', function () {
-                var isMfs = MFS.indexOf(method.value) !== -1;
-                payerWrap.classList.toggle('d-none', !isMfs);
-                payerInput.required = isMfs;
-              });
+              var fields = document.getElementById('onlinePaymentFields');
+              var modes = document.querySelectorAll('input[name="payment_mode"]');
+              if (!fields || !modes.length) return;
+
+              // Required is toggled alongside visibility: a hidden required field blocks
+              // submission with a validation bubble the visitor cannot see.
+              var required = ['regPaymentMethod', 'regPaymentType', 'regTrxId', 'regScreenshot'];
+              function sync() {
+                var online = document.getElementById('payOnline').checked;
+                fields.classList.toggle('d-none', !online);
+                required.forEach(function (id) {
+                  var el = document.getElementById(id);
+                  if (el) { el.required = online; }
+                });
+              }
+              modes.forEach(function (m) { m.addEventListener('change', sync); });
+              sync();
             })();
             </script>
-
-            <p class="text-white-50 small text-center mt-3 mb-0">Prefer to pay in person? You don't need to fill in the section above — simply visit the POWERSURGE GYM & NUTRITION office and pay there once you arrive.</p>
 
             <button type="submit" class="btn btn-ps w-100 mt-3">Submit Registration</button>
           </form>

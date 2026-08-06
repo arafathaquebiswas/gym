@@ -24,7 +24,10 @@ if (Feature::on('coupons') && Permission::can('coupons')) {
     $navItems[] = ['coupons', 'Coupons', 'bi-ticket-perforated', url('/admin/coupons'), null];
 }
 if (Permission::can('members')) {
-    $navItems[] = ['members', 'Members', 'bi-people', url('/admin/members'), null];
+    $navItems[] = ['members', 'Members', 'bi-people', url('/admin/members'), [
+        ['All Members', url('/admin/members'), 'admin/members', null],
+        ['Payment Verification', url('/admin/registrations'), 'admin/registrations', null],
+    ]];
 }
 if (Feature::on('store') && Permission::can('store')) {
     $navItems[] = ['products', 'Store', 'bi-shop', url('/admin/products'), [

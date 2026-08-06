@@ -306,6 +306,11 @@ $router->get('/admin/messages/{id}', [ContactMessageAdminController::class, 'sho
 $router->post('/admin/messages/{id}/mark-replied', [ContactMessageAdminController::class, 'markReplied']);
 $router->post('/admin/messages/{id}/delete', [ContactMessageAdminController::class, 'destroy']);
 
+// ---- Admin: Online payment verification -------------------------------------------
+$router->get('/admin/registrations', [PaymentVerificationAdminController::class, 'index']);
+$router->post('/admin/registrations/{id}/verify', [PaymentVerificationAdminController::class, 'verify']);
+$router->post('/admin/registrations/{id}/reject', [PaymentVerificationAdminController::class, 'reject']);
+
 // ---- Admin: Reviews ---------------------------------------------------------------
 $router->get('/admin/reviews', [ReviewAdminController::class, 'index']);
 $router->get('/admin/audit-log', [AuditLogController::class, 'index']);

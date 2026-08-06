@@ -20,6 +20,12 @@ final class MembershipRegistrationController extends Controller
     /** Assigned to members.photo when no picture is uploaded — media_tile() resolves it under assets/images/. */
     private const DEFAULT_PROFILE_IMAGE = 'logo/logo.png';
 
+    /** Payment screenshots get their own ceiling, above the 2MB used for profile pictures. */
+    public const SCREENSHOT_MAX_BYTES = 5 * 1024 * 1024;
+
+    private const PAYMENT_METHODS = ['bkash' => 'bKash', 'nagad' => 'Nagad'];
+    private const PAYMENT_TYPES = ['qr' => 'QR Payment', 'mobile' => 'Mobile Number Payment'];
+
     public function submit(): void
     {
         Security::requireCsrf();
@@ -102,7 +108,50 @@ final class MembershipRegistrationController extends Controller
             $errors['photo'] = Upload::lastError();
         }
 
+        // ---- Online payment (bKash/Nagad) --------------------------------------
+        // Only demanded when the visitor actually chose to pay online. "Pay at Gym"
+        // leaves every payment column NULL, which is what keeps walk-ins out of the
+        // admin verification queue.
+        $payOnline = $this->input('payment_mode') === 'online';
+        $old['payment_mode'] = $payOnline ? 'online' : 'gym';
+        $paymentMethod = $this->input('payment_method');
+        $paymentType = $this->input('payment_type');
+        $transactionId = strtoupper($this->input('transaction_id'));
+        $old['payment_method'] = $paymentMethod;
+        $old['payment_type'] = $paymentType;
+        $old['transaction_id'] = $transactionId;
+
+        $screenshot = null;
+        if ($payOnline) {
+            if (!isset(self::PAYMENT_METHODS[$paymentMethod])) {
+                $errors['payment_method'] = 'Please choose bKash or Nagad.';
+            }
+            if (!isset(self::PAYMENT_TYPES[$paymentType])) {
+                $errors['payment_type'] = 'Please choose QR Payment or Mobile Number Payment.';
+            }
+            if ($transactionId === '') {
+                $errors['transaction_id'] = 'Transaction ID is required.';
+            } elseif (!preg_match('/^[A-Z0-9]{6,32}$/', $transactionId)) {
+                $errors['transaction_id'] = 'Transaction ID should be 6-32 letters and numbers, e.g. 9A7BCD123EF.';
+            } elseif ((new Member())->transactionIdExists($transactionId)) {
+                // The unique index is the real guarantee; this only turns the
+                // resulting constraint violation into something a visitor can act on.
+                $errors['transaction_id'] = 'This Transaction ID has already been submitted. Please check the ID, or contact the gym office.';
+            }
+
+            $screenshot = Upload::handle($_FILES['payment_screenshot'] ?? [], 'payments', self::SCREENSHOT_MAX_BYTES);
+            if ($screenshot === null) {
+                $errors['payment_screenshot'] = Upload::lastError()
+                    ?? 'Payment screenshot is required when paying online.';
+            }
+        }
+
         if ($errors !== []) {
+            // Anything already written to disk is orphaned the moment we redirect —
+            // the file input cannot be repopulated, so the visitor will re-pick it.
+            Upload::delete($photo);
+            Upload::delete($screenshot);
+
             $_SESSION['_old'] = $old;
             $_SESSION['_errors'] = $errors;
             flash('danger', count($errors) === 1
@@ -118,13 +167,6 @@ final class MembershipRegistrationController extends Controller
         // discarded; it exists only because `users.password_hash` is NOT NULL underneath.
         $userId = $userModel->create($name, $email, $phone, bin2hex(random_bytes(16)), 'member');
 
-        // Self-reported only — never auto-verified, never activates anything by itself. It just
-        // gives staff a head start when the visitor says "I already paid online" at the office.
-        $reportedMethod = $this->input('reported_payment_method');
-        if (!in_array($reportedMethod, ['bkash', 'nagad', 'rocket', 'card', 'bank_transfer'], true)) {
-            $reportedMethod = null;
-        }
-
         $data = [
             'gender' => $this->input('gender') ?: null,
             'dob' => $this->input('dob') ?: null,
@@ -137,11 +179,16 @@ final class MembershipRegistrationController extends Controller
             'target_weight_kg' => $targetWeight !== '' ? (float) $targetWeight : null,
             'registration_coupon_code' => $coupon ? $coupon['code'] : null,
             'registration_coupon_discount' => $coupon ? $couponDiscount : null,
+            'registration_amount' => (float) $preferredPackage['display_price'],
             'registration_notes' => $this->rawInput('notes') ?: null,
             'preferred_package_id' => (int) $preferredPackage['id'],
-            'reported_payment_method' => $reportedMethod,
-            'reported_payment_reference' => $this->input('reported_payment_reference') ?: null,
-            'reported_payer_number' => $this->input('reported_payer_number') ?: null,
+            // NULL across the board for "Pay at Gym" — nothing was paid online, so there
+            // is nothing to verify and the row stays out of the verification queue.
+            'payment_method' => $payOnline ? $paymentMethod : null,
+            'payment_type' => $payOnline ? $paymentType : null,
+            'transaction_id' => $payOnline ? $transactionId : null,
+            'payment_screenshot' => $screenshot,
+            'payment_status' => $payOnline ? 'pending' : null,
         ];
         if (Feature::trainerModuleOn()) {
             $trainerId = (int) $this->input('trainer_id');
@@ -171,7 +218,9 @@ final class MembershipRegistrationController extends Controller
             'ip' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
         ]);
 
-        $confirmation = 'Your registration request has been received. Please visit or contact the POWERSURGE GYM & NUTRITION office to complete your payment and activate your membership.';
+        $confirmation = $payOnline
+            ? 'Your registration has been submitted successfully. Your payment is currently under verification. Your membership will be activated after the payment has been verified by our administrator.'
+            : 'Your registration request has been received. Please visit or contact the POWERSURGE GYM & NUTRITION office to complete your payment and activate your membership.';
         if ($coupon) {
             $confirmation .= ' Coupon ' . $coupon['code'] . ' has been applied — ৳'
                 . number_format($couponDiscount, 2) . ' off your '

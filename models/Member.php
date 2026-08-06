@@ -14,7 +14,8 @@ final class Member extends Model
         'notify_email', 'notify_promotions',
         'preferred_package_id', 'registration_notes',
         'reported_payment_method', 'reported_payment_reference', 'reported_payer_number',
-        'registration_coupon_code', 'registration_coupon_discount',
+        'registration_coupon_code', 'registration_coupon_discount', 'registration_amount',
+        'payment_method', 'payment_type', 'transaction_id', 'payment_screenshot', 'payment_status',
     ];
 
     private const BASE_SELECT = "SELECT m.*, u.name, u.email, u.phone, u.status AS account_status,
@@ -51,6 +52,93 @@ final class Member extends Model
         );
         $stmt->execute($fields);
         return (int) $this->db->lastInsertId();
+    }
+
+    /**
+     * Has this bKash/Nagad Transaction ID already been submitted by anyone?
+     * Backed by a unique index — this exists to report the clash as a form error
+     * rather than letting it surface as a constraint violation.
+     */
+    public function transactionIdExists(string $transactionId): bool
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM members WHERE transaction_id = :trx');
+        $stmt->execute(['trx' => $transactionId]);
+
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    /** The three payment states a registration can be in. NULL means "paid at gym", which is not part of this workflow at all. */
+    public const PAYMENT_STATUSES = [
+        'pending' => 'Pending Verification',
+        'verified' => 'Verified',
+        'rejected' => 'Rejected',
+    ];
+
+    /**
+     * Registrations that claimed an online bKash/Nagad payment, newest first.
+     * payment_status IS NOT NULL is what excludes "Pay at Gym" sign-ups, which have
+     * no payment to check.
+     */
+    public function paymentQueue(string $status = ''): array
+    {
+        $where = 'm.payment_status IS NOT NULL';
+        $params = [];
+        if (isset(self::PAYMENT_STATUSES[$status])) {
+            $where .= ' AND m.payment_status = :status';
+            $params['status'] = $status;
+        }
+
+        $stmt = $this->db->prepare(
+            "SELECT m.*, u.name, u.phone, u.email,
+                    p.name AS package_name,
+                    v.name AS verified_by_name
+             FROM members m
+             JOIN users u ON u.id = m.user_id
+             LEFT JOIN membership_packages p ON p.id = m.preferred_package_id
+             LEFT JOIN users v ON v.id = m.verified_by
+             WHERE $where
+             ORDER BY CASE WHEN m.payment_status = 'pending' THEN 0 ELSE 1 END, m.created_at DESC"
+        );
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    }
+
+    /** @return array<string,int> status => count, for the queue's filter tabs. */
+    public function paymentStatusCounts(): array
+    {
+        $counts = array_fill_keys(array_keys(self::PAYMENT_STATUSES), 0);
+        $rows = $this->db->query(
+            'SELECT payment_status, COUNT(*) AS total FROM members
+             WHERE payment_status IS NOT NULL GROUP BY payment_status'
+        )->fetchAll();
+
+        foreach ($rows as $row) {
+            $counts[$row['payment_status']] = (int) $row['total'];
+        }
+
+        return $counts;
+    }
+
+    /**
+     * Records an admin's verify/reject decision. The rejection reason is cleared on
+     * verify so a re-verified payment does not keep displaying why it was once refused.
+     */
+    public function setPaymentStatus(int $memberId, string $status, int $adminUserId, ?string $rejectionReason = null): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE members
+             SET payment_status = :status, verified_by = :admin, verified_at = :at,
+                 rejection_reason = :reason
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            'status' => $status,
+            'admin' => $adminUserId,
+            'at' => date('Y-m-d H:i:s'),
+            'reason' => $status === 'rejected' ? $rejectionReason : null,
+            'id' => $memberId,
+        ]);
     }
 
     /** Lightweight list for pickers (e.g. POS customer selection) — every member regardless of subscription status, since a walk-in purchase isn't gated on membership standing. */

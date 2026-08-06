@@ -338,6 +338,20 @@ final class MemberAdminController extends AdminController
             $this->abort404();
         }
 
+        // Attaching a package is what makes a membership Active (see recomputeStatus()),
+        // so this is the gate for "only verified payments activate". Members who chose
+        // "Pay at Gym" have a NULL payment_status and are unaffected.
+        if ($member['payment_status'] === 'pending') {
+            flash('danger', 'This member paid online and their payment has not been verified yet. Review it under Members → Payment Verification first.');
+            redirect('admin/members/' . $id);
+        }
+        if ($member['payment_status'] === 'rejected') {
+            flash('danger', 'This member\'s online payment was rejected'
+                . ($member['rejection_reason'] ? ' (' . $member['rejection_reason'] . ')' : '')
+                . '. Verify a corrected payment before activating the membership.');
+            redirect('admin/members/' . $id);
+        }
+
         $packageId = (int) $this->input('package_id');
         $package = (new Package())->find($packageId);
         if (!$package) {
