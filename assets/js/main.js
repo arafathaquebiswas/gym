@@ -1,4 +1,4 @@
-/* PowerSurge Gym — shared front-end behaviour */
+/* POWERSURGE GYM & NUTRITION — shared front-end behaviour */
 $(function () {
   'use strict';
 

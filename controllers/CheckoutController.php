@@ -78,7 +78,7 @@ final class CheckoutController extends Controller
             'shippingMaxOverride' => $maxOverride,
             'savedAddresses' => $savedAddresses,
             'member' => $member,
-            'gymName' => $settingModel->get('gym_name', 'PowerSurge Gym'),
+            'gymName' => $settingModel->get('gym_name', 'POWERSURGE GYM & NUTRITION'),
             'gymAddress' => $settingModel->get('gym_address'),
             'gymPhone' => $settingModel->get('gym_phone'),
             'deliveryOn' => $deliveryOn,

@@ -1,4 +1,4 @@
-/* PowerSurge Gym — live countdown for active membership offers, with auto-expire */
+/* POWERSURGE GYM & NUTRITION — live countdown for active membership offers, with auto-expire */
 $(function () {
   'use strict';
 

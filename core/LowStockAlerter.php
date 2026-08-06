@@ -21,7 +21,7 @@ final class LowStockAlerter
             return;
         }
 
-        $gymName = $settingModel->get('gym_name', 'PowerSurge Gym');
+        $gymName = $settingModel->get('gym_name', 'POWERSURGE GYM & NUTRITION');
         $productUrl = url('/admin/products');
 
         $body = '

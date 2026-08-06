@@ -1,4 +1,4 @@
-/* PowerSurge Gym — trainer booking widget (AJAX slot lookup + booking submit) */
+/* POWERSURGE GYM & NUTRITION — trainer booking widget (AJAX slot lookup + booking submit) */
 $(function () {
   'use strict';
 

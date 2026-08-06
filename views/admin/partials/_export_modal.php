@@ -5,7 +5,7 @@
       <!-- Modal Header -->
       <div class="modal-header border-secondary bg-dark-subtle px-4 py-3">
         <div>
-          <div class="text-orange text-uppercase fw-bold small tracking-wider"><i class="bi bi-shield-check me-1"></i> PowerSurge Gym</div>
+          <div class="text-orange text-uppercase fw-bold small tracking-wider"><i class="bi bi-shield-check me-1"></i> POWERSURGE GYM & NUTRITION</div>
           <h5 class="modal-title fw-bold text-white mb-0" id="adminExportModalLabel">Professional Data Export</h5>
         </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>

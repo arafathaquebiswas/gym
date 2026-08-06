@@ -11,7 +11,7 @@ final class StockNotifier
             return 0;
         }
 
-        $gymName = (new Setting())->get('gym_name', 'PowerSurge Gym');
+        $gymName = (new Setting())->get('gym_name', 'POWERSURGE GYM & NUTRITION');
         $productUrl = url('/store/' . $product['slug']);
 
         $body = '

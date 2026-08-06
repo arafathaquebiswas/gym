@@ -9,7 +9,7 @@ $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= e($pageTitle ?? 'Delivery') ?> | PowerSurge Delivery</title>
+    <title><?= e($pageTitle ?? 'Delivery') ?> | POWERSURGE GYM & NUTRITION Delivery</title>
     <meta name="csrf-token" content="<?= e(Security::csrfToken()) ?>">
     <link rel="icon" type="image/png" href="<?= asset('images/logo/logo.png') ?>">
 
@@ -24,8 +24,8 @@ $currentPath = trim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'
     <div class="admin-overlay" id="deliveryOverlay" hidden></div>
     <aside class="admin-sidebar" id="deliverySidebar">
         <a href="<?= url('/delivery') ?>" class="admin-brand">
-            <img src="<?= asset('images/logo/logo.png') ?>" alt="PowerSurge Gym" height="34">
-            <span>Power<span class="text-orange">Surge</span> Delivery</span>
+            <img src="<?= asset('images/logo/logo.png') ?>" alt="POWERSURGE GYM & NUTRITION" height="34">
+            <span>POWERSURGE <span class="text-orange">GYM & NUTRITION</span> Delivery</span>
         </a>
         <nav class="admin-nav">
             <a href="<?= url('/delivery') ?>" class="admin-nav-link <?= $currentPath === 'delivery' ? 'active' : '' ?>">

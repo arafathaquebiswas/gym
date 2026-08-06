@@ -21,7 +21,7 @@ final class Backup
 
     private static function exportMysql(PDO $db): string
     {
-        $sql = "-- PowerSurge Gym database backup — generated " . date('Y-m-d H:i:s') . "\n";
+        $sql = "-- POWERSURGE GYM & NUTRITION database backup — generated " . date('Y-m-d H:i:s') . "\n";
         $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
 
         $tables = $db->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
@@ -70,7 +70,7 @@ final class Backup
 
     private static function exportSqlite(PDO $db): string
     {
-        $sql = "-- PowerSurge Gym database backup — generated " . date('Y-m-d H:i:s') . "\n";
+        $sql = "-- POWERSURGE GYM & NUTRITION database backup — generated " . date('Y-m-d H:i:s') . "\n";
         $sql .= "PRAGMA foreign_keys = OFF;\n\n";
 
         $tables = $db->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")->fetchAll(PDO::FETCH_COLUMN);

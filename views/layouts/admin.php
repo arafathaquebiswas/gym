@@ -81,7 +81,7 @@ $childIsActive = function (array $child) use ($currentPath): bool {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= e($pageTitle ?? 'Admin') ?> | PowerSurge Admin</title>
+    <title><?= e($pageTitle ?? 'Admin') ?> | POWERSURGE GYM & NUTRITION Admin</title>
     <meta name="csrf-token" content="<?= e(Security::csrfToken()) ?>">
     <link rel="icon" type="image/png" href="<?= asset('images/logo/logo.png') ?>">
 
@@ -95,8 +95,8 @@ $childIsActive = function (array $child) use ($currentPath): bool {
     <div class="admin-overlay" id="adminOverlay" hidden></div>
     <aside class="admin-sidebar" id="adminSidebar">
         <a href="<?= url('/admin') ?>" class="admin-brand">
-            <img src="<?= asset('images/logo/logo.png') ?>" alt="PowerSurge Gym" height="34">
-            <span>Power<span class="text-orange">Surge</span> Admin</span>
+            <img src="<?= asset('images/logo/logo.png') ?>" alt="POWERSURGE GYM & NUTRITION" height="34">
+            <span>POWERSURGE <span class="text-orange">GYM & NUTRITION</span> Admin</span>
         </a>
         <nav class="admin-nav">
             <?php $navSection = null; foreach ($navItems as [$key, $label, $icon, $href, $children]): ?>

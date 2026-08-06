@@ -29,7 +29,7 @@ final class ReportExporter
     public static function pdf(string $title, array $headers, array $rows, string $subtitle = '', array $options = []): never
     {
         $settingModel = new Setting();
-        $gymName = $settingModel->get('gym_name', 'PowerSurge Gym');
+        $gymName = $settingModel->get('gym_name', 'POWERSURGE GYM & NUTRITION');
         $gymPhone = $settingModel->get('gym_phone', '01904-485009');
         $gymEmail = $settingModel->get('gym_email', 'info@powersurgegym.com');
         $gymAddress = $settingModel->get('gym_address', '123 Fitness Ave, Suite 100, City');
@@ -290,7 +290,7 @@ final class ReportExporter
 
           <!-- Confidential Footer -->
           <div class="footer-notice">
-            <div>Generated automatically by PowerSurge Gym Management System.</div>
+            <div>Generated automatically by POWERSURGE GYM & NUTRITION Management System.</div>
             <div>This report is confidential and intended for authorized personnel only.</div>
             <div>Report ID: <?= e($exportId) ?> &nbsp;|&nbsp; Printed on: <?= e($genOn) ?>, <?= e($genTime) ?> &nbsp;|&nbsp; <?= e($companyName) ?> &nbsp;•&nbsp; www.powersurgegym.com</div>
           </div>

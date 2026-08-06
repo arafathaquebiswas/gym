@@ -30,25 +30,48 @@ final class TrainerSchedule extends Model
      */
     public function saveWeek(int $trainerId, array $days): void
     {
-        $stmt = $this->db->prepare(
-            'INSERT INTO trainer_schedule (trainer_id, day_of_week, start_time, end_time, is_off)
-             VALUES (:trainer_id, :day, :start, :end, :is_off)
-             ON DUPLICATE KEY UPDATE start_time = VALUES(start_time), end_time = VALUES(end_time), is_off = VALUES(is_off)'
-        );
+        // Delete-then-insert rather than an upsert: this call replaces the whole
+        // week anyway, and MySQL's ON DUPLICATE KEY UPDATE is a syntax error on
+        // SQLite. Nothing references trainer_schedule.id, so recreating the rows
+        // costs nothing. Wrapped in a transaction so a failure part-way through
+        // can't leave the trainer with a half-deleted schedule.
+        $ownsTransaction = !$this->db->inTransaction();
+        if ($ownsTransaction) {
+            $this->db->beginTransaction();
+        }
 
-        foreach (range(0, 6) as $day) {
-            $row = $days[$day] ?? [];
-            $isOff = !empty($row['is_off']);
-            $start = ($isOff || empty($row['start'])) ? null : $row['start'];
-            $end = ($isOff || empty($row['end'])) ? null : $row['end'];
+        try {
+            $delete = $this->db->prepare('DELETE FROM trainer_schedule WHERE trainer_id = :trainer_id');
+            $delete->execute(['trainer_id' => $trainerId]);
 
-            $stmt->execute([
-                'trainer_id' => $trainerId,
-                'day' => $day,
-                'start' => $start,
-                'end' => $end,
-                'is_off' => $isOff ? 1 : 0,
-            ]);
+            $insert = $this->db->prepare(
+                'INSERT INTO trainer_schedule (trainer_id, day_of_week, start_time, end_time, is_off)
+                 VALUES (:trainer_id, :day, :start, :end, :is_off)'
+            );
+
+            foreach (range(0, 6) as $day) {
+                $row = $days[$day] ?? [];
+                $isOff = !empty($row['is_off']);
+                $start = ($isOff || empty($row['start'])) ? null : $row['start'];
+                $end = ($isOff || empty($row['end'])) ? null : $row['end'];
+
+                $insert->execute([
+                    'trainer_id' => $trainerId,
+                    'day' => $day,
+                    'start' => $start,
+                    'end' => $end,
+                    'is_off' => $isOff ? 1 : 0,
+                ]);
+            }
+
+            if ($ownsTransaction) {
+                $this->db->commit();
+            }
+        } catch (Throwable $e) {
+            if ($ownsTransaction && $this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $e;
         }
     }
 

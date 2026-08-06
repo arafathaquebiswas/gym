@@ -11,7 +11,7 @@ $pageTitle = 'Register for Membership';
         <div class="glass-card p-4 p-md-5">
           <div class="text-center mb-4">
             <h3 class="mb-1">Online Membership Registration</h3>
-            <p class="text-white-50 mb-0">No account or password needed — submit your details below, then visit or contact the PowerSurge Gym office to complete your payment and activate your membership.</p>
+            <p class="text-white-50 mb-0">No account or password needed — submit your details below, then visit or contact the POWERSURGE GYM & NUTRITION office to complete your payment and activate your membership.</p>
           </div>
           <form method="post" action="<?= url('/register') ?>" class="form-ps needs-validation" novalidate>
             <input type="hidden" name="_csrf" value="<?= e(Security::csrfToken()) ?>">
@@ -124,11 +124,11 @@ $pageTitle = 'Register for Membership';
             })();
             </script>
 
-            <p class="text-white-50 small text-center mt-3 mb-0">Prefer to pay in person? You don't need to fill in the section above — simply visit the PowerSurge Gym office and pay there once you arrive.</p>
+            <p class="text-white-50 small text-center mt-3 mb-0">Prefer to pay in person? You don't need to fill in the section above — simply visit the POWERSURGE GYM & NUTRITION office and pay there once you arrive.</p>
 
             <button type="submit" class="btn btn-ps w-100 mt-3">Submit Registration</button>
           </form>
-          <p class="text-center text-white-50 mt-4 mb-0">Already registered? Visit or contact the PowerSurge Gym office to complete your payment.</p>
+          <p class="text-center text-white-50 mt-4 mb-0">Already registered? Visit or contact the POWERSURGE GYM & NUTRITION office to complete your payment.</p>
         </div>
       </div>
     </div>

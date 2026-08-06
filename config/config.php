@@ -45,7 +45,7 @@ define('DB_USER', $env('DB_USER', 'root'));
 define('DB_PASS', $env('DB_PASS', ''));
 define('DB_CHARSET', 'utf8mb4');
 
-define('APP_NAME', 'PowerSurge Gym');
+define('APP_NAME', 'POWERSURGE GYM & NUTRITION');
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost:3000';
 $scheme = (($_SERVER['HTTPS'] ?? '') === 'on' || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https') ? 'https' : 'http';
 define('APP_URL', $env('APP_URL', "$scheme://$host"));

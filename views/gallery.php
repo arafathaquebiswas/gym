@@ -9,7 +9,7 @@ $cats = ['gym' => 'Gym', 'events' => 'Events', 'competitions' => 'Competitions',
   <div class="container">
     <div class="hero-copy">
       <span class="hero-badge">Gallery</span>
-      <h1>Life Inside <span class="text-orange">PowerSurge</span></h1>
+      <h1>Life Inside <span class="text-orange">POWERSURGE GYM & NUTRITION</span></h1>
       <p class="hero-subtitle">Gym floor, events, competitions, and member transformations.</p>
     </div>
   </div>

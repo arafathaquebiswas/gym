@@ -12,7 +12,7 @@ $pageTitle = 'Membership Plans';
     <div class="hero-copy">
       <span class="hero-badge">Membership Plans</span>
       <h1>A Plan for <span class="text-orange">Every Goal</span></h1>
-      <p class="hero-subtitle">Everything about joining, pricing, and renewing at PowerSurge — packages, offers, comparisons, and trainer add-ons, all in one place.</p>
+      <p class="hero-subtitle">Everything about joining, pricing, and renewing at POWERSURGE GYM & NUTRITION — packages, offers, comparisons, and trainer add-ons, all in one place.</p>
       <div class="hero-actions">
         <a href="<?= url('/register') ?>" class="btn btn-ps btn-lg">Join Now</a>
         <a href="<?= url('/contact') ?>" class="btn btn-ps-outline btn-lg">Visit / Contact to Renew</a>

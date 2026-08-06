@@ -1,4 +1,4 @@
-/* PowerSurge Admin — rotates the chevron on any expandable-detail-row toggle button (admin list tables). */
+/* POWERSURGE GYM & NUTRITION Admin — rotates the chevron on any expandable-detail-row toggle button (admin list tables). */
 $(function () {
   'use strict';
 

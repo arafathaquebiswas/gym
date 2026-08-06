@@ -48,7 +48,7 @@
 <section class="section">
   <div class="container text-center">
     <h2 class="section-title">Our Team &amp; Community</h2>
-    <p class="section-subtitle mx-auto">Life on the PowerSurge floor — the people who train here every day.</p>
+    <p class="section-subtitle mx-auto">Life on the POWERSURGE GYM & NUTRITION floor — the people who train here every day.</p>
     <div class="row g-3">
       <?php foreach ($teamPhotos as $item): ?>
       <div class="col-6 col-md-4 col-lg-2">

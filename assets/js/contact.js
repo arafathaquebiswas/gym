@@ -1,4 +1,4 @@
-/* PowerSurge Gym — AJAX contact form submission */
+/* POWERSURGE GYM & NUTRITION — AJAX contact form submission */
 $(function () {
   'use strict';
 

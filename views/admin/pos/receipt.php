@@ -7,7 +7,7 @@ $isPdfMode = !empty($isPdf);
 $basePath = defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 3);
 
 $settingModel = new Setting();
-$gymName = $settingModel->get('gym_name', 'PowerSurge Gym');
+$gymName = $settingModel->get('gym_name', 'POWERSURGE GYM & NUTRITION');
 $gymPhone = $settingModel->get('gym_phone', '01904-485009');
 $gymEmail = $settingModel->get('gym_email', 'info@powersurgegym.com');
 $gymAddress = $settingModel->get('gym_address', '123 Fitness Ave, Suite 100, City');
@@ -387,7 +387,7 @@ $paymentStatusLabel = strtoupper((string) $sale['payment_status']);
         <div style="font-size: 11px; color: #4b5563; line-height: 1.4;">
           <strong style="color: #111827;">Terms & Return Policy:</strong>
           <div style="margin-top: 4px;">
-            Thank you for shopping at PowerSurge Gym! We appreciate your business.
+            Thank you for shopping at POWERSURGE GYM & NUTRITION! We appreciate your business.
           </div>
           <div style="margin-top: 4px;">
             Returns or exchanges are accepted within 7 days of purchase with original sales receipt. Unopened items only.

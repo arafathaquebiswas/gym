@@ -194,7 +194,7 @@ $extraScripts = ['js/pricing-countdown.js'];
           <?php endif; ?>
           <?php if (!empty($review['admin_reply'])): ?>
           <div class="glass-card p-2 mt-2" style="background:rgba(255,106,26,.08)">
-            <div class="text-orange small fw-semibold">Reply from PowerSurge Gym:</div>
+            <div class="text-orange small fw-semibold">Reply from POWERSURGE GYM & NUTRITION:</div>
             <div class="small text-white-50"><?= nl2br(e($review['admin_reply'])) ?></div>
           </div>
           <?php endif; ?>

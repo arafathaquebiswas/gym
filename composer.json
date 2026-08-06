@@ -1,6 +1,6 @@
 {
     "name": "powersurge/gym-management",
-    "description": "PowerSurge Gym Management System",
+    "description": "POWERSURGE GYM & NUTRITION Management System",
     "type": "project",
     "require": {
         "php": ">=8.1",

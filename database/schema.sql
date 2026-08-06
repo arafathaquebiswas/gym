@@ -1,5 +1,5 @@
 -- =============================================================
--- PowerSurge Gym Management System — Full Database Schema
+-- POWERSURGE GYM & NUTRITION Management System — Full Database Schema
 -- Engine: InnoDB, Charset: utf8mb4
 -- =============================================================
 

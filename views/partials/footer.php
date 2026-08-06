@@ -3,8 +3,8 @@
     <div class="row g-4">
       <div class="col-lg-4">
         <h5 class="text-white mb-3 d-flex align-items-center gap-2">
-          <img src="<?= asset('images/logo/logo.png') ?>" alt="PowerSurge Gym" height="36">
-          Power<span class="text-orange">Surge</span> Gym
+          <img src="<?= asset('images/logo/logo.png') ?>" alt="POWERSURGE GYM & NUTRITION" height="36">
+          POWERSURGE <span class="text-orange">GYM & NUTRITION</span>
         </h5>
         <p><?= e($settings['gym_tagline'] ?? 'Train Hard. Surge Ahead.') ?></p>
         <div class="mt-3">
@@ -50,7 +50,7 @@
     </div>
     <div class="divider-ps"></div>
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
-      <small>&copy; <?= date('Y') ?> PowerSurge Gym. All rights reserved.</small>
+      <small>&copy; <?= date('Y') ?> POWERSURGE GYM & NUTRITION. All rights reserved.</small>
       <small>Built with <i class="bi bi-heart-fill text-orange"></i> for a stronger you.</small>
       <small><a href="<?= url('/login') ?>" class="text-white-50">Staff Login</a></small>
     </div>

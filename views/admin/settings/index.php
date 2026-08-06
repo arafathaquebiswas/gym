@@ -44,7 +44,7 @@ $yn = function (string $key, string $default = '1') use ($settings) {
         <div class="row g-3">
           <div class="col-md-6">
             <label>Gym Name</label>
-            <input type="text" name="gym_name" class="form-control" value="<?= $v('gym_name', 'PowerSurge Gym') ?>">
+            <input type="text" name="gym_name" class="form-control" value="<?= $v('gym_name', 'POWERSURGE GYM & NUTRITION') ?>">
           </div>
           <div class="col-md-6">
             <label>Phone</label>
@@ -413,7 +413,7 @@ $yn = function (string $key, string $default = '1') use ($settings) {
           </div>
           <div class="col-md-6">
             <label>From Name</label>
-            <input type="text" name="smtp_from_name" class="form-control" value="<?= $v('smtp_from_name', 'PowerSurge Gym') ?>">
+            <input type="text" name="smtp_from_name" class="form-control" value="<?= $v('smtp_from_name', 'POWERSURGE GYM & NUTRITION') ?>">
           </div>
         </div>
       </div>

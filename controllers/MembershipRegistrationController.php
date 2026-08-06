@@ -85,8 +85,8 @@ final class MembershipRegistrationController extends Controller
             Mailer::send(
                 $email,
                 $name,
-                'Registration Received — PowerSurge Gym',
-                "<p>Hi {$name},</p><p>We've received your membership registration request. Please visit or contact the PowerSurge Gym office to complete your payment and activate your membership.</p>"
+                'Registration Received — POWERSURGE GYM & NUTRITION',
+                "<p>Hi {$name},</p><p>We've received your membership registration request. Please visit or contact the POWERSURGE GYM & NUTRITION office to complete your payment and activate your membership.</p>"
             );
         }
 
@@ -101,7 +101,7 @@ final class MembershipRegistrationController extends Controller
             'ip' => $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0',
         ]);
 
-        flash('success', 'Your registration request has been received. Please visit or contact the PowerSurge Gym office to complete your payment and activate your membership.');
+        flash('success', 'Your registration request has been received. Please visit or contact the POWERSURGE GYM & NUTRITION office to complete your payment and activate your membership.');
         redirect('register');
     }
 }

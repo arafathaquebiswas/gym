@@ -6,7 +6,7 @@ final class OrderMailer
     public static function sendConfirmation(array $order, array $items): bool
     {
         $settings = new Setting();
-        $gymName = $settings->get('gym_name', 'PowerSurge Gym');
+        $gymName = $settings->get('gym_name', 'POWERSURGE GYM & NUTRITION');
         $gymPhone = $settings->get('gym_phone', '01904-485009');
         $gymEmail = $settings->get('gym_email', '');
 

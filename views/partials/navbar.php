@@ -30,8 +30,8 @@ $cartCount = (new Cart())->count($cartIdentity['user_id'], $cartIdentity['cart_t
 <nav class="navbar navbar-expand-lg navbar-dark navbar-ps sticky-top py-2">
   <div class="container navbar-ps-container">
     <a class="navbar-brand d-flex align-items-center gap-2" href="<?= url('/') ?>">
-      <img src="<?= asset('images/logo/logo.png') ?>" alt="PowerSurge Gym">
-      Power<span>Surge</span>
+      <img src="<?= asset('images/logo/logo.png') ?>" alt="POWERSURGE GYM & NUTRITION">
+      POWERSURGE <span>GYM & NUTRITION</span>
     </a>
     <button class="navbar-toggler text-white" type="button" data-bs-toggle="collapse" data-bs-target="#psNav" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>

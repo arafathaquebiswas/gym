@@ -1,4 +1,4 @@
-# PowerSurge Gym — Management System & Website
+# POWERSURGE GYM & NUTRITION — Management System & Website
 
 Phase 1 deliverable: the full public website (Home, About, Membership, Packages,
 Pricing, Personal Training, Store, Gallery, Blog, FAQ, Contact, Login, Register)

@@ -1,5 +1,5 @@
 -- =============================================================
--- PowerSurge Gym — Seed Data
+-- POWERSURGE GYM & NUTRITION — Seed Data
 -- Run AFTER schema.sql
 -- =============================================================
 
@@ -26,7 +26,7 @@ INSERT INTO roles (slug, name) VALUES
 INSERT INTO users (role_id, name, email, phone, password_hash, status)
 VALUES (
     (SELECT id FROM roles WHERE slug = 'super_admin'),
-    'PowerSurge Super Admin',
+    'POWERSURGE GYM & NUTRITION Super Admin',
     'admin@powersurgegym.test',
     '+8801000000000',
     '$2y$12$WbfL9gQIVkeP472L0fGSiOPh2e8O9Jgl08wfeREuxeIib2wb5z0/O',
@@ -128,9 +128,9 @@ INSERT INTO products (category_id, sku, barcode, name, slug, brand, description,
 ((SELECT id FROM product_categories WHERE slug='supplements'), 'SUP-MG-003', '8901000000035', 'Mass Gainer 6lb', 'mass-gainer-6lb', 'PowerSurge Nutrition', 'High-calorie gainer blend for lean muscle mass.', 2200.00, 3200.00, 25, 5, NULL),
 ((SELECT id FROM product_categories WHERE slug='supplements'), 'SUP-PW-004', '8901000000042', 'Pre Workout 300g', 'pre-workout-300g', 'PowerSurge Nutrition', 'Explosive energy and focus formula for intense sessions.', 1200.00, 1900.00, 30, 5, NULL),
 ((SELECT id FROM product_categories WHERE slug='supplements'), 'SUP-VT-005', '8901000000059', 'Daily Vitamins (60 caps)', 'daily-vitamins-60caps', 'PowerSurge Nutrition', 'Multivitamin complex to support recovery and immunity.', 500.00, 850.00, 60, 10, NULL),
-((SELECT id FROM product_categories WHERE slug='supplements'), 'SUP-PB-016', '8901000000165', 'Power Butter (Regular & Creamy)', 'power-butter-regular-creamy', 'PowerSurge Gym', 'The gym''s own peanut butter — regular & creamy, no added nonsense.', 250.00, 450.00, 90, 15, 'Sell/Powersurge_gym_Butter.jpg'),
+((SELECT id FROM product_categories WHERE slug='supplements'), 'SUP-PB-016', '8901000000165', 'Power Butter (Regular & Creamy)', 'power-butter-regular-creamy', 'POWERSURGE GYM & NUTRITION', 'The gym''s own peanut butter — regular & creamy, no added nonsense.', 250.00, 450.00, 90, 15, 'Sell/Powersurge_gym_Butter.jpg'),
 ((SELECT id FROM product_categories WHERE slug='accessories'), 'ACC-SB-006', '8901000000066', 'Shaker Bottle 700ml', 'shaker-bottle-700ml', 'Applied Nutrition', 'Leak-proof shaker with mixing ball — steel or classic clear.', 150.00, 350.00, 100, 15, 'Sell/gymbollol.jpg'),
-((SELECT id FROM product_categories WHERE slug='accessories'), 'ACC-WB-007', '8901000000073', 'Water Bottle 1L', 'water-bottle-1l', 'PowerSurge Gear', 'PowerSurge Gym branded steel water bottle.', 180.00, 400.00, 80, 15, 'Sell/logobolol.jpg'),
+((SELECT id FROM product_categories WHERE slug='accessories'), 'ACC-WB-007', '8901000000073', 'Water Bottle 1L', 'water-bottle-1l', 'POWERSURGE GYM & NUTRITION Gear', 'POWERSURGE GYM & NUTRITION branded steel water bottle.', 180.00, 400.00, 80, 15, 'Sell/logobolol.jpg'),
 ((SELECT id FROM product_categories WHERE slug='accessories'), 'ACC-TS-008', '8901000000080', 'Gym T-Shirt', 'gym-t-shirt', 'Gymshark', 'Breathable performance t-shirt, unisex.', 350.00, 750.00, 70, 10, 'Sell/GYMSHARK-tshirt.webp'),
 ((SELECT id FROM product_categories WHERE slug='accessories'), 'ACC-HD-009', '8901000000097', 'Hoodie', 'hoodie', 'PowerSurge Apparel', 'Warm fleece hoodie with embroidered logo.', 900.00, 1800.00, 35, 5, NULL),
 ((SELECT id FROM product_categories WHERE slug='equipment'), 'EQP-GL-010', '8901000000103', 'Gym Gloves', 'gym-gloves', 'PowerSurge Gear', 'Padded gloves with wrist support.', 350.00, 650.00, 45, 10, NULL),
@@ -152,7 +152,7 @@ INSERT INTO gallery (title, category, image_path) VALUES
 ('Squad Session', 'gym', 'pic/1stpic.jpg'),
 ('Leg Day Setup', 'gym', 'pic/anotherpic2.jpg'),
 ('Member Giveaway Day', 'events', 'award/giveaway-gift.jpg'),
-('PowerSurge Family Meetup', 'events', 'family/ourfamily.jpg'),
+('POWERSURGE GYM & NUTRITION Family Meetup', 'events', 'family/ourfamily.jpg'),
 ('Gymsquad Flex-Off', 'competitions', 'pic/middlepic.jpg'),
 ('Members Posing With the Legacy Wall', 'transformation', 'pic/anotherpic.jpg'),
 ('Focused Before the Set', 'transformation', 'pic/lastpic.jpg'),
@@ -162,17 +162,17 @@ INSERT INTO gallery (title, category, image_path) VALUES
 ('Outside the Gym', 'team', 'trainer/trainer6.png'),
 ('Post-Workout Pump', 'team', 'trainer/trainer7.png'),
 ('Progress Check', 'team', 'trainer/trainer8.png'),
-('Team PowerSurge', 'team', 'trainer/femaletrainer.jpg');
+('Team POWERSURGE GYM & NUTRITION', 'team', 'trainer/femaletrainer.jpg');
 
 -- ---- Blog Posts -------------------------------------------------------
 INSERT INTO blog_posts (title, slug, category, excerpt, content, status, published_at) VALUES
-('5 Warm-Up Mistakes That Are Killing Your Gains', '5-warm-up-mistakes', 'workout_tips', 'Skipping these steps could be limiting your progress every single session.', '<p>A proper warm-up primes your nervous system and joints for heavy work. Here are five mistakes we see every week at PowerSurge, and how to fix them.</p>', 'published', NOW()),
+('5 Warm-Up Mistakes That Are Killing Your Gains', '5-warm-up-mistakes', 'workout_tips', 'Skipping these steps could be limiting your progress every single session.', '<p>A proper warm-up primes your nervous system and joints for heavy work. Here are five mistakes we see every week at POWERSURGE GYM & NUTRITION, and how to fix them.</p>', 'published', NOW()),
 ('How Much Protein Do You Actually Need?', 'how-much-protein-do-you-need', 'diet_tips', 'The science-backed answer for muscle growth and recovery.', '<p>Protein needs vary by goal, but most active lifters do well around 1.6–2.2g per kg of bodyweight per day. Here is how to plan your meals around that target.</p>', 'published', NOW()),
-('PowerSurge Gym Extends Weekend Hours', 'powersurge-extends-weekend-hours', 'announcements', 'Starting this month, we are open longer on Fridays and Saturdays.', '<p>Based on member feedback, our weekend hours are now extended until 11 PM on Fridays and Saturdays.</p>', 'published', NOW());
+('POWERSURGE GYM & NUTRITION Extends Weekend Hours', 'powersurge-extends-weekend-hours', 'announcements', 'Starting this month, we are open longer on Fridays and Saturdays.', '<p>Based on member feedback, our weekend hours are now extended until 11 PM on Fridays and Saturdays.</p>', 'published', NOW());
 
 -- ---- Testimonials -------------------------------------------------------
 INSERT INTO testimonials (member_name, rating, message, is_featured, is_approved) VALUES
-('Shafiul Islam', 5, 'PowerSurge completely changed my approach to training. Down 12kg in 5 months with the trainers here!', 1, 1),
+('Shafiul Islam', 5, 'POWERSURGE GYM & NUTRITION completely changed my approach to training. Down 12kg in 5 months with the trainers here!', 1, 1),
 ('Farzana Akter', 5, 'The staff genuinely care about your progress. Clean equipment, great energy, highly recommended.', 1, 1),
 ('Imran Kabir', 4, 'Great value for the VIP package — steam room after leg day is unbeatable.', 1, 1);
 
@@ -189,7 +189,7 @@ INSERT INTO faqs (question, answer, category, sort_order) VALUES
 -- blank — no real values were given for these yet. Fill them in via the
 -- Settings screen once Phase 2 ships (or update this table directly for now).
 INSERT INTO settings (setting_key, setting_value) VALUES
-('gym_name', 'PowerSurge Gym'),
+('gym_name', 'POWERSURGE GYM & NUTRITION'),
 ('gym_tagline', 'Train Hard. Surge Ahead.'),
 ('gym_phone', '01904-485009'),
 ('gym_email', ''),

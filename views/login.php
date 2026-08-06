@@ -7,7 +7,7 @@
         <div class="glass-card p-4 p-md-5">
           <div class="text-center mb-4">
             <h3 class="mb-1">Welcome Back</h3>
-            <p class="text-white-50 mb-0">Log in to your PowerSurge account.</p>
+            <p class="text-white-50 mb-0">Log in to your POWERSURGE GYM & NUTRITION account.</p>
           </div>
           <form method="post" action="<?= url('/login') ?>" class="form-ps needs-validation" novalidate>
             <input type="hidden" name="_csrf" value="<?= e(Security::csrfToken()) ?>">

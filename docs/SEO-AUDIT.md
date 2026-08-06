@@ -1,4 +1,4 @@
-# PowerSurge Gym — Technical SEO Audit
+# POWERSURGE GYM & NUTRITION — Technical SEO Audit
 
 **Site:** https://powersurgebd.com/
 **Audited:** 6 August 2026
@@ -61,7 +61,7 @@ The templates already render all four correctly when populated — [views/partia
 
 ### ⚠️ NAP inconsistency found off-site
 
-Your business is listed on moumachi.com.bd as **"Powersurge Gym, 377/3 Barek Mollah Mor, Mirpur-2"** — that says **Mirpur-2**, while you gave me **Mirpur 60 Feet Road, Kamal Sarani, Dhaka-1216**. Google treats conflicting addresses as a trust signal problem for local ranking. Decide on **one** canonical format, use it byte-identical everywhere (site, Google Business Profile, Facebook, every directory), and correct the listings that disagree. Recommended canonical string:
+Your business is listed on moumachi.com.bd as **"POWERSURGE GYM & NUTRITION, 377/3 Barek Mollah Mor, Mirpur-2"** — that says **Mirpur-2**, while you gave me **Mirpur 60 Feet Road, Kamal Sarani, Dhaka-1216**. Google treats conflicting addresses as a trust signal problem for local ranking. Decide on **one** canonical format, use it byte-identical everywhere (site, Google Business Profile, Facebook, every directory), and correct the listings that disagree. Recommended canonical string:
 
 ```
 House 377/3, Barek Mollah Mor, Mirpur 60 Feet Road, Kamal Sarani, Dhaka 1216, Bangladesh
@@ -389,21 +389,21 @@ Then set `$metaDescription` at the top of each view (same place `$pageTitle` is 
 
 | Page | Meta description |
 |---|---|
-| `/` | `PowerSurge Gym — Mirpur's first duplex gym on 60 Feet Road. 6,000 sq ft, fully AC, separate ladies section. Membership from ৳1,000. Call 01904-485009.` |
-| `/about` | `Inside PowerSurge Gym Mirpur: 6,000 sq ft over two floors, certified trainers, separate cardio and strength zones, and a members-first culture.` |
-| `/membership` | `Gym membership in Mirpur from ৳1,000 for 2 months. 4-month and 12-month plans, no joining fee, locker and trainer options. Join PowerSurge Gym today.` |
-| `/personal-training` | `1-on-1 personal training in Mirpur, Dhaka. Certified coaches for weight loss, muscle gain and strength. Book a session at PowerSurge Gym: 01904-485009.` |
-| `/store` | `Buy authentic whey protein, creatine, pre-workout and gym gear in Dhaka. Genuine brands, in-stock delivery across Bangladesh from PowerSurge Gym.` |
-| `/gallery` | `See inside PowerSurge Gym Mirpur — equipment, training floors, ladies section and member results. Real photos of Dhaka's first duplex gym.` |
-| `/faq` | `Opening hours, membership freezing, student discounts and trainer questions — everything you need to know before joining PowerSurge Gym Mirpur.` |
-| `/contact` | `Visit PowerSurge Gym at House 377/3, Barek Mollah Mor, Mirpur 60 Feet Road, Dhaka 1216. Open Sat–Thu 7AM–11PM. Call 01904-485009.` |
-| `/blog` | `Workout guides, nutrition advice and training tips from the coaches at PowerSurge Gym Mirpur, written for lifters in Bangladesh.` |
+| `/` | `POWERSURGE GYM & NUTRITION — Mirpur's first duplex gym on 60 Feet Road. 6,000 sq ft, fully AC, separate ladies section. Membership from ৳1,000. Call 01904-485009.` |
+| `/about` | `Inside POWERSURGE GYM & NUTRITION Mirpur: 6,000 sq ft over two floors, certified trainers, separate cardio and strength zones, and a members-first culture.` |
+| `/membership` | `Gym membership in Mirpur from ৳1,000 for 2 months. 4-month and 12-month plans, no joining fee, locker and trainer options. Join POWERSURGE GYM & NUTRITION today.` |
+| `/personal-training` | `1-on-1 personal training in Mirpur, Dhaka. Certified coaches for weight loss, muscle gain and strength. Book a session at POWERSURGE GYM & NUTRITION: 01904-485009.` |
+| `/store` | `Buy authentic whey protein, creatine, pre-workout and gym gear in Dhaka. Genuine brands, in-stock delivery across Bangladesh from POWERSURGE GYM & NUTRITION.` |
+| `/gallery` | `See inside POWERSURGE GYM & NUTRITION Mirpur — equipment, training floors, ladies section and member results. Real photos of Dhaka's first duplex gym.` |
+| `/faq` | `Opening hours, membership freezing, student discounts and trainer questions — everything you need to know before joining POWERSURGE GYM & NUTRITION Mirpur.` |
+| `/contact` | `Visit POWERSURGE GYM & NUTRITION at House 377/3, Barek Mollah Mor, Mirpur 60 Feet Road, Dhaka 1216. Open Sat–Thu 7AM–11PM. Call 01904-485009.` |
+| `/blog` | `Workout guides, nutrition advice and training tips from the coaches at POWERSURGE GYM & NUTRITION Mirpur, written for lifters in Bangladesh.` |
 
 **Time:** 45 minutes. **Impact:** high (CTR + duplicate-content removal).
 
 ### 2.2 Title tags — 🟠 HIGH — no keywords, no location
 
-Current pattern is `{Page} | PowerSurge Gym`, producing titles like `Home | PowerSurge Gym` (21 chars). You are leaving 40+ characters of ranking real estate unused on every page, and "Home" is a wasted word.
+Current pattern is `{Page} | POWERSURGE GYM & NUTRITION`, producing titles like `Home | POWERSURGE GYM & NUTRITION` (21 chars). You are leaving 40+ characters of ranking real estate unused on every page, and "Home" is a wasted word.
 
 Your competitor **getfitgymbd.com** titles their homepage `Get Fit Gym – Best Gym in Mirpur 60 Feet Road` — same road, targeting the exact query.
 
@@ -411,18 +411,18 @@ Your competitor **getfitgymbd.com** titles their homepage `Get Fit Gym – Best 
 
 | Page | Title |
 |---|---|
-| `/` | `Best Gym in Mirpur, Dhaka \| PowerSurge Gym 60 Feet Road` |
-| `/about` | `About PowerSurge Gym — Mirpur's First Duplex Fitness Center` |
-| `/membership` | `Gym Membership Price in Mirpur from ৳1,000 \| PowerSurge Gym` |
+| `/` | `Best Gym in Mirpur, Dhaka \| POWERSURGE GYM & NUTRITION 60 Feet Road` |
+| `/about` | `About POWERSURGE GYM & NUTRITION — Mirpur's First Duplex Fitness Center` |
+| `/membership` | `Gym Membership Price in Mirpur from ৳1,000 \| POWERSURGE GYM & NUTRITION` |
 | `/personal-training` | `Personal Trainer in Mirpur, Dhaka \| 1-on-1 Coaching` |
-| `/store` | `Buy Whey Protein & Supplements Online in Dhaka \| PowerSurge` |
-| `/gallery` | `PowerSurge Gym Photos — Inside Our Mirpur Fitness Center` |
-| `/faq` | `Gym Membership FAQ — Hours, Prices & Rules \| PowerSurge Gym` |
-| `/contact` | `Contact PowerSurge Gym Mirpur \| 01904-485009 \| 60 Feet Road` |
-| `/blog` | `Fitness & Nutrition Blog for Bangladesh \| PowerSurge Gym` |
-| `/bundles` | `Supplement Bundle Deals & Combo Offers in Dhaka \| PowerSurge` |
+| `/store` | `Buy Whey Protein & Supplements Online in Dhaka \| POWERSURGE GYM & NUTRITION` |
+| `/gallery` | `POWERSURGE GYM & NUTRITION Photos — Inside Our Mirpur Fitness Center` |
+| `/faq` | `Gym Membership FAQ — Hours, Prices & Rules \| POWERSURGE GYM & NUTRITION` |
+| `/contact` | `Contact POWERSURGE GYM & NUTRITION Mirpur \| 01904-485009 \| 60 Feet Road` |
+| `/blog` | `Fitness & Nutrition Blog for Bangladesh \| POWERSURGE GYM & NUTRITION` |
+| `/bundles` | `Supplement Bundle Deals & Combo Offers in Dhaka \| POWERSURGE GYM & NUTRITION` |
 
-Implementation: `$pageTitle` already flows into the layout. For pages that should **not** get the ` | PowerSurge Gym` suffix appended twice, change [views/layouts/main.php:15](../views/layouts/main.php#L15) to:
+Implementation: `$pageTitle` already flows into the layout. For pages that should **not** get the ` | POWERSURGE GYM & NUTRITION` suffix appended twice, change [views/layouts/main.php:15](../views/layouts/main.php#L15) to:
 
 ```php
 <title><?= e($pageTitle ?? $gymName) ?><?= empty($fullTitle) ? ' | ' . e($gymName) : '' ?></title>

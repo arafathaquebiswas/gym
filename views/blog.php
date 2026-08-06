@@ -9,7 +9,7 @@ $cats = ['workout_tips' => 'Workout Tips', 'diet_tips' => 'Diet Tips', 'fitness_
     <div class="hero-copy">
       <span class="hero-badge">Blog</span>
       <h1>Workout Tips &amp; <span class="text-orange">Fitness News</span></h1>
-      <p class="hero-subtitle">Training advice, nutrition guidance, and updates from PowerSurge Gym.</p>
+      <p class="hero-subtitle">Training advice, nutrition guidance, and updates from POWERSURGE GYM & NUTRITION.</p>
     </div>
   </div>
 </section>

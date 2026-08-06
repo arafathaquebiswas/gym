@@ -1,4 +1,4 @@
-/* PowerSurge Gym — BMI Calculator (client-side only, no data sent anywhere) */
+/* POWERSURGE GYM & NUTRITION — BMI Calculator (client-side only, no data sent anywhere) */
 $(function () {
   'use strict';
 
@@ -184,7 +184,7 @@ $(function () {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     doc.setFontSize(18);
-    doc.text('PowerSurge Gym — BMI Result', 14, 20);
+    doc.text('POWERSURGE GYM & NUTRITION — BMI Result', 14, 20);
     doc.setFontSize(12);
     doc.text(lastSummary.split('\n'), 14, 34);
     doc.save('bmi-result.pdf');

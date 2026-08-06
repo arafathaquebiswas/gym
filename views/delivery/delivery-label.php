@@ -10,7 +10,7 @@
 
 /* ── Settings ──────────────────────────────────────────────────────────── */
 $settingModel = new Setting();
-$gymName      = $settingModel->get('gym_name',    'PowerSurge Gym');
+$gymName      = $settingModel->get('gym_name',    'POWERSURGE GYM & NUTRITION');
 $gymPhone     = $settingModel->get('gym_phone',   '01904-485009');
 $gymEmail     = $settingModel->get('gym_email',   'info@powersurgegym.com');
 $gymAddress   = $settingModel->get('gym_address', 'Fitness Ave, Dhaka, Bangladesh');

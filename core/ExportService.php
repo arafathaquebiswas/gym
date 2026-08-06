@@ -160,12 +160,12 @@ final class ExportService
         $out = fopen('php://output', 'w');
 
         $setting = new Setting();
-        $companyName = $setting->get('gym_name', 'PowerSurge Gym');
+        $companyName = $setting->get('gym_name', 'POWERSURGE GYM & NUTRITION');
 
         // 1. Company Header
         fputcsv($out, [$companyName]);
         fputcsv($out, ['Fitness Management & POS Management System']);
-        fputcsv($out, ['PowerSurge Gym Official Report']);
+        fputcsv($out, ['POWERSURGE GYM & NUTRITION Official Report']);
         fputcsv($out, []);
 
         // 2. Report Title
@@ -197,7 +197,7 @@ final class ExportService
         }
 
         fputcsv($out, ['=======================================================================']);
-        fputcsv($out, ['Generated automatically by PowerSurge Gym Management System.']);
+        fputcsv($out, ['Generated automatically by POWERSURGE GYM & NUTRITION Management System.']);
         fputcsv($out, ['This report is confidential and intended for authorized personnel only.']);
         fputcsv($out, [$companyName . '  •  Website: www.powersurgegym.com  •  Email: support@powersurgegym.com']);
 
@@ -242,7 +242,7 @@ final class ExportService
         $rightStartCol = $colLetters[max(3, $midColIdx)];
 
         $setting = new Setting();
-        $companyName = $setting->get('gym_name', 'PowerSurge Gym');
+        $companyName = $setting->get('gym_name', 'POWERSURGE GYM & NUTRITION');
 
         $user = Auth::user() ?? [];
         $userName = !empty($user['name']) ? $user['name'] : 'Arafat Biswas';
@@ -306,7 +306,7 @@ final class ExportService
         // Subtitle line below Slogan
         $rowIdx++;
         $sheet->mergeCells("A{$rowIdx}:{$midCol}{$rowIdx}");
-        $sheet->setCellValue('A' . $rowIdx, '⚡ PowerSurge Gym Official Verified Report');
+        $sheet->setCellValue('A' . $rowIdx, '⚡ POWERSURGE GYM & NUTRITION Official Verified Report');
         $sheet->getStyle('A' . $rowIdx)->getFont()->setItalic(true)->setSize(9)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF64748B'));
 
         $rowIdx = max($rowIdx + 2, $mRow + 1);
@@ -422,7 +422,7 @@ final class ExportService
 
         // --- FOOTER SECTION (At Very Bottom) ---
         $sheet->mergeCells("A{$rowIdx}:{$lastCol}{$rowIdx}");
-        $sheet->setCellValue('A' . $rowIdx, "Generated automatically by PowerSurge Gym Management System.");
+        $sheet->setCellValue('A' . $rowIdx, "Generated automatically by POWERSURGE GYM & NUTRITION Management System.");
         $sheet->getStyle('A' . $rowIdx)->getFont()->setSize(8)->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('FF475569'));
         $sheet->getStyle('A' . $rowIdx)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         $rowIdx++;

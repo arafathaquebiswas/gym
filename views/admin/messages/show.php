@@ -32,7 +32,7 @@ $statusColors = ['new' => 'success', 'read' => 'secondary', 'replied' => 'info']
   <div class="glass-card p-3 mb-4"><?= nl2br(e($message['message'])) ?></div>
 
   <div class="d-flex gap-2">
-    <a href="mailto:<?= e($message['email']) ?>?subject=Re: <?= e($message['subject'] ?: 'Your message to PowerSurge Gym') ?>" class="btn btn-ps"><i class="bi bi-reply"></i> Reply by Email</a>
+    <a href="mailto:<?= e($message['email']) ?>?subject=Re: <?= e($message['subject'] ?: 'Your message to POWERSURGE GYM & NUTRITION') ?>" class="btn btn-ps"><i class="bi bi-reply"></i> Reply by Email</a>
     <?php if ($message['status'] !== 'replied'): ?>
     <form method="post" action="<?= url('/admin/messages/' . $message['id'] . '/mark-replied') ?>">
       <?= Security::csrfField() ?>

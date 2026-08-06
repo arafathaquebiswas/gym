@@ -339,13 +339,13 @@ function _nqs(string $key, string $value, array $base): string {
       if (Notification.permission !== 'granted') {
         Notification.requestPermission().then(function(p) {
           updatePermLabel();
-          if (p === 'granted') new Notification('PowerSurge Notifications', {
+          if (p === 'granted') new Notification('POWERSURGE GYM & NUTRITION Notifications', {
             body: 'Desktop notifications are working correctly.',
             icon: '<?= asset('images/logo/logo.png') ?>',
           });
         });
       } else {
-        new Notification('PowerSurge Notifications', {
+        new Notification('POWERSURGE GYM & NUTRITION Notifications', {
           body: 'Desktop notifications are working correctly.',
           icon: '<?= asset('images/logo/logo.png') ?>',
         });

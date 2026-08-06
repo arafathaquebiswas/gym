@@ -1,5 +1,5 @@
 /* =========================================================
-   PowerSurge Gym — Admin Panel shell
+   POWERSURGE GYM & NUTRITION — Admin Panel shell
    ========================================================= */
 
 .admin-body { background: var(--ps-black); color: var(--ps-text); overflow-x: hidden; }
@@ -552,7 +552,7 @@ tr.collapse.show { display: table-row; }
 }
 
 /* =========================================================
-   PowerSurge Gym — Universal Print Engine & A4 Optimization
+   POWERSURGE GYM & NUTRITION — Universal Print Engine & A4 Optimization
    ========================================================= */
 @media print {
   /* 1. Reset Root Document */

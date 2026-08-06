@@ -29,17 +29,26 @@ final class Database
                         PDO::ATTR_EMULATE_PREPARES => false,
                     ]);
                 } catch (PDOException $e) {
-                    // In production a failed connection must be loud. Falling back
-                    // would serve the live site from an empty SQLite file — and
-                    // setup_sqlite.php would seed it with default admin accounts.
-                    if (defined('APP_ENV') && APP_ENV === 'production') {
-                        error_log('Database connection failed: ' . $e->getMessage());
+                    error_log('MySQL connection failed: ' . $e->getMessage());
+
+                    // A failed connection must be loud anywhere but a developer's
+                    // machine. Falling back silently serves the site from a separate
+                    // SQLite file: every write lands in a database nobody reads, and
+                    // the MySQL-only SQL this app relies on (ON DUPLICATE KEY UPDATE,
+                    // INSERT IGNORE, INTERVAL) fails outright there.
+                    //
+                    // The marker for a development checkout is config/env.local.php,
+                    // not APP_ENV: env.local.php is never uploaded to the server, so
+                    // its absence is reliable, whereas APP_ENV only reads correctly
+                    // if the deployed env.php happens to set it.
+                    if (!is_file(BASE_PATH . '/config/env.local.php')) {
                         throw new RuntimeException(
                             'Database connection failed. Check the credentials in config/env.php.',
                             0,
                             $e
                         );
                     }
+
                     // Development only: fall back to SQLite so local work continues.
                     $driver = 'sqlite';
                 }

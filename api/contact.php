@@ -53,7 +53,7 @@ $gymEmail = $settingModel->get('gym_email');
 if ($gymEmail) {
     Mailer::send(
         $gymEmail,
-        'PowerSurge Gym',
+        'POWERSURGE GYM & NUTRITION',
         'New Contact Message: ' . ($subject ?: 'Website Inquiry'),
         '<p><strong>From:</strong> ' . e($name) . ' (' . e($email) . ')</p><p><strong>Phone:</strong> ' . e($phone) . '</p><p>' . nl2br(e($message)) . '</p>'
     );

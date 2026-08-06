@@ -1,6 +1,6 @@
 <?php
 /**
- * SQLite Schema and Seed generator for PowerSurge Gym
+ * SQLite Schema and Seed generator for POWERSURGE GYM & NUTRITION
  */
 
 $dbFile = __DIR__ . '/gym.sqlite';
