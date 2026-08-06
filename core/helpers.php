@@ -13,9 +13,17 @@ function url(string $path = ''): string
     return rtrim(APP_URL, '/') . '/' . ltrim($path, '/');
 }
 
+/**
+ * Assets carry a ?v= stamp of their last-modified time, so a CSS/JS edit reaches browsers
+ * on the next request instead of sitting behind a cached copy until a hard refresh.
+ */
 function asset(string $path): string
 {
-    return url('assets/' . ltrim($path, '/'));
+    $relative = 'assets/' . ltrim($path, '/');
+    $file = BASE_PATH . '/' . $relative;
+    $version = is_file($file) ? filemtime($file) : false;
+
+    return url($relative) . ($version ? '?v=' . $version : '');
 }
 
 function upload_url(string $path): string

@@ -15,6 +15,18 @@ $activeCount = count(array_filter([
     $f['category'], $f['brand'], $f['availability'], $f['min_price'], $f['max_price'],
     $f['on_sale'], $f['best_seller'], $f['min_rating'],
 ]));
+
+// Accordion: exactly one section is open — the one the visitor is filtering on, else Category.
+// Keeping the rest collapsed is what lets the whole panel fit one product card's height.
+$openGroup = match (true) {
+    $f['min_price'] !== null || $f['max_price'] !== null => 'price',
+    (bool) $f['availability'] => 'availability',
+    $f['on_sale'] || $f['best_seller'] => 'offers',
+    (bool) $f['min_rating'] => 'rating',
+    (bool) $f['brand'] => 'brand',
+    default => 'category',
+};
+$isOpen = fn (string $group) => $openGroup === $group ? 'open' : '';
 ?>
 <form method="get" action="<?= url('/store') ?>" class="shop-filters glass-card" id="shopFilters">
   <div class="shop-filters-head">
@@ -39,7 +51,7 @@ $activeCount = count(array_filter([
   </div>
 
   <div class="shop-filters-scroll">
-    <details class="filter-group" open>
+    <details class="filter-group" data-group="category" <?= $isOpen('category') ?>>
       <summary>Category</summary>
       <ul class="filter-list">
         <li>
@@ -71,7 +83,7 @@ $activeCount = count(array_filter([
       </ul>
     </details>
 
-    <details class="filter-group" <?= $f['min_price'] !== null || $f['max_price'] !== null ? 'open' : '' ?>>
+    <details class="filter-group" data-group="price" <?= $isOpen('price') ?>>
       <summary>Price (৳)</summary>
       <div class="filter-body">
         <div class="d-flex align-items-center gap-2 mb-2">
@@ -95,7 +107,7 @@ $activeCount = count(array_filter([
       </div>
     </details>
 
-    <details class="filter-group" <?= $f['availability'] ? 'open' : '' ?>>
+    <details class="filter-group" data-group="availability" <?= $isOpen('availability') ?>>
       <summary>Availability</summary>
       <ul class="filter-list">
         <?php
@@ -118,7 +130,7 @@ $activeCount = count(array_filter([
       </ul>
     </details>
 
-    <details class="filter-group" <?= $f['on_sale'] || $f['best_seller'] ? 'open' : '' ?>>
+    <details class="filter-group" data-group="offers" <?= $isOpen('offers') ?>>
       <summary>Offers</summary>
       <ul class="filter-list">
         <li>
@@ -139,7 +151,7 @@ $activeCount = count(array_filter([
     </details>
 
     <?php if ($hasReviews): ?>
-    <details class="filter-group" <?= $f['min_rating'] ? 'open' : '' ?>>
+    <details class="filter-group" data-group="rating" <?= $isOpen('rating') ?>>
       <summary>Customer Rating</summary>
       <ul class="filter-list">
         <li>
@@ -162,7 +174,7 @@ $activeCount = count(array_filter([
     <?php endif; ?>
 
     <?php if (!empty($brands)): ?>
-    <details class="filter-group" <?= $f['brand'] ? 'open' : '' ?>>
+    <details class="filter-group" data-group="brand" <?= $isOpen('brand') ?>>
       <summary>Brand</summary>
       <ul class="filter-list">
         <li>

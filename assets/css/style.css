@@ -507,9 +507,9 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
 
 /* ---------- Store Front UI Extensions ---------- */
 :root {
-  /* One product card's height: 300px image + 14px gap + ~250px of copy/price/button + card padding.
-     The sidebar matches it so the top and bottom of the two columns line up. */
   --ps-product-image-h: 300px;
+  /* Fallback only. store.php measures the first product card and overrides this per page load,
+     so the sidebar's top and bottom edges land exactly on the first card's. */
   --ps-shop-sidebar-h: 630px;
 }
 

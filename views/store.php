@@ -214,13 +214,14 @@ $pageQuery = array_filter([
 </section>
 
 <script>
-// Filters apply on change (the Apply button is the no-JS fallback), and the sidebar keeps
-// its open sections + scroll position across the page reload each filter causes.
+// Sidebar behaviour: filters apply on change (the Apply button is the no-JS fallback), only one
+// section is open at a time, and the panel is pinned to the exact height of one product card.
 (function () {
   var form = document.getElementById('shopFilters');
   if (!form) return;
 
   var scroller = form.querySelector('.shop-filters-scroll');
+  var groups = Array.prototype.slice.call(form.querySelectorAll('.filter-group'));
   var store = window.sessionStorage;
 
   form.addEventListener('change', function (event) {
@@ -237,12 +238,21 @@ $pageQuery = array_filter([
     });
   });
 
-  form.querySelectorAll('.filter-group').forEach(function (group, index) {
-    var key = 'psFilterGroup' + index;
-    var saved = store.getItem(key);
-    if (saved) group.open = saved === 'open';
+  // Accordion — opening one section collapses the rest, so the panel never outgrows its box.
+  var remembered = store.getItem('psFilterGroup');
+  if (remembered) {
+    groups.forEach(function (group) {
+      group.open = group.dataset.group === remembered;
+    });
+  }
+  groups.forEach(function (group) {
     group.addEventListener('toggle', function () {
-      store.setItem(key, group.open ? 'open' : 'closed');
+      if (!group.open) return;
+      store.setItem('psFilterGroup', group.dataset.group);
+      groups.forEach(function (other) {
+        if (other !== group) other.open = false;
+      });
+      if (scroller) scroller.scrollTop = 0;
     });
   });
 
@@ -253,5 +263,26 @@ $pageQuery = array_filter([
       store.setItem('psFilterScroll', String(scroller.scrollTop));
     });
   }
+
+  // Match the sidebar to a real product card rather than a guessed pixel value, so the two
+  // columns line up top and bottom whatever the cards end up containing.
+  var card = document.querySelector('.product-card');
+  if (!card) return;
+
+  function syncHeight() {
+    if (window.innerWidth < 992) {
+      form.style.removeProperty('--ps-shop-sidebar-h');
+      return;
+    }
+    var gridTop = card.getBoundingClientRect().top;
+    var sidebarTop = form.getBoundingClientRect().top;
+    // The results bar sits above the grid, so the sidebar starts higher than the first card.
+    var height = card.offsetHeight + Math.max(0, gridTop - sidebarTop);
+    form.style.setProperty('--ps-shop-sidebar-h', height + 'px');
+  }
+
+  syncHeight();
+  window.addEventListener('resize', syncHeight);
+  window.addEventListener('load', syncHeight);
 })();
 </script>
