@@ -54,7 +54,7 @@ $pageQuery = array_filter([
 </section>
 
 <section class="section pt-0">
-  <div class="container">
+  <div class="store-container">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
       <div class="shop-results-bar d-flex flex-wrap align-items-center gap-2">
         <span class="text-white-50 small">
@@ -95,7 +95,7 @@ $pageQuery = array_filter([
     </div>
 
     <div class="row g-4">
-      <div class="col-lg-3 sidebar-col">
+      <div class="sidebar-col">
         <?php $this->partial('partials/store-filters', [
           'categories' => $categories,
           'brands' => $brands,
@@ -105,7 +105,7 @@ $pageQuery = array_filter([
           'hasReviews' => $hasReviews,
         ]); ?>
       </div>
-      <div class="col-lg-9">
+      <div class="store-main-col">
         <?php if (empty($products)): ?>
           <div class="glass-card p-5 text-center text-white-50">
             <i class="bi bi-search fs-1 d-block mb-2 opacity-50"></i>
@@ -115,7 +115,7 @@ $pageQuery = array_filter([
         <?php else: ?>
         <div class="row g-4">
           <?php foreach ($products as $product): ?>
-          <div class="col-6 col-lg-4 d-flex align-items-stretch">
+          <div class="col-6 col-md-6 col-lg-4 col-xl-3 d-flex align-items-stretch">
             <div class="glass-card product-card w-100 d-flex flex-column justify-content-between position-relative">
               <a href="<?= url('/store/' . $product['slug']) ?>" class="text-decoration-none text-white d-flex flex-column justify-content-between flex-grow-1">
                 <div>

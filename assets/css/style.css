@@ -516,10 +516,30 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
 .pagination-ps .page-item.active .page-link { background: var(--ps-orange); border-color: var(--ps-orange); color: #fff; }
 
 /* ---------- Store Front UI Extensions ---------- */
+.store-container {
+  width: 100%;
+  max-width: 1760px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.75rem;
+  padding-right: 1.75rem;
+}
+
+@media (min-width: 992px) {
+  .sidebar-col {
+    flex: 0 0 300px;
+    width: 300px;
+    max-width: 300px;
+  }
+  .store-main-col {
+    flex: 1 1 0%;
+    width: auto;
+    min-width: 0;
+  }
+}
+
 :root {
   --ps-product-image-h: 300px;
-  /* Fallback only. store.php measures the first product card and overrides this per page load,
-     so the sidebar's top and bottom edges land exactly on the first card's. */
   --ps-shop-sidebar-h: 760px;
 }
 
