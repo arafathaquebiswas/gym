@@ -123,7 +123,22 @@ $pageTitle = 'Home';
   </div>
 </section>
 
-
+TRAINERS
+<?php if (Feature::trainerDisplayOn()): ?>
+<section class="section">
+  <div class="container text-center">
+    <h2 class="section-title">Meet Our Trainers</h2>
+    <p class="section-subtitle mx-auto">Experienced professionals dedicated to your progress.</p>
+    <div class="row g-4">
+      <?php foreach ($trainers as $trainer): ?>
+      <div class="col-md-4">
+        <?php $this->partial('partials/trainer-card', ['trainer' => $trainer]); ?>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
 
 <!-- TRANSFORMATION GALLERY -->
 <?php if (Feature::on('gallery')): ?>
