@@ -628,7 +628,7 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
   position: relative;
   width: 100%;
   /* Fixed box — the image never dictates card height, so every card in a row lines up. */
-  height: var(--ps-product-image-h);
+  height: var(--ps-product-image-h, 310px);
   border-radius: 10px;
   overflow: hidden;
   background: #ffffff;
@@ -663,14 +663,53 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
   font-size: 3.5rem;
 }
 
+.product-discount-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  z-index: 9;
+}
+
+.brand-name-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ps-orange);
+  margin-bottom: 0.2rem;
+}
+
+.stock-status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  font-size: 0.76rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}
+.stock-status-badge.badge-plenty { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+.stock-status-badge.badge-in { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+.stock-status-badge.badge-low { background: rgba(234, 179, 8, 0.15); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.3); }
+.stock-status-badge.badge-out { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+
 .product-wishlist-btn {
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.65);
+  background: rgba(15, 23, 42, 0.7);
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #cbd5e1;
@@ -678,16 +717,27 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 10;
 }
 
 .product-wishlist-btn:hover,
 .product-wishlist-btn.active {
-  background: rgba(239, 68, 68, 0.9);
+  background: rgba(239, 68, 68, 0.95);
   color: #ffffff;
   border-color: #ef4444;
-  transform: scale(1.1);
+  transform: scale(1.15);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+}
+
+.product-wishlist-btn.active i {
+  animation: heartPulse 0.35s ease-in-out;
+}
+
+@keyframes heartPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.35); }
+  100% { transform: scale(1); }
 }
 
 /* Whatever the copy above runs to — long names, extra badges — the CTA sits on the card's floor. */
@@ -717,6 +767,23 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
   min-height: 2.6em;
   line-height: 1.3em;
   font-size: 0.95rem;
+}
+
+@media (max-width: 991px) {
+  .sidebar-col { display: none; }
+  .sidebar-col.show-mobile {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100vh;
+    z-index: 1050;
+    background: #0f172a;
+    padding: 1rem;
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.8);
+    overflow-y: auto;
+  }
 }
 
 @media (max-width: 1199px) {

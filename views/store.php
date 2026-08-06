@@ -55,42 +55,47 @@ $pageQuery = array_filter([
 
 <section class="section pt-0">
   <div class="container">
-    <div class="shop-results-bar d-flex flex-wrap align-items-center gap-2 mb-3">
-      <span class="text-white-50 small">
-        <?php if ($total > 0): ?>
-          Showing <strong class="text-white"><?= count($products) ?></strong> of <strong class="text-white"><?= (int) $total ?></strong> products
-        <?php else: ?>
-          No matching products
-        <?php endif; ?>
-      </span>
-      <?php
-      // Removable chip per active filter — each link is the current query minus that one key.
-      $chipLabels = [
-        'q' => fn ($v) => 'Search: "' . $v . '"',
-        'category' => fn ($v) => 'Category: ' . ($slugNames[$v] ?? $v),
-        'brand' => fn ($v) => 'Brand: ' . ($slugNames[$v] ?? $v),
-        'availability' => fn ($v) => ['in' => 'In stock', 'low' => 'Only a few left', 'out' => 'Out of stock'][$v] ?? $v,
-        'min_price' => fn ($v) => 'From ৳' . number_format((float) $v),
-        'max_price' => fn ($v) => 'Up to ৳' . number_format((float) $v),
-        'on_sale' => fn () => 'On sale',
-        'best_seller' => fn () => 'Best sellers',
-        'min_rating' => fn ($v) => $v . '★ & up',
-      ];
-      foreach ($chipLabels as $key => $label):
-        if (!isset($pageQuery[$key])) {
-            continue;
-        }
-        $rest = $pageQuery;
-        unset($rest[$key]);
-      ?>
-      <a class="filter-chip" href="<?= url('/store' . ($rest ? '?' . http_build_query($rest) : '')) ?>">
-        <?= e($label($pageQuery[$key])) ?> <i class="bi bi-x-lg"></i>
-      </a>
-      <?php endforeach; ?>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+      <div class="shop-results-bar d-flex flex-wrap align-items-center gap-2">
+        <span class="text-white-50 small">
+          <?php if ($total > 0): ?>
+            Showing <strong class="text-white"><?= count($products) ?></strong> of <strong class="text-white"><?= (int) $total ?></strong> products
+          <?php else: ?>
+            No matching products
+          <?php endif; ?>
+        </span>
+        <?php
+        // Removable chip per active filter — each link is the current query minus that one key.
+        $chipLabels = [
+          'q' => fn ($v) => 'Search: "' . $v . '"',
+          'category' => fn ($v) => 'Category: ' . ($slugNames[$v] ?? $v),
+          'brand' => fn ($v) => 'Brand: ' . ($slugNames[$v] ?? $v),
+          'availability' => fn ($v) => ['in' => 'In stock', 'low' => 'Only a few left', 'out' => 'Out of stock'][$v] ?? $v,
+          'min_price' => fn ($v) => 'From ৳' . number_format((float) $v),
+          'max_price' => fn ($v) => 'Up to ৳' . number_format((float) $v),
+          'on_sale' => fn () => 'On sale',
+          'best_seller' => fn () => 'Best sellers',
+          'min_rating' => fn ($v) => $v . '★ & up',
+        ];
+        foreach ($chipLabels as $key => $label):
+          if (!isset($pageQuery[$key])) {
+              continue;
+          }
+          $rest = $pageQuery;
+          unset($rest[$key]);
+        ?>
+        <a class="filter-chip" href="<?= url('/store' . ($rest ? '?' . http_build_query($rest) : '')) ?>">
+          <?= e($label($pageQuery[$key])) ?> <i class="bi bi-x-lg"></i>
+        </a>
+        <?php endforeach; ?>
+      </div>
+      <button type="button" class="btn btn-ps-outline btn-sm d-lg-none" id="mobileFilterToggle">
+        <i class="bi bi-funnel me-1"></i> Filter Products
+      </button>
     </div>
 
     <div class="row g-4">
-      <div class="col-lg-3">
+      <div class="col-lg-3 sidebar-col">
         <?php $this->partial('partials/store-filters', [
           'categories' => $categories,
           'brands' => $brands,
@@ -119,20 +124,34 @@ $pageQuery = array_filter([
                     <button type="button" class="product-wishlist-btn" title="Add to Wishlist" onclick="event.preventDefault(); event.stopPropagation(); this.classList.toggle('active');">
                       <i class="bi bi-heart-fill"></i>
                     </button>
+                    <?php if (!empty($product['offer_is_live']) && !empty($product['discount_percent'])): ?>
+                      <span class="product-discount-tag"><?= (int) $product['discount_percent'] ?>% OFF</span>
+                    <?php endif; ?>
                   </div>
                   <div class="d-flex gap-1 flex-wrap mb-1">
-                    <div class="cat-tag"><?= e($product['category_name']) ?></div>
-                    <?php if (!empty($product['created_at']) && strtotime($product['created_at']) >= strtotime('-30 days')): ?><span class="badge bg-info text-dark font-weight-semibold">New Arrival</span><?php endif; ?>
-                    <?php if (in_array((int) $product['id'], $bestSellerIds, true)): ?><span class="badge bg-warning text-dark fw-bold"><i class="bi bi-fire"></i> Best Seller</span><?php endif; ?>
-                    <?php if (in_array((int) $product['id'], $popularIds, true)): ?><span class="badge" style="background:#ff6a1a">Popular</span><?php endif; ?>
-                    <?php if (!empty($product['bogo_enabled'])): ?><span class="badge" style="background:#ff6a1a">BOGO</span><?php endif; ?>
+                    <span class="cat-tag"><?= e($product['category_name']) ?></span>
+                    <?php if (!empty($product['created_at']) && strtotime($product['created_at']) >= strtotime('-30 days')): ?>
+                      <span class="badge bg-info text-dark font-weight-semibold">New Arrival</span>
+                    <?php endif; ?>
+                    <?php if (in_array((int) $product['id'], $bestSellerIds, true)): ?>
+                      <span class="badge bg-warning text-dark fw-bold"><i class="bi bi-fire"></i> Best Seller</span>
+                    <?php endif; ?>
+                    <?php if (!empty($product['is_featured'])): ?>
+                      <span class="badge bg-primary text-white font-weight-semibold">Featured</span>
+                    <?php endif; ?>
+                    <?php if (in_array((int) $product['id'], $popularIds, true)): ?>
+                      <span class="badge" style="background:#ff6a1a">Trending</span>
+                    <?php endif; ?>
+                    <?php if (!empty($product['bogo_enabled'])): ?>
+                      <span class="badge" style="background:#ff6a1a">BOGO</span>
+                    <?php endif; ?>
                   </div>
                   <?php if (!empty($product['brand_name'])): ?>
-                    <div class="text-orange fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.05em;">
+                    <div class="brand-name-tag text-orange fw-bold text-uppercase mb-1">
                       <?= e($product['brand_name']) ?>
                     </div>
                   <?php endif; ?>
-                  <h6 class="product-title mb-1 text-white fw-bold"><?= e($product['name']) ?></h6>
+                  <h6 class="product-title text-white fw-bold mb-1"><?= e($product['name']) ?></h6>
                   <div class="product-rating-row d-flex align-items-center gap-1 my-1">
                     <?php $reviewCount = (int) ($product['review_count'] ?? 0); ?>
                     <?php if ($reviewCount > 0): ?>
@@ -152,30 +171,33 @@ $pageQuery = array_filter([
                 <div>
                   <?php if (!empty($product['offer_is_live']) && (float) $product['display_price'] < (float) $product['selling_price']): ?>
                     <?php $savings = (float) $product['selling_price'] - (float) $product['display_price']; ?>
-                    <div class="price d-flex align-items-center flex-wrap gap-1 mt-1">
-                      <span class="text-orange fw-bold fs-5">৳<?= number_format((float) $product['display_price']) ?></span>
-                      <small class="text-white-50 text-decoration-line-through me-1">৳<?= number_format((float) $product['selling_price']) ?></small>
-                      <?php if (!empty($product['discount_percent'])): ?>
-                        <span class="badge bg-danger fw-bold me-1"><?= (int) $product['discount_percent'] ?>% OFF</span>
-                      <?php endif; ?>
-                    </div>
-                    <div class="mt-1 d-flex align-items-center gap-1 flex-wrap">
-                      <span class="badge bg-success text-white fw-semibold" style="font-size: 0.72rem;">
-                        Save ৳<?= number_format($savings) ?>
-                      </span>
-                      <?php if (!empty($product['discount_label'])): ?>
-                        <span class="badge bg-danger text-white" style="font-size:.65rem">⚡ <?= e($product['discount_label']) ?></span>
-                      <?php endif; ?>
+                    <div class="price-box my-1">
+                      <div class="d-flex align-items-baseline gap-2 flex-wrap">
+                        <span class="text-orange fw-bold fs-5">৳<?= number_format((float) $product['display_price']) ?></span>
+                        <small class="text-white-50 text-decoration-line-through">৳<?= number_format((float) $product['selling_price']) ?></small>
+                      </div>
+                      <div class="d-flex align-items-center gap-1 mt-1">
+                        <span class="badge bg-success text-white fw-semibold" style="font-size: 0.72rem;">
+                          Save ৳<?= number_format($savings) ?>
+                        </span>
+                        <?php if (!empty($product['discount_label'])): ?>
+                          <span class="badge bg-danger text-white" style="font-size:.65rem">⚡ <?= e($product['discount_label']) ?></span>
+                        <?php endif; ?>
+                      </div>
                     </div>
                   <?php else: ?>
-                    <div class="price text-white fw-bold fs-5 mt-1">৳<?= number_format((float) $product['selling_price']) ?></div>
+                    <div class="price-box my-1">
+                      <div class="text-white fw-bold fs-5">৳<?= number_format((float) $product['selling_price']) ?></div>
+                    </div>
                   <?php endif; ?>
                   <?php if ($product['stock_qty'] <= 0): ?>
-                    <span class="badge bg-danger text-white mt-2 d-inline-flex align-items-center"><i class="bi bi-x-circle-fill me-1"></i>🔴 Out of Stock</span>
-                  <?php elseif ($product['stock_qty'] <= ($product['min_stock'] ?? 5)): ?>
-                    <span class="badge bg-warning text-dark mt-2 d-inline-flex align-items-center fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>🟡 Only <?= (int) $product['stock_qty'] ?> Left!</span>
+                    <span class="stock-status-badge badge-out"><i class="bi bi-x-circle-fill me-1"></i>🔴 Out of Stock</span>
+                  <?php elseif ($product['stock_qty'] <= 5): ?>
+                    <span class="stock-status-badge badge-low"><i class="bi bi-exclamation-triangle-fill me-1"></i>🟡 Only <?= (int) $product['stock_qty'] ?> Left</span>
+                  <?php elseif ($product['stock_qty'] <= 20): ?>
+                    <span class="stock-status-badge badge-in"><i class="bi bi-check-circle-fill me-1"></i>🟢 In Stock</span>
                   <?php else: ?>
-                    <span class="badge bg-success text-white mt-2 d-inline-flex align-items-center fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>🟢 Plenty (<?= (int) $product['stock_qty'] ?> in stock)</span>
+                    <span class="stock-status-badge badge-plenty"><i class="bi bi-check-circle-fill me-1"></i>🟢 Plenty</span>
                   <?php endif; ?>
                 </div>
               </a>
