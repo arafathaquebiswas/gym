@@ -42,8 +42,8 @@ final class Setting extends Model
     public function set(string $key, string $value): void
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO settings (setting_key, setting_value) VALUES (:key, :value)
-             ON DUPLICATE KEY UPDATE setting_value = :value2'
+            'INSERT INTO settings (setting_key, setting_value) VALUES (:key, :value) '
+            . self::onDuplicateKeyUpdate(['setting_key'], 'setting_value = :value2')
         );
         $stmt->execute(['key' => $key, 'value' => $value, 'value2' => $value]);
         self::$cache = null;

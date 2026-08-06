@@ -21,7 +21,8 @@ final class RelatedProduct extends Model
         $this->db->prepare('DELETE FROM related_products WHERE product_id = :product_id')->execute(['product_id' => $productId]);
 
         $stmt = $this->db->prepare(
-            'INSERT IGNORE INTO related_products (product_id, related_product_id, sort_order) VALUES (:product_id, :related_id, :sort_order)'
+            self::insertOrIgnoreInto()
+            . ' related_products (product_id, related_product_id, sort_order) VALUES (:product_id, :related_id, :sort_order)'
         );
         foreach (array_values($relatedProductIds) as $i => $relatedId) {
             $relatedId = (int) $relatedId;

@@ -78,7 +78,8 @@ final class Notification extends Model
         if (empty($userIds)) return;
         $db = Database::connection();
         $stmt = $db->prepare(
-            "INSERT IGNORE INTO notifications (user_id, title, message, link, type, category, is_read, created_at)
+            self::insertOrIgnoreInto()
+            . " notifications (user_id, title, message, link, type, category, is_read, created_at)
              VALUES (:user_id, :title, :message, :link, :category, :category2, 0, NOW())"
         );
         foreach (array_unique($userIds) as $uid) {
@@ -267,10 +268,12 @@ final class Notification extends Model
     /** Delete notifications older than $days days. Returns deleted row count. */
     public static function cleanup(int $days = 90): int
     {
+        // Cutoff computed in PHP rather than with NOW() - INTERVAL n DAY, which
+        // is MySQL-only syntax and cannot be shimmed as a function on SQLite.
         $stmt = Database::connection()->prepare(
-            "DELETE FROM notifications WHERE created_at < NOW() - INTERVAL :d DAY"
+            'DELETE FROM notifications WHERE created_at < :cutoff'
         );
-        $stmt->bindValue(':d', $days, PDO::PARAM_INT);
+        $stmt->bindValue(':cutoff', date('Y-m-d H:i:s', strtotime("-$days days")));
         $stmt->execute();
         return $stmt->rowCount();
     }

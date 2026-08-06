@@ -26,7 +26,7 @@ final class Wishlist extends Model
     public function add(int $userId, int $productId): void
     {
         $stmt = $this->db->prepare(
-            'INSERT IGNORE INTO wishlist (user_id, product_id) VALUES (:user_id, :product_id)'
+            self::insertOrIgnoreInto() . ' wishlist (user_id, product_id) VALUES (:user_id, :product_id)'
         );
         $stmt->execute(['user_id' => $userId, 'product_id' => $productId]);
     }

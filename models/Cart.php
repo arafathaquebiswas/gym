@@ -38,13 +38,32 @@ final class Cart extends Model
 
     public function add(?int $userId, ?string $cartToken, int $productId, int $qty): void
     {
-        $stmt = $this->db->prepare(
-            'INSERT INTO shopping_cart (user_id, cart_token, product_id, qty) VALUES (:user_id, :cart_token, :product_id, :qty)
-             ON DUPLICATE KEY UPDATE qty = qty + :qty2'
+        // Look up then write, rather than an upsert: shopping_cart carries two
+        // unique indexes — (user_id, product_id) and (cart_token, product_id) —
+        // and a row belongs to either the signed-in user or the guest token, so
+        // only one of them can ever be the conflict. MySQL infers that on its
+        // own but SQLite's ON CONFLICT needs a single target named up front,
+        // and this keeps one code path for both engines.
+        $find = $this->db->prepare(
+            $userId !== null
+                ? 'SELECT id FROM shopping_cart WHERE user_id = :owner AND product_id = :product_id LIMIT 1'
+                : 'SELECT id FROM shopping_cart WHERE cart_token = :owner AND product_id = :product_id LIMIT 1'
         );
-        $stmt->execute([
-            'user_id' => $userId, 'cart_token' => $cartToken, 'product_id' => $productId,
-            'qty' => $qty, 'qty2' => $qty,
+        $find->execute(['owner' => $userId ?? $cartToken, 'product_id' => $productId]);
+        $existingId = $find->fetchColumn();
+
+        if ($existingId !== false) {
+            $update = $this->db->prepare('UPDATE shopping_cart SET qty = qty + :qty WHERE id = :id');
+            $update->execute(['qty' => $qty, 'id' => (int) $existingId]);
+            return;
+        }
+
+        $insert = $this->db->prepare(
+            'INSERT INTO shopping_cart (user_id, cart_token, product_id, qty)
+             VALUES (:user_id, :cart_token, :product_id, :qty)'
+        );
+        $insert->execute([
+            'user_id' => $userId, 'cart_token' => $cartToken, 'product_id' => $productId, 'qty' => $qty,
         ]);
     }
 

@@ -227,11 +227,14 @@ final class ReportController extends AdminController
 
     public function monthlyRevenue(): void
     {
-        $stmt = Database::connection()->query(
+        // Boundary computed in PHP: "INTERVAL 11 MONTH" is MySQL-only syntax and
+        // is a parse error on SQLite, unlike DATE_FORMAT which Database shims.
+        $stmt = Database::connection()->prepare(
             "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS ym, SUM(amount) AS total
-             FROM payments WHERE status = 'completed' AND paid_at >= DATE_SUB(CURDATE(), INTERVAL 11 MONTH)
+             FROM payments WHERE status = 'completed' AND paid_at >= :since
              GROUP BY ym"
         );
+        $stmt->execute(['since' => date('Y-m-d', strtotime('-11 months'))]);
         $byMonth = array_column($stmt->fetchAll(), 'total', 'ym');
 
         $rows = [];
@@ -339,15 +342,19 @@ final class ReportController extends AdminController
     {
         $db = Database::connection();
 
-        $upcomingStmt = $db->query(
+        $upcomingStmt = $db->prepare(
             "SELECT ms.*, u.name, u.phone, p.name AS package_name
              FROM member_subscriptions ms
              JOIN members m ON m.id = ms.member_id
              JOIN users u ON u.id = m.user_id
              JOIN membership_packages p ON p.id = ms.package_id
-             WHERE ms.status = 'active' AND ms.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+             WHERE ms.status = 'active' AND ms.end_date BETWEEN :today AND :in_seven_days
              ORDER BY ms.end_date ASC"
         );
+        $upcomingStmt->execute([
+            'today' => date('Y-m-d'),
+            'in_seven_days' => date('Y-m-d', strtotime('+7 days')),
+        ]);
 
         [$from, $to] = $this->dateRange();
         $renewedStmt = $db->prepare(

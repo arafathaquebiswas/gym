@@ -6,8 +6,8 @@ final class StockNotification extends Model
     public function subscribe(int $productId, string $email): void
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO stock_notifications (product_id, email) VALUES (:product_id, :email)
-             ON DUPLICATE KEY UPDATE notified_at = NULL'
+            'INSERT INTO stock_notifications (product_id, email) VALUES (:product_id, :email) '
+            . self::onDuplicateKeyUpdate(['product_id', 'email'], 'notified_at = NULL')
         );
         $stmt->execute(['product_id' => $productId, 'email' => $email]);
     }

@@ -39,7 +39,9 @@ final class ProductTag extends Model
     {
         $this->db->prepare('DELETE FROM product_tag_map WHERE product_id = :product_id')->execute(['product_id' => $productId]);
 
-        $stmt = $this->db->prepare('INSERT IGNORE INTO product_tag_map (product_id, tag_id) VALUES (:product_id, :tag_id)');
+        $stmt = $this->db->prepare(
+            self::insertOrIgnoreInto() . ' product_tag_map (product_id, tag_id) VALUES (:product_id, :tag_id)'
+        );
         foreach ($tagNames as $name) {
             $name = trim($name);
             if ($name === '') {
