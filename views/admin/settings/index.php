@@ -30,6 +30,7 @@ $yn = function (string $key, string $default = '1') use ($settings) {
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-features">Feature Flags</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-automation">Automation</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-free-trial">Free Trial</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-payment">Online Payment</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-smtp">SMTP</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-backup">Backup &amp; Restore</a></li>
 </ul>
@@ -243,6 +244,31 @@ $yn = function (string $key, string $default = '1') use ($settings) {
               <option value="1" <?= ($settings['auto_expire_memberships'] ?? '1') === '1' ? 'selected' : '' ?>>Yes</option>
               <option value="0" <?= ($settings['auto_expire_memberships'] ?? '1') === '0' ? 'selected' : '' ?>>No</option>
             </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane fade" id="tab-payment">
+      <div class="admin-card">
+        <h6 class="mb-3">Online Membership Payment (bKash / Nagad)</h6>
+        <p class="text-white-50 small">Shown on the Online Membership Registration page when a visitor chooses to pay online. Upload the QR here whenever it changes — no file access to the server needed.</p>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label>bKash QR Code Image</label>
+            <?php if (!empty($settings['bkash_qr_image'])): ?>
+              <div class="mb-2"><?= media_tile($settings['bkash_qr_image'], 'bKash QR code', 'bi-qr-code', '', null) ?></div>
+            <?php endif; ?>
+            <input type="file" name="bkash_qr_image" class="form-control" accept="image/jpeg,image/png,image/webp">
+            <div class="form-text text-white-50">JPG, PNG or WebP. Upload a clear, square crop of just the QR — visitors scan it from their phone.</div>
+          </div>
+          <div class="col-md-6">
+            <label>Merchant Number</label>
+            <input type="text" name="payment_merchant_number" class="form-control" value="<?= $v('payment_merchant_number', PAYMENT_MERCHANT_NUMBER) ?>">
+            <div class="form-text text-white-50">Shown next to the QR so visitors can pay even if they can't scan it.</div>
+            <label class="mt-3">Extra Instructions <small class="text-white-50">(optional)</small></label>
+            <textarea name="payment_instructions" class="form-control" rows="3" placeholder="Anything else members should know before paying"><?= $v('payment_instructions', '') ?></textarea>
+            <div class="form-text text-white-50">Appears under the standard payment notes. Leave blank to show only the defaults.</div>
           </div>
         </div>
       </div>

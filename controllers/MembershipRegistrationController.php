@@ -14,6 +14,9 @@ final class MembershipRegistrationController extends Controller
             'pageTitle' => 'Register for Membership',
             'packages' => (new Package())->allActive(),
             'trainers' => Feature::trainerModuleOn() ? (new Trainer())->allActive() : [],
+            // QR, merchant number and any extra notes are admin-editable under
+            // Settings → Online Payment, so changing them needs no code deploy.
+            'paymentSettings' => (new Setting())->all(),
         ]);
     }
 

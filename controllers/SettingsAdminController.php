@@ -24,6 +24,8 @@ final class SettingsAdminController extends AdminController
         'feature_delivery', 'feature_pickup', 'delivery_fee_per_order',
         'discount_stacking_enabled',
         'auto_email_notifications', 'auto_low_stock_alerts',
+        // Online membership payment (bKash/Nagad) shown on the registration form.
+        'payment_merchant_number', 'payment_instructions',
     ];
 
     public function index(): void
@@ -63,6 +65,15 @@ final class SettingsAdminController extends AdminController
         $freeTrialBgPath = Upload::handle($_FILES['free_trial_background_image'] ?? [], 'settings');
         if ($freeTrialBgPath) {
             $pairs['free_trial_background_image'] = $freeTrialBgPath;
+        }
+
+        // The bKash QR shown on the membership registration form. Uploading it here
+        // avoids needing file access to the server just to change a payment code.
+        $qrPath = Upload::handle($_FILES['bkash_qr_image'] ?? [], 'settings');
+        if ($qrPath) {
+            $pairs['bkash_qr_image'] = $qrPath;
+        } elseif (Upload::lastError() !== null) {
+            flash('danger', 'bKash QR code: ' . Upload::lastError());
         }
 
         // The public footer (views/partials/footer.php) reads one combined "business_hours"

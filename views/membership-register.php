@@ -1,6 +1,7 @@
 <?php
 /** @var array $packages */
 /** @var array $trainers */
+/** @var array $paymentSettings */
 $pageTitle = 'Register for Membership';
 
 // Server-side messages from a rejected submit, shown against the field that caused
@@ -149,20 +150,30 @@ $errMsg = static function (string $field): string {
             <div id="onlinePaymentFields" class="<?= $payOnline ? '' : 'd-none' ?>">
               <div class="row align-items-center g-3 mb-3 p-3 rounded" style="background:rgba(255,255,255,.04)">
                 <div class="col-sm-auto text-center">
-                  <?php $qr = BASE_PATH . '/assets/images/payment/bkash-qr.png'; ?>
-                  <?php if (is_file($qr)): ?>
-                    <img src="<?= asset('images/payment/bkash-qr.png') ?>" alt="bKash QR code for POWERSURGE GYM & NUTRITION" class="img-fluid rounded bg-white p-2" style="max-width:190px">
+                  <?php
+                    // Admin-uploaded QR first (Settings → Online Payment), then a file dropped
+                    // straight into assets/. Neither is required for the page to work — the
+                    // merchant number alone is enough to take a payment.
+                    $qrSetting = $paymentSettings['bkash_qr_image'] ?? '';
+                    $qrFile = BASE_PATH . '/assets/images/payment/bkash-qr.png';
+                    $qrSrc = $qrSetting !== '' ? url($qrSetting) : (is_file($qrFile) ? asset('images/payment/bkash-qr.png') : null);
+                  ?>
+                  <?php if ($qrSrc !== null): ?>
+                    <img src="<?= e($qrSrc) ?>" alt="bKash QR code for POWERSURGE GYM &amp; NUTRITION" class="img-fluid rounded bg-white p-2" style="max-width:190px">
                   <?php else: ?>
                     <div class="d-flex align-items-center justify-content-center rounded bg-white text-dark text-center p-3" style="width:190px;height:190px">
-                      <span class="small">QR code image not uploaded yet — please pay to the merchant number below.</span>
+                      <span class="small">Scan the QR on the gym's payment card, or pay to the merchant number shown here.</span>
                     </div>
                   <?php endif; ?>
                 </div>
                 <div class="col-sm">
-                  <p class="mb-2">Merchant number: <strong class="fs-5"><?= e(PAYMENT_MERCHANT_NUMBER) ?></strong></p>
+                  <p class="mb-2">Merchant number: <strong class="fs-5"><?= e($paymentSettings['payment_merchant_number'] ?? PAYMENT_MERCHANT_NUMBER) ?></strong></p>
                   <p class="small mb-2" style="color:#ff6b6b"><strong>Use "Payment" only — "Send Money" is not accepted.</strong> <span class="text-white-50">শুধু মাত্র Payment করুন, Send Money প্রযোজ্য নয়।</span></p>
                   <p class="text-white-50 small mb-2">Please make the payment using the QR code above. After completing the payment, enter your Transaction ID (TrxID) and upload a screenshot of the successful payment.</p>
                   <p class="text-white-50 small mb-2">A 1.3% charge applies to bKash and Nagad payments. <span class="text-white-50">বিকাশ বা নগদ পেমেন্ট এর জন্য ১.৩% চার্জ প্রযোজ্য।</span></p>
+                  <?php if (!empty($paymentSettings['payment_instructions'])): ?>
+                    <p class="text-white-50 small mb-2"><?= nl2br(e($paymentSettings['payment_instructions'])) ?></p>
+                  <?php endif; ?>
                   <p class="small mb-0" style="color:#ffc107">⚠️ Only complete (successful) payment screenshots are accepted. Membership will be activated only after admin verification.</p>
                 </div>
               </div>
