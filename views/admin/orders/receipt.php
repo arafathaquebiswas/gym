@@ -25,18 +25,21 @@ $resolveImageBase64 = function (?string $path, string $fallbackAsset) use ($base
         }
         if (!str_starts_with($path, 'http://') && !str_starts_with($path, 'https://')) {
             $clean = ltrim(preg_replace('/^(uploads\/|assets\/)/', '', $path), '/');
-            $uploadFile = $basePath . '/uploads/' . $clean;
-            $assetFile  = $basePath . '/assets/' . $clean;
 
-            if (file_exists($uploadFile) && is_file($uploadFile)) {
-                $ext  = strtolower(pathinfo($uploadFile, PATHINFO_EXTENSION));
-                $mime = $ext === 'svg' ? 'image/svg+xml' : ($ext === 'png' ? 'image/png' : 'image/jpeg');
-                return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($uploadFile));
-            }
-            if (file_exists($assetFile) && is_file($assetFile)) {
-                $ext  = strtolower(pathinfo($assetFile, PATHINFO_EXTENSION));
-                $mime = $ext === 'svg' ? 'image/svg+xml' : ($ext === 'png' ? 'image/png' : 'image/jpeg');
-                return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($assetFile));
+            // Mirrors media_tile(): uploads first, then assets/images/, then
+            // assets/. Without the middle one a product image stored as
+            // "Sell/shirt.webp" resolves to nothing and the receipt prints a
+            // placeholder. webp/gif are named so they are not mislabelled jpeg.
+            $mimes = ['svg' => 'image/svg+xml', 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif'];
+            foreach ([
+                $basePath . '/uploads/' . $clean,
+                $basePath . '/assets/images/' . $clean,
+                $basePath . '/assets/' . $clean,
+            ] as $candidate) {
+                if (is_file($candidate)) {
+                    $ext = strtolower(pathinfo($candidate, PATHINFO_EXTENSION));
+                    return 'data:' . ($mimes[$ext] ?? 'image/jpeg') . ';base64,' . base64_encode(file_get_contents($candidate));
+                }
             }
         }
     }

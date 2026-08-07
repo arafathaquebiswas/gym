@@ -13,35 +13,52 @@ $gymEmail = $settingModel->get('gym_email', 'info@powersurgegym.com');
 $gymAddress = $settingModel->get('gym_address', '123 Fitness Ave, Suite 100, City');
 $gymWebsite = 'www.powersurgegym.com';
 
+/**
+ * Reads a file into a data: URI, with the MIME taken from the extension.
+ * WebP is listed explicitly — it used to fall into the jpeg default, which
+ * browsers usually sniff past but PDF renderers do not.
+ */
+$toDataUri = static function (string $file): string {
+    $mimes = [
+        'svg' => 'image/svg+xml',
+        'png' => 'image/png',
+        'webp' => 'image/webp',
+        'gif' => 'image/gif',
+    ];
+    $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+
+    return 'data:' . ($mimes[$ext] ?? 'image/jpeg') . ';base64,' . base64_encode(file_get_contents($file));
+};
+
 // Universal Image Resolver: Ensures all image URIs are clean, valid Base64 Data URIs without raw HTML/XML markup
-$resolveImageBase64 = function (?string $path, string $fallbackAsset) use ($basePath): string {
+$resolveImageBase64 = function (?string $path, string $fallbackAsset) use ($basePath, $toDataUri): string {
     if (!empty($path)) {
         if (str_starts_with($path, 'data:image/')) {
             return $path;
         }
         if (!str_starts_with($path, 'http://') && !str_starts_with($path, 'https://')) {
             $clean = ltrim(preg_replace('/^(uploads\/|assets\/)/', '', $path), '/');
-            $uploadFile = $basePath . '/uploads/' . $clean;
-            $assetFile = $basePath . '/assets/' . $clean;
 
-            if (file_exists($uploadFile) && is_file($uploadFile)) {
-                $ext = strtolower(pathinfo($uploadFile, PATHINFO_EXTENSION));
-                $mime = $ext === 'svg' ? 'image/svg+xml' : ($ext === 'png' ? 'image/png' : 'image/jpeg');
-                return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($uploadFile));
-            }
-            if (file_exists($assetFile) && is_file($assetFile)) {
-                $ext = strtolower(pathinfo($assetFile, PATHINFO_EXTENSION));
-                $mime = $ext === 'svg' ? 'image/svg+xml' : ($ext === 'png' ? 'image/png' : 'image/jpeg');
-                return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($assetFile));
+            // Same locations, in the same order, that media_tile() uses: an
+            // "uploads/" path is a real upload, anything else lives under
+            // assets/images/. Omitting that middle one is why a product image
+            // stored as "Sell/shirt.webp" fell through to the placeholder even
+            // though the file was sitting on disk.
+            foreach ([
+                $basePath . '/uploads/' . $clean,
+                $basePath . '/assets/images/' . $clean,
+                $basePath . '/assets/' . $clean,
+            ] as $candidate) {
+                if (is_file($candidate)) {
+                    return $toDataUri($candidate);
+                }
             }
         }
     }
 
     $fallbackFile = $basePath . '/assets/' . ltrim($fallbackAsset, '/');
-    if (file_exists($fallbackFile) && is_file($fallbackFile)) {
-        $ext = strtolower(pathinfo($fallbackFile, PATHINFO_EXTENSION));
-        $mime = $ext === 'svg' ? 'image/svg+xml' : ($ext === 'png' ? 'image/png' : 'image/jpeg');
-        return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($fallbackFile));
+    if (is_file($fallbackFile)) {
+        return $toDataUri($fallbackFile);
     }
 
     $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>';
@@ -159,6 +176,34 @@ $paymentStatusLabel = strtoupper((string) $sale['payment_status']);
     color: #1f2937;
     vertical-align: middle;
   }
+  /*
+   * This page is rendered standalone (PosController requires it directly, not
+   * through the admin layout), so Bootstrap and Bootstrap Icons are not loaded.
+   * The action bar was written with .btn/.d-flex/.bi-* classes and rendered as
+   * bare browser defaults — plain blue links, an unstyled button, invisible
+   * icons. These rules give the bar its own styling rather than pulling in a
+   * whole framework for one toolbar. Screen only: the bar is .no-print.
+   */
+  .receipt-toolbar { display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 10px; padding-bottom: 10px;
+    border-bottom: 1px solid #e5e7eb; }
+  .receipt-toolbar .toolbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .receipt-btn { display: inline-block; padding: 7px 14px; border-radius: 6px;
+    font-size: 13px; font-weight: 600; line-height: 1.2; text-decoration: none;
+    border: 1px solid #d1d5db; background: #fff; color: #374151; cursor: pointer;
+    font-family: inherit; }
+  .receipt-btn:hover { background: #f9fafb; border-color: #9ca3af; }
+  .receipt-btn-primary { background: #ea580c; border-color: #ea580c; color: #fff; }
+  .receipt-btn-primary:hover { background: #c2410c; border-color: #c2410c; color: #fff; }
+  .receipt-tip { padding: 8px 12px; background: #f9fafb; border: 1px solid #e5e7eb;
+    border-radius: 6px; font-size: 11px; color: #4b5563; }
+
+  @media (max-width: 640px) {
+    .receipt-toolbar { flex-direction: column; align-items: stretch; }
+    .receipt-toolbar .toolbar-actions { justify-content: stretch; }
+    .receipt-btn { flex: 1; text-align: center; }
+  }
+
   .item-thumb {
     width: 36px;
     height: 36px;
@@ -264,23 +309,16 @@ $paymentStatusLabel = strtoupper((string) $sale['payment_status']);
 <div class="invoice-wrapper">
   <?php if (!$isPdfMode): ?>
     <!-- Top Action Bar & Print Tip Notice (Screen Only) -->
-    <div class="no-print mb-3">
-      <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
-        <a href="<?= url('/admin/pos') ?>" class="btn btn-ps-outline btn-sm">
-          <i class="bi bi-arrow-left"></i> Back to POS
-        </a>
-        <div class="d-flex gap-2">
-          <button type="button" class="btn btn-ps-outline btn-sm" onclick="window.print()">
-            <i class="bi bi-printer"></i> Print Invoice (A4)
-          </button>
-          <a href="<?= url('/admin/pos/receipt/' . $sale['id'] . '/pdf') ?>" class="btn btn-ps btn-sm">
-            <i class="bi bi-file-earmark-pdf"></i> Download PDF
-          </a>
+    <div class="no-print">
+      <div class="receipt-toolbar">
+        <a href="<?= url('/admin/pos') ?>" class="receipt-btn">&larr; Back to POS</a>
+        <div class="toolbar-actions">
+          <button type="button" class="receipt-btn" onclick="window.print()">Print Invoice (A4)</button>
+          <a href="<?= url('/admin/pos/receipt/' . $sale['id'] . '/pdf') ?>" class="receipt-btn receipt-btn-primary">Download PDF</a>
         </div>
       </div>
-      <div class="p-2 px-3 bg-light border rounded-3 d-flex align-items-center gap-2" style="font-size: 11px; color: #4b5563;">
-        <i class="bi bi-info-circle text-primary fs-6"></i>
-        <span><strong>Clean Print Tip:</strong> In your browser print dialog, uncheck <em>"Headers and footers"</em> (to remove date/URL) and check <em>"Background graphics"</em> (for full-color badges).</span>
+      <div class="receipt-tip">
+        <strong>Clean Print Tip:</strong> In your browser print dialog, uncheck <em>"Headers and footers"</em> (to remove date/URL) and check <em>"Background graphics"</em> (for full-color badges).
       </div>
     </div>
   <?php endif; ?>
