@@ -33,6 +33,7 @@ $yn = function (string $key, string $default = '1') use ($settings) {
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-payment">Online Payment</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-smtp">SMTP</a></li>
   <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-backup">Backup &amp; Restore</a></li>
+  <li class="nav-item"><a class="nav-link text-danger" data-bs-toggle="tab" href="#tab-reset">Reset Data</a></li>
 </ul>
 
 <form id="settingsForm" method="post" action="<?= url('/admin/settings') ?>" enctype="multipart/form-data" class="admin-form">
@@ -445,6 +446,69 @@ $yn = function (string $key, string $default = '1') use ($settings) {
       </div>
     </div>
 
+
+    <div class="tab-pane fade" id="tab-reset">
+      <div class="admin-card" style="border-left:3px solid var(--bs-danger)">
+        <h6 class="mb-3 text-danger"><i class="bi bi-exclamation-octagon"></i> Reset Data — start fresh</h6>
+        <p class="text-white-50 small">
+          Clears the trading history built up while testing, so the gym can start from real data.
+          <strong class="text-white">This cannot be undone from the admin panel.</strong>
+        </p>
+        <div class="row g-3 small mb-3">
+          <div class="col-md-6">
+            <div class="p-3 rounded h-100" style="background:rgba(220,53,69,.08)">
+              <strong class="text-danger d-block mb-2">Removed</strong>
+              <ul class="mb-0 ps-3 text-white-50">
+                <li>Sales, sale items and payments</li>
+                <li>Orders and order items</li>
+                <li>Members and their subscriptions</li>
+                <li>Stock movements, attendance, trainer bookings</li>
+                <li>Coupon usage history</li>
+                <li>Activity log and notifications</li>
+              </ul>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="p-3 rounded h-100" style="background:rgba(25,135,84,.08)">
+              <strong class="text-success d-block mb-2">Kept</strong>
+              <ul class="mb-0 ps-3 text-white-50">
+                <li>All admin and staff logins</li>
+                <li>Every setting on this page</li>
+                <li>Roles and permissions</li>
+                <li>Products, categories, packages</li>
+                <li>Trainers, blog posts, gallery</li>
+                <li>Coupons and delivery zones</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <p class="text-white-50 small">
+          Product stock levels are left exactly as they are. Demo sales already reduced them,
+          so adjust any product whose stock looks wrong after resetting.
+        </p>
+
+        <a href="<?= url('/admin/settings/backup') ?>" class="btn btn-ps-outline btn-sm mb-3">
+          <i class="bi bi-download"></i> Download backup first
+        </a>
+
+        <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" form="resetDataForm" name="backup_taken" value="1" id="resetBackupTaken" required>
+            <label class="form-check-label text-white-50 small" for="resetBackupTaken">
+              I have downloaded a backup. (We cannot verify this — please make sure.)
+            </label>
+          </div>
+          <div class="row g-2 align-items-end">
+            <div class="col-sm-4">
+              <label for="resetPhrase" class="small">Type <strong>RESET</strong> to confirm</label>
+              <input type="text" form="resetDataForm" name="confirm_phrase" id="resetPhrase" class="form-control" autocomplete="off" placeholder="RESET" required>
+            </div>
+            <div class="col-sm-auto">
+              <button type="submit" form="resetDataForm" class="btn btn-danger btn-sm">Clear Data</button>
+            </div>
+          </div>
+      </div>
+    </div>
+
     <div class="tab-pane fade" id="tab-backup">
       <div class="admin-card">
         <h6 class="mb-3">Backup &amp; Restore</h6>
@@ -460,24 +524,22 @@ $yn = function (string $key, string $default = '1') use ($settings) {
 
         <hr class="border-secondary my-4">
 
-        <form method="post" action="<?= url('/admin/settings/restore') ?>" enctype="multipart/form-data" class="admin-form"
-              onsubmit="return confirm('This will REPLACE all current data with the uploaded backup. A safety backup is taken first, but this cannot be undone from the browser. Continue?');">
-          <?= Security::csrfField() ?>
+        <div class="admin-form">
           <h6 class="text-danger mb-2"><i class="bi bi-exclamation-triangle"></i> Restore Database</h6>
           <div class="row g-3 align-items-end">
             <div class="col-md-5">
               <label>Backup File (.sql)</label>
-              <input type="file" name="backup_file" class="form-control" accept=".sql" required>
+              <input type="file" form="restoreForm" name="backup_file" class="form-control" accept=".sql" required>
             </div>
             <div class="col-md-4">
               <label>Type <code>RESTORE</code> to confirm</label>
-              <input type="text" name="confirm_phrase" class="form-control" required placeholder="RESTORE">
+              <input type="text" form="restoreForm" name="confirm_phrase" class="form-control" required placeholder="RESTORE">
             </div>
             <div class="col-md-3">
-              <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-upload"></i> Restore Database</button>
+              <button type="submit" form="restoreForm" class="btn btn-outline-danger w-100"><i class="bi bi-upload"></i> Restore Database</button>
             </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   </div>
@@ -485,4 +547,22 @@ $yn = function (string $key, string $default = '1') use ($settings) {
   <div class="mt-3" id="saveSettingsBtnRow">
     <button type="submit" form="settingsForm" class="btn btn-ps">Save Settings</button>
   </div>
+</form>
+
+<?php
+/*
+ * Declared outside #settingsForm on purpose. A <form> nested inside another is
+ * dropped by the HTML parser, and its </form> closes the outer one instead —
+ * which is why Restore used to submit to /admin/settings. The controls above
+ * reference these by id through the form="" attribute, the same mechanism the
+ * Save Settings button already uses.
+ */
+?>
+<form id="resetDataForm" method="post" action="<?= url('/admin/settings/reset-data') ?>"
+      onsubmit="return confirm('Permanently clear all sales, payments, orders and members? This cannot be undone.');">
+  <?= Security::csrfField() ?>
+</form>
+<form id="restoreForm" method="post" action="<?= url('/admin/settings/restore') ?>" enctype="multipart/form-data"
+      onsubmit="return confirm('This will REPLACE all current data with the uploaded backup. A safety backup is taken first, but this cannot be undone from the browser. Continue?');">
+  <?= Security::csrfField() ?>
 </form>

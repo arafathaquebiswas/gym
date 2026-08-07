@@ -114,6 +114,52 @@ final class SettingsAdminController extends AdminController
         ]);
     }
 
+    /**
+     * Clears trading history — see core/DataReset.php for exactly what goes and
+     * what stays. Three guards, because this cannot be undone from the UI:
+     * only an owner-level account may run it, the confirmation phrase must be
+     * typed, and the admin must tick that they have taken a backup. The tick is
+     * an acknowledgement, not proof — the download cannot be verified
+     * server-side, which is why the wording says so plainly.
+     */
+    public function resetData(): void
+    {
+        Security::requireCsrf();
+
+        if (!Auth::hasRole('main_admin', 'super_admin')) {
+            http_response_code(403);
+            die('403 - Permission Denied');
+        }
+
+        if ($this->input('confirm_phrase') !== 'RESET') {
+            flash('danger', 'Type RESET in the confirmation box to clear the data.');
+            redirect('admin/settings');
+        }
+        if ($this->input('backup_taken') !== '1') {
+            flash('danger', 'Download a backup first, then tick the confirmation box.');
+            redirect('admin/settings');
+        }
+
+        try {
+            $removed = DataReset::clearTransactions();
+        } catch (Throwable $e) {
+            error_log('Data reset failed: ' . $e->getMessage());
+            flash('danger', 'Reset failed and nothing was changed. Please try again, or restore your backup.');
+            redirect('admin/settings');
+        }
+
+        $summary = $removed
+            ? implode(', ', array_map(fn ($t, $n) => "$n $t", array_keys($removed), $removed))
+            : 'nothing to remove';
+
+        // Logged after the wipe on purpose: activity_logs is one of the cleared
+        // tables, so writing this first would delete the record of the reset.
+        $this->logActivity('data_reset', 'Cleared transaction data — ' . $summary);
+
+        flash('success', 'Data cleared. Removed: ' . $summary . '. Products, packages, trainers, blog, gallery and all admin accounts were kept.');
+        redirect('admin/settings');
+    }
+
     public function backup(): void
     {
         $sql = Backup::export();
