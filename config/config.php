@@ -67,6 +67,18 @@ define('APP_URL', $env('APP_URL', "$scheme://$host"));
 define('BASE_PATH', dirname(__DIR__));
 
 // ---- Uploads ----------------------------------------------------------------
+/**
+ * Where the SQLite database file lives.
+ *
+ * Defaults to database/gym.sqlite inside the project, which is right for a local
+ * checkout. On a server deployed from git it MUST point somewhere outside the
+ * deployed tree — public_html is a git working copy there, so every deploy
+ * overwrites whatever is inside it, and a database committed to the repo takes
+ * the live one with it. Set DB_SQLITE_PATH in config/env.php (git-ignored, so
+ * deploys never touch it) to an absolute path above the web root.
+ */
+define('DB_SQLITE_PATH', $env('DB_SQLITE_PATH', BASE_PATH . '/database/gym.sqlite'));
+
 define('UPLOAD_PATH', BASE_PATH . '/uploads');
 define('MAX_UPLOAD_SIZE', 2 * 1024 * 1024); // 2MB
 define('ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/webp']);

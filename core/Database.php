@@ -66,8 +66,16 @@ final class Database
             }
 
             if ($driver === 'sqlite' || self::$instance === null) {
-                $sqliteFile = BASE_PATH . '/database/gym.sqlite';
+                // Configurable so the live database can sit outside the deployed tree —
+                // see DB_SQLITE_PATH in config/config.php for why that matters.
+                $sqliteFile = defined('DB_SQLITE_PATH') ? DB_SQLITE_PATH : BASE_PATH . '/database/gym.sqlite';
                 if (!file_exists($sqliteFile)) {
+                    // setup_sqlite.php seeds the in-project path; a configured external
+                    // database that has gone missing is a deployment fault, not something
+                    // to paper over by silently seeding an empty one in its place.
+                    if ($sqliteFile !== BASE_PATH . '/database/gym.sqlite') {
+                        throw new RuntimeException("SQLite database not found at $sqliteFile (DB_SQLITE_PATH in config/env.php).");
+                    }
                     require_once BASE_PATH . '/database/setup_sqlite.php';
                 }
                 self::$instance = new PDO('sqlite:' . $sqliteFile, null, null, [

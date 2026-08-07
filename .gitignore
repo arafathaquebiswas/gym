@@ -17,3 +17,8 @@ uploads/**
 !uploads/.htaccess
 
 # vendor/ is deliberately committed: Hostinger shared hosting has no composer.
+
+# The live SQLite database must never be committed. public_html on the server is a
+# git working copy, so anything tracked here overwrites the live file on every
+# deploy — this is exactly how production data was lost. The server reads its
+# database from DB_SQLITE_PATH (config/env.php), outside the deployed tree.
