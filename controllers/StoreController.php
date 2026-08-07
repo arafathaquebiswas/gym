@@ -104,8 +104,17 @@ final class StoreController extends Controller
             $canReview = $member && $reviewModel->canReview((int) $member['id'], (int) $product['id']);
         }
 
+        // Weight/option variants, each already resolved to its own price and stock so the
+        // picker can show real figures without the view doing any pricing of its own.
+        $variantModel = new ProductVariant();
+        $variants = array_map(
+            fn (array $v) => $variantModel->withResolvedPricing($v, $product),
+            $variantModel->activeForProduct((int) $product['id'])
+        );
+
         $this->view('store-detail', [
             'product' => $product,
+            'variants' => $variants,
             'images' => (new ProductImage())->forProduct((int) $product['id']),
             'reviews' => $reviewModel->forProduct((int) $product['id']),
             'ratingSummary' => $reviewModel->averageRating((int) $product['id']),

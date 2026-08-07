@@ -480,7 +480,7 @@ $orderDate          = format_date($order['created_at'], 'd M Y, h:i A');
         <td style="text-align: center;">
           <img src="<?= e($itemImage) ?>" alt="" class="product-thumb">
         </td>
-        <td style="font-weight: 700; color: #0f172a;"><?= e($item['product_name']) ?></td>
+        <td style="font-weight: 700; color: #0f172a;"><?= e($item['product_name']) ?><?= !empty($item['variant_label']) ? ' (' . e($item['variant_label']) . ')' : '' ?></td>
         <td style="text-align: center; font-weight: 800;"><?= $itemQty ?></td>
         <td style="text-align: right;">BDT <?= number_format($itemUnitPrice, 2) ?></td>
         <td style="text-align: right; color: #64748b;"><?= $itemDiscount > 0 ? 'BDT ' . number_format($itemDiscount, 2) : '—' ?></td>

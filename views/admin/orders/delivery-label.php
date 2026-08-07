@@ -501,7 +501,7 @@ foreach ($items as $item) {
         <?php foreach ($items as $item): ?>
         <tr>
           <td style="font-family:'Courier New',monospace; font-size:7.5pt;"><?= e($item['sku'] ?? '—') ?></td>
-          <td><?= e($item['product_name']) ?></td>
+          <td><?= e($item['product_name']) ?><?= !empty($item['variant_label']) ? ' (' . e($item['variant_label']) . ')' : '' ?></td>
           <td style="text-align:center; font-weight:700;"><?= (int) $item['qty'] ?></td>
         </tr>
         <?php endforeach; ?>

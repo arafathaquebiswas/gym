@@ -104,20 +104,20 @@ $defaultFulfillment = $deliveryOn ? 'delivery' : 'pickup';
 
               <div class="row g-3">
                 <div class="col-md-6">
-                  <label>City *</label>
-                  <input type="text" name="delivery_city" id="fCity" class="form-control" required>
+                  <label>District *</label>
+                  <input type="text" name="delivery_city" id="fCity" class="form-control" placeholder="e.g. Dhaka" required>
                 </div>
                 <div class="col-md-6">
-                  <label>Area</label>
-                  <input type="text" name="delivery_area" id="fArea" class="form-control">
+                  <label>Area / Thana *</label>
+                  <input type="text" name="delivery_area" id="fArea" class="form-control" placeholder="e.g. Mirpur" required>
                 </div>
                 <div class="col-md-6">
                   <label>Postal Code</label>
                   <input type="text" name="delivery_postal_code" id="fPostal" class="form-control">
                 </div>
                 <div class="col-12">
-                  <label>Delivery Address *</label>
-                  <input type="text" name="delivery_address" id="fAddress" class="form-control" required>
+                  <label>Complete Address *</label>
+                  <input type="text" name="delivery_address" id="fAddress" class="form-control" placeholder="House / road / block" required>
                 </div>
                 <?php if ($isMember): ?>
                 <div class="col-12 form-check">
@@ -134,12 +134,12 @@ $defaultFulfillment = $deliveryOn ? 'delivery' : 'pickup';
                 <input type="text" name="full_name" id="fFullName" class="form-control" value="<?= e($currentUser['name'] ?? '') ?>" required>
               </div>
               <div class="col-md-6">
-                <label>Phone *</label>
-                <input type="text" name="phone" id="fPhone" class="form-control" required>
+                <label>Mobile Number *</label>
+                <input type="tel" name="phone" id="fPhone" class="form-control" inputmode="tel" placeholder="e.g. 017XXXXXXXX" required>
               </div>
               <div class="col-md-6">
                 <label>Email *</label>
-                <input type="email" name="email" class="form-control" value="<?= e($currentUser['email'] ?? '') ?>" required>
+                <input type="email" name="email" id="fEmail" class="form-control" value="<?= e($currentUser['email'] ?? '') ?>" required>
               </div>
               <div class="col-12">
                 <label>Order Notes</label>
@@ -167,6 +167,19 @@ $defaultFulfillment = $deliveryOn ? 'delivery' : 'pickup';
               <p class="text-white-50 small mt-1">Enter the transaction ID from your payment app — our team will verify it.</p>
             </div>
           </div>
+
+          <?php if (Feature::on('coupons')): ?>
+          <div class="glass-card p-4 mt-4">
+            <h6 class="mb-1">Coupon Code <small class="text-white-50 fw-normal">(optional)</small></h6>
+            <p class="text-white-50 small mb-3">Have a code? Enter it here — leave it blank to continue without one.</p>
+            <div class="input-group">
+              <input type="text" name="coupon_code_input" id="couponCodeInput" class="form-control text-uppercase"
+                     autocapitalize="characters" autocomplete="off" placeholder="e.g. SURGE10">
+              <button type="button" class="btn btn-ps-outline" id="couponApplyBtn">Apply</button>
+            </div>
+            <p class="small mt-2 mb-0 d-none" id="couponFeedback"></p>
+          </div>
+          <?php endif; ?>
 
           <?php if (Feature::on('coupons') && !empty($eligibleCoupons)): ?>
           <div class="glass-card p-4 mt-4">
@@ -207,25 +220,25 @@ $defaultFulfillment = $deliveryOn ? 'delivery' : 'pickup';
             <h6 class="mb-3">Order Summary</h6>
             <?php foreach ($lines as $line): ?>
             <div class="d-flex justify-content-between small mb-2">
-              <span><?= e($line['name']) ?> × <?= (int) $line['qty'] ?></span>
+              <span><?= e($line['name']) ?><?= !empty($line['variant_label']) ? ' (' . e($line['variant_label']) . ')' : '' ?> × <?= (int) $line['qty'] ?></span>
               <span>৳<?= number_format($line['display_price'] * $line['qty']) ?></span>
             </div>
             <?php endforeach; ?>
             <hr>
             <div class="d-flex justify-content-between"><span class="text-white-50">Subtotal</span><span>৳<?= number_format($subtotal) ?></span></div>
             <div class="d-flex justify-content-between d-none" id="summaryDiscountRow">
-              <span class="text-white-50">Coupon Discount</span>
+              <span class="text-white-50">Coupon Discount <span class="text-white-50 small" id="summaryCouponName"></span></span>
               <span class="text-success" id="summaryDiscount">−৳0</span>
             </div>
             <div class="d-flex justify-content-between">
-              <span class="text-white-50">Shipping</span>
+              <span class="text-white-50">Shipping Charge</span>
               <span id="summaryShipping"><?= $estimatedShipping > 0 ? '৳' . number_format($estimatedShipping) : 'Free' ?></span>
             </div>
-            <?php if ($estimatedTax > 0): ?>
-            <div class="d-flex justify-content-between"><span class="text-white-50">Tax</span><span>৳<?= number_format($estimatedTax) ?></span></div>
-            <?php endif; ?>
+            <div class="d-flex justify-content-between <?= $estimatedTax > 0 ? '' : 'd-none' ?>" id="summaryVatRow">
+              <span class="text-white-50">VAT</span><span id="summaryVat">৳<?= number_format($estimatedTax) ?></span>
+            </div>
             <hr>
-            <div class="d-flex justify-content-between fw-bold fs-5"><span>Estimated Total</span><span class="text-orange" id="summaryTotal">৳<?= number_format($subtotal + $estimatedShipping + $estimatedTax) ?></span></div>
+            <div class="d-flex justify-content-between fw-bold fs-5"><span>Grand Total</span><span class="text-orange" id="summaryTotal">৳<?= number_format($subtotal + $estimatedShipping + $estimatedTax) ?></span></div>
             <p class="text-white-50 small mt-2" id="freeShippingHint">
               <?php if ($freeShippingMin > 0 && $subtotal < $freeShippingMin): ?>
                 Spend ৳<?= number_format($freeShippingMin - $subtotal) ?> more for free shipping!
@@ -264,15 +277,24 @@ document.querySelectorAll('.payment-method-radio').forEach(function (radio) {
   var deliveryFields = document.getElementById('deliveryFields');
   var pickupInfo = document.getElementById('pickupInfo');
   var cityInput = document.getElementById('fCity');
+  var areaInput = document.getElementById('fArea');
   var addressInput = document.getElementById('fAddress');
   var zoneSelect = document.getElementById('fZone');
   var summaryShipping = document.getElementById('summaryShipping');
   var summaryTotal = document.getElementById('summaryTotal');
   var summaryDiscountRow = document.getElementById('summaryDiscountRow');
   var summaryDiscount = document.getElementById('summaryDiscount');
+  var summaryCouponName = document.getElementById('summaryCouponName');
+  var summaryVatRow = document.getElementById('summaryVatRow');
+  var summaryVat = document.getElementById('summaryVat');
+  var taxPercent = <?= (float) $taxPercent ?>;
   var freeShippingHint = document.getElementById('freeShippingHint');
   var currentFulfillment = '<?= $defaultFulfillment ?>';
   var selectedDiscount = 0;
+  var couponInput = document.getElementById('couponCodeInput');
+  var couponApplyBtn = document.getElementById('couponApplyBtn');
+  var couponFeedback = document.getElementById('couponFeedback');
+  var csrfToken = '<?= e(Security::csrfToken()) ?>';
 
   function computeShipping(isPickup) {
     if (isPickup || !shippingEnabled) return 0;
@@ -292,13 +314,30 @@ document.querySelectorAll('.payment-method-radio').forEach(function (radio) {
     if (deliveryFields) deliveryFields.classList.toggle('d-none', isPickup);
     if (pickupInfo) pickupInfo.classList.toggle('d-none', !isPickup);
     if (cityInput) cityInput.required = !isPickup;
+    if (areaInput) areaInput.required = !isPickup;
     if (addressInput) addressInput.required = !isPickup;
     if (zoneSelect) zoneSelect.required = !isPickup && zoneSelect.dataset.wasRequired === '1';
     if (freeShippingHint) freeShippingHint.classList.toggle('d-none', isPickup);
 
     var shipping = computeShipping(isPickup);
     summaryShipping.textContent = shipping > 0 ? money(shipping) : 'Free';
-    summaryTotal.textContent = money(Math.max(0, subtotal - selectedDiscount) + shipping + tax);
+
+    // VAT follows the discounted subtotal, matching Order::create()'s server-side
+    // maths, so the preview cannot drift from what actually gets charged.
+    var net = Math.max(0, subtotal - selectedDiscount);
+    var vat = taxPercent > 0 ? Math.round(net * (taxPercent / 100)) : 0;
+    if (summaryVatRow) summaryVatRow.classList.toggle('d-none', vat <= 0);
+    if (summaryVat) summaryVat.textContent = money(vat);
+
+    summaryTotal.textContent = money(net + shipping + vat);
+  }
+
+  function setDiscount(amount, couponName) {
+    selectedDiscount = amount > 0 ? amount : 0;
+    if (summaryDiscountRow) summaryDiscountRow.classList.toggle('d-none', selectedDiscount <= 0);
+    if (summaryDiscount) summaryDiscount.textContent = '−' + money(selectedDiscount);
+    if (summaryCouponName) summaryCouponName.textContent = couponName ? '(' + couponName + ')' : '';
+    applyFulfillment(currentFulfillment);
   }
 
   // The exact discount amount is computed server-side (Promotion::computeDiscount(), including
@@ -307,12 +346,62 @@ document.querySelectorAll('.payment-method-radio').forEach(function (radio) {
   document.querySelectorAll('.coupon-radio').forEach(function (radio) {
     radio.addEventListener('change', function () {
       var label = radio.closest('.coupon-option');
-      selectedDiscount = radio.checked ? parseFloat(label.dataset.computedDiscount || '0') : 0;
-      if (summaryDiscountRow) summaryDiscountRow.classList.toggle('d-none', selectedDiscount <= 0);
-      if (summaryDiscount) summaryDiscount.textContent = '−' + money(selectedDiscount);
-      applyFulfillment(currentFulfillment);
+      // Picking from the list supersedes anything typed, so the two can't both claim
+      // to be "the" coupon — the server reads the typed field first.
+      if (couponInput) { couponInput.value = ''; }
+      if (couponFeedback) { couponFeedback.classList.add('d-none'); }
+      setDiscount(radio.checked ? parseFloat(label.dataset.computedDiscount || '0') : 0, radio.value);
     });
   });
+
+  // A typed code is checked against the cart on the server — the response carries the
+  // discount, so nothing here decides what a coupon is worth.
+  function applyTypedCoupon() {
+    if (!couponInput) return;
+    var code = couponInput.value.trim().toUpperCase();
+    couponInput.value = code;
+
+    var body = new FormData();
+    body.append('_csrf', csrfToken);
+    body.append('code', code);
+    var emailField = document.getElementById('fEmail');
+    if (emailField) body.append('email', emailField.value);
+
+    couponApplyBtn.disabled = true;
+    fetch('<?= url('/api/validate-coupon.php') ?>', { method: 'POST', body: body, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        couponApplyBtn.disabled = false;
+        document.querySelectorAll('.coupon-radio:checked').forEach(function (r) { r.checked = false; });
+
+        if (data.empty) {
+          couponFeedback.classList.add('d-none');
+          setDiscount(0, '');
+          return;
+        }
+        couponFeedback.classList.remove('d-none');
+        couponFeedback.classList.toggle('text-success', !!data.valid);
+        couponFeedback.classList.toggle('text-danger', !data.valid);
+        couponFeedback.textContent = data.valid
+          ? data.title + ' applied — ' + data.discount_label + ' off'
+          : data.message;
+        setDiscount(data.valid ? parseFloat(data.discount) : 0, data.valid ? data.code : '');
+      })
+      .catch(function () {
+        couponApplyBtn.disabled = false;
+        couponFeedback.classList.remove('d-none');
+        couponFeedback.classList.add('text-danger');
+        couponFeedback.textContent = 'Could not check that code. Please try again.';
+        setDiscount(0, '');
+      });
+  }
+
+  if (couponApplyBtn) {
+    couponApplyBtn.addEventListener('click', applyTypedCoupon);
+    couponInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); applyTypedCoupon(); }
+    });
+  }
 
   var fulfillmentRadios = document.querySelectorAll('.fulfillment-radio');
   fulfillmentRadios.forEach(function (radio) {

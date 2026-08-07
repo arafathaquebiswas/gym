@@ -845,6 +845,8 @@ CREATE TABLE order_items (
     unit_price      DECIMAL(10,2) NOT NULL,
     subtotal        DECIMAL(10,2) NOT NULL,
     discount_source VARCHAR(20) NULL COMMENT 'product_offer/category_offer/brand_offer/flash_sale/bogo — null = regular price',
+    variant_id      INT UNSIGNED NULL COMMENT 'product_variants.id when a weight/option was chosen',
+    variant_label   VARCHAR(60) NULL COMMENT 'e.g. "500 g" — snapshot at time of sale, so a renamed or deleted variant cannot rewrite a past invoice',
     CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT,
     INDEX idx_order_items_order (order_id)
@@ -855,13 +857,17 @@ CREATE TABLE shopping_cart (
     user_id     INT UNSIGNED NULL,
     cart_token  VARCHAR(64) NULL,
     product_id  INT UNSIGNED NOT NULL,
+    -- 0 = the product itself, no variant chosen. Part of the unique keys below, and
+    -- NULLs never compare equal on either engine, so this cannot be nullable without
+    -- letting the same product be added twice as separate rows.
+    variant_id  INT UNSIGNED NOT NULL DEFAULT 0,
     qty         INT NOT NULL,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_cart_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
-    UNIQUE KEY uniq_cart_user_product (user_id, product_id),
-    UNIQUE KEY uniq_cart_token_product (cart_token, product_id)
+    UNIQUE KEY uniq_cart_user_product (user_id, product_id, variant_id),
+    UNIQUE KEY uniq_cart_token_product (cart_token, product_id, variant_id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE wishlist (

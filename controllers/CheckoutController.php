@@ -72,6 +72,11 @@ final class CheckoutController extends Controller
             'eligibleCoupons' => $eligibleCoupons,
             'estimatedShipping' => $shipping,
             'estimatedTax' => $tax,
+            // The rate itself, so the summary can recompute VAT live as the discount
+            // changes rather than showing a figure frozen at page load.
+            'taxPercent' => $settingModel->getBool('tax_enabled')
+                ? (float) $settingModel->get('tax_percent', '0')
+                : 0.0,
             'freeShippingMin' => $freeShippingMin,
             'shippingEnabled' => $shippingEnabled,
             'shippingFlatRate' => $flatRate,
@@ -161,14 +166,16 @@ final class CheckoutController extends Controller
             'full_name' => $name, 'email' => $email, 'phone' => $phone,
             'delivery_address' => $this->input('delivery_address'),
             'delivery_city' => $this->input('delivery_city'),
+            'delivery_area' => $this->input('delivery_area'),
         ]);
         $validator->required('full_name', 'Full name')
             ->required('email', 'Email')->email('email')
-            ->phone('phone');
+            ->required('phone', 'Mobile number')->phone('phone', 'Mobile number');
 
         if (!$isPickup) {
-            $validator->required('delivery_address', 'Delivery address')
-                ->required('delivery_city', 'City');
+            $validator->required('delivery_address', 'Complete address')
+                ->required('delivery_city', 'District')
+                ->required('delivery_area', 'Area/Thana');
         }
 
         if ($validator->fails()) {
@@ -213,12 +220,22 @@ final class CheckoutController extends Controller
         $payment = [
             'method' => $paymentMethod,
             'discount' => 0.0,
-            'couponCode' => Feature::on('coupons') ? ($this->input('coupon_code') ?: null) : null,
+            // A typed code wins over one picked from the list — selecting a card clears
+            // the text field client-side, so a non-empty box is the deliberate choice.
+            'couponCode' => Feature::on('coupons')
+                ? ($this->input('coupon_code_input') ?: $this->input('coupon_code') ?: null)
+                : null,
             'reference_no' => $referenceNo,
             'payer_number' => $payerNumber,
         ];
 
-        $cartLines = array_map(fn ($l) => ['product_id' => (int) $l['id'], 'qty' => (int) $l['qty']], $lines);
+        // Only ids and quantities cross into Order::create() — it re-reads every product
+        // and variant and prices them itself, so nothing the browser sent sets a price.
+        $cartLines = array_map(fn ($l) => [
+            'product_id' => (int) $l['id'],
+            'qty' => (int) $l['qty'],
+            'variant_id' => (int) ($l['variant_id'] ?? 0),
+        ], $lines);
 
         try {
             $result = (new Order())->create($cartLines, $userId, $customer, $payment);

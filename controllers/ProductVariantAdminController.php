@@ -24,7 +24,7 @@ final class ProductVariantAdminController extends AdminController
         $variantModel = new ProductVariant();
         $variantModel->create([
             'product_id' => (int) $id,
-            'sku' => $this->input('sku'),
+            'sku' => $this->resolveSku((int) $id, null),
             'barcode' => $this->input('barcode'),
             'price' => $this->input('price') !== '' ? (float) $this->input('price') : null,
             'offer_price' => $this->input('offer_price') !== '' ? (float) $this->input('offer_price') : null,
@@ -56,7 +56,7 @@ final class ProductVariantAdminController extends AdminController
         }
 
         $data = [
-            'sku' => $this->input('sku'),
+            'sku' => $this->resolveSku((int) $id, (int) $variantId),
             'barcode' => $this->input('barcode'),
             'price' => $this->input('price') !== '' ? (float) $this->input('price') : null,
             'offer_price' => $this->input('offer_price') !== '' ? (float) $this->input('offer_price') : null,
@@ -124,13 +124,38 @@ final class ProductVariantAdminController extends AdminController
         return array_map('intval', (array) ($_POST['attribute_value_ids'] ?? []));
     }
 
+    /**
+     * The typed SKU, or one derived from the product and the variant's weight when the
+     * admin left it blank — SKU is optional on the form, but the column is UNIQUE and
+     * NOT NULL, so something has to fill it. Suffixed until it stops colliding.
+     */
+    private function resolveSku(int $productId, ?int $excludeId): string
+    {
+        $typed = $this->input('sku');
+        if ($typed !== '') {
+            return $typed;
+        }
+
+        $product = (new Product())->find($productId);
+        $base = strtoupper($product['sku'] ?? 'VAR');
+        $weight = ProductVariant::weightLabel($this->input('weight') ?: null);
+        $suffix = $weight !== null ? strtoupper(str_replace(' ', '', $weight)) : 'V';
+
+        $variantModel = new ProductVariant();
+        $candidate = "$base-$suffix";
+        $n = 2;
+        while ($variantModel->skuExists($candidate, $excludeId)) {
+            $candidate = "$base-$suffix-" . $n++;
+        }
+
+        return $candidate;
+    }
+
     private function validate(?int $excludeId): ?string
     {
         $sku = $this->input('sku');
-        if ($sku === '') {
-            return 'Variant SKU is required.';
-        }
-        if ((new ProductVariant())->skuExists($sku, $excludeId)) {
+        // Blank is allowed — resolveSku() generates one. Only a typed SKU can clash.
+        if ($sku !== '' && (new ProductVariant())->skuExists($sku, $excludeId)) {
             return 'That SKU is already used by another variant.';
         }
         $barcode = $this->input('barcode');

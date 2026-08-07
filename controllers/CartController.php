@@ -52,27 +52,55 @@ final class CartController extends Controller
             redirect('store');
         }
 
+        // The variant is re-read from the database rather than taken on trust: the form
+        // posts only an id, so price and stock must come from the row it points at, and
+        // that row has to belong to this product and still be active.
+        $variantId = (int) $this->input('variant_id');
+        $variant = null;
+        $variantModel = new ProductVariant();
+        $activeVariants = $variantModel->activeForProduct($productId);
+
+        if ($variantId > 0) {
+            foreach ($activeVariants as $candidate) {
+                if ((int) $candidate['id'] === $variantId) {
+                    $variant = $candidate;
+                    break;
+                }
+            }
+            if (!$variant) {
+                flash('danger', 'That option is no longer available. Please choose another.');
+                redirect('store/' . $product['slug']);
+            }
+        } elseif ($activeVariants !== []) {
+            flash('danger', 'Please choose a weight before adding to cart.');
+            redirect('store/' . $product['slug']);
+        }
+
+        $label = $variant ? ProductVariant::label($variant) : null;
+        $availableStock = $variant ? (int) $variant['stock_qty'] : (int) $product['stock_qty'];
+
         [$userId, $cartToken] = $this->identity();
         $cartModel = new Cart();
         $existingQty = 0;
         foreach ($cartModel->forIdentity($userId, $cartToken) as $line) {
-            if ((int) $line['id'] === $productId) {
+            if ((int) $line['id'] === $productId && (int) $line['variant_id'] === $variantId) {
                 $existingQty = (int) $line['qty'];
             }
         }
 
-        if (($existingQty + $qty) > $product['stock_qty'] && !($product['allow_preorder'] && Feature::on('preorder'))) {
-            flash('danger', "Only {$product['stock_qty']} of {$product['name']} available.");
+        if (($existingQty + $qty) > $availableStock && !($product['allow_preorder'] && Feature::on('preorder'))) {
+            $what = $product['name'] . ($label ? " ($label)" : '');
+            flash('danger', "Only $availableStock of $what available.");
             redirect('store/' . $product['slug']);
         }
 
-        $cartModel->add($userId, $cartToken, $productId, $qty);
+        $cartModel->add($userId, $cartToken, $productId, $qty, $variantId);
 
         if ($this->input('buy_now') === '1') {
             redirect('checkout');
         }
 
-        flash('success', $product['name'] . ' added to your cart.');
+        flash('success', $product['name'] . ($label ? " ($label)" : '') . ' added to your cart.');
         redirect($this->input('redirect_to') ?: 'cart');
     }
 
@@ -109,20 +137,30 @@ final class CartController extends Controller
         Security::requireCsrf();
 
         [$userId, $cartToken] = $this->identity();
-        $productId = (int) $this->input('product_id');
+        $cartModel = new Cart();
+        // Lines are addressed by cart row id — one product can now be several lines,
+        // one per weight, so a product id no longer picks out a single one.
+        $cartId = (int) $this->input('cart_id');
         $qty = (int) $this->input('qty', '1');
 
         if ($qty <= 0) {
-            (new Cart())->remove($userId, $cartToken, $productId);
-        } else {
-            $product = (new Product())->find($productId);
-            if ($product && $qty > $product['stock_qty'] && !($product['allow_preorder'] && Feature::on('preorder'))) {
-                flash('danger', "Only {$product['stock_qty']} of {$product['name']} available.");
-                redirect('cart');
-            }
-            (new Cart())->updateQty($userId, $cartToken, $productId, $qty);
+            $cartModel->remove($userId, $cartToken, $cartId);
+            redirect('cart');
         }
 
+        $line = $cartModel->findLine($userId, $cartToken, $cartId);
+        if (!$line) {
+            redirect('cart');
+        }
+
+        // forIdentity() has already folded the variant's stock over the product's.
+        if ($qty > (int) $line['stock_qty'] && !($line['allow_preorder'] && Feature::on('preorder'))) {
+            $what = $line['name'] . ($line['variant_label'] ? " ({$line['variant_label']})" : '');
+            flash('danger', "Only {$line['stock_qty']} of $what available.");
+            redirect('cart');
+        }
+
+        $cartModel->updateQty($userId, $cartToken, $cartId, $qty);
         redirect('cart');
     }
 
@@ -131,7 +169,7 @@ final class CartController extends Controller
         Security::requireCsrf();
 
         [$userId, $cartToken] = $this->identity();
-        (new Cart())->remove($userId, $cartToken, (int) $this->input('product_id'));
+        (new Cart())->remove($userId, $cartToken, (int) $this->input('cart_id'));
 
         flash('success', 'Item removed from cart.');
         redirect('cart');

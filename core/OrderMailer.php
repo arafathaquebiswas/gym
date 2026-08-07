@@ -21,7 +21,8 @@ final class OrderMailer
         $rows = '';
         foreach ($items as $item) {
             $rows .= '<tr>'
-                . '<td style="padding:8px;border-bottom:1px solid #333;">' . e($item['product_name']) . '</td>'
+                . '<td style="padding:8px;border-bottom:1px solid #333;">' . e($item['product_name'])
+                . (!empty($item['variant_label']) ? ' (' . e($item['variant_label']) . ')' : '') . '</td>'
                 . '<td style="padding:8px;border-bottom:1px solid #333;text-align:center;">' . (int) $item['qty'] . '</td>'
                 . '<td style="padding:8px;border-bottom:1px solid #333;text-align:right;">' . money((float) $item['subtotal']) . '</td>'
                 . '</tr>';

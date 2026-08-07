@@ -23,17 +23,20 @@
             </div>
             <div class="flex-grow-1">
               <a href="<?= url('/store/' . $line['slug']) ?>" class="text-white text-decoration-none fw-semibold"><?= e($line['name']) ?></a>
+              <?php if (!empty($line['variant_label'])): ?>
+                <span class="badge bg-secondary ms-1"><?= e($line['variant_label']) ?></span>
+              <?php endif; ?>
               <div class="text-orange small">৳<?= number_format((float) $line['display_price']) ?></div>
             </div>
             <form method="post" action="<?= url('/cart/update') ?>" class="d-flex align-items-center gap-1">
               <?= Security::csrfField() ?>
-              <input type="hidden" name="product_id" value="<?= (int) $line['id'] ?>">
+              <input type="hidden" name="cart_id" value="<?= (int) $line['cart_id'] ?>">
               <input type="number" name="qty" value="<?= (int) $line['qty'] ?>" min="1" max="<?= max(1, (int) $line['stock_qty']) ?>" class="form-control form-control-sm" style="width:70px" onchange="this.form.submit()">
             </form>
             <div class="fw-semibold" style="min-width:90px;text-align:right">৳<?= number_format((float) $line['display_price'] * (int) $line['qty']) ?></div>
             <form method="post" action="<?= url('/cart/remove') ?>">
               <?= Security::csrfField() ?>
-              <input type="hidden" name="product_id" value="<?= (int) $line['id'] ?>">
+              <input type="hidden" name="cart_id" value="<?= (int) $line['cart_id'] ?>">
               <button type="submit" class="btn btn-link text-danger p-0"><i class="bi bi-trash"></i></button>
             </form>
           </div>

@@ -17,6 +17,7 @@ final class Order extends Model
         }
 
         $productModel = new Product();
+        $variantModel = new ProductVariant();
         $this->db->beginTransaction();
         try {
             $resolvedLines = [];
@@ -38,32 +39,75 @@ final class Order extends Model
                     $maxShippingOverride = max($maxShippingOverride ?? 0.0, (float) $product['shipping_charge']);
                 }
 
-                if ((int) $product['stock_qty'] >= $qty) {
-                    $productModel->decrementStockIfAvailable((int) $product['id'], $qty);
-                    $stockChanges[] = ['product_id' => (int) $product['id'], 'qty' => $qty, 'note' => 'Order placed'];
-                    LowStockAlerter::checkAndNotify($product, (int) $product['stock_qty'] - $qty);
-                } elseif ((int) $product['allow_preorder'] === 1 && Feature::on('preorder')) {
-                    $productModel->adjustStock((int) $product['id'], -$qty); // may go negative — backorder demand
-                    $stockChanges[] = ['product_id' => (int) $product['id'], 'qty' => $qty, 'note' => 'Pre-order / backorder'];
-                    LowStockAlerter::checkAndNotify($product, (int) $product['stock_qty'] - $qty);
-                } else {
-                    throw new RuntimeException("Not enough stock for {$product['name']} (only {$product['stock_qty']} left).");
+                // The chosen weight is re-read here and priced from its own row. The cart
+                // only ever carries an id, so this is the single place a variant's price
+                // and stock are established — a client cannot name either.
+                $variantId = (int) ($line['variant_id'] ?? 0);
+                $variant = null;
+                $variantLabel = null;
+                if ($variantId > 0) {
+                    $variant = $variantModel->find($variantId);
+                    if (!$variant || (int) $variant['product_id'] !== (int) $product['id'] || $variant['status'] !== 'active') {
+                        throw new RuntimeException("The selected option for {$product['name']} is no longer available.");
+                    }
+                    $variant = $variantModel->withResolvedPricing($variant, $product);
+                    $variantLabel = ProductVariant::label($variant);
                 }
 
+                // Stock lives on whichever row the shopper actually bought from.
+                $stockOwner = $variant ? 'variant' : 'product';
+                $availableStock = $variant ? (int) $variant['effective_stock'] : (int) $product['stock_qty'];
+                $describe = $product['name'] . ($variantLabel ? " ($variantLabel)" : '');
+
+                if ($availableStock >= $qty) {
+                    if ($stockOwner === 'variant') {
+                        $variantModel->decrementStockIfAvailable($variantId, $qty);
+                    } else {
+                        $productModel->decrementStockIfAvailable((int) $product['id'], $qty);
+                    }
+                    $stockChanges[] = ['product_id' => (int) $product['id'], 'qty' => $qty, 'note' => 'Order placed'];
+                    LowStockAlerter::checkAndNotify($product, $availableStock - $qty);
+                } elseif ((int) $product['allow_preorder'] === 1 && Feature::on('preorder')) {
+                    if ($stockOwner === 'variant') {
+                        $variantModel->adjustStock($variantId, -$qty); // may go negative — backorder demand
+                    } else {
+                        $productModel->adjustStock((int) $product['id'], -$qty);
+                    }
+                    $stockChanges[] = ['product_id' => (int) $product['id'], 'qty' => $qty, 'note' => 'Pre-order / backorder'];
+                    LowStockAlerter::checkAndNotify($product, $availableStock - $qty);
+                } else {
+                    throw new RuntimeException("Not enough stock for $describe (only $availableStock left).");
+                }
+
+                // A variant's own offer price wins, then its base price, then the product's
+                // computed display price — mirroring withResolvedPricing()'s fallback order.
                 $unitPrice = (float) $product['display_price'];
+                if ($variant) {
+                    $unitPrice = $variant['effective_offer_price'] ?? $variant['effective_price'];
+                }
+
                 $resolvedLines[] = [
                     'product_id' => (int) $product['id'],
                     'product_name' => $product['name'],
-                    'sku' => $product['sku'],
+                    'sku' => $variant && !empty($variant['effective_sku']) ? $variant['effective_sku'] : $product['sku'],
                     'qty' => $qty,
                     'unit_price' => $unitPrice,
                     'subtotal' => round($unitPrice * $qty, 2),
+                    'variant_id' => $variantId > 0 ? $variantId : null,
+                    'variant_label' => $variantLabel,
                 ];
                 // Parallel to $resolvedLines (same index) — kept separate so these extra keys
                 // never reach the order_items INSERT (real prepared statements reject unknown params).
+                // For a variant, "regular price" is that variant's own base price — the figure
+                // a coupon reverts to when offer stacking is off. Falling back to the product's
+                // selling_price here would silently re-price the line to the wrong weight.
                 $lineMeta[] = [
-                    'had_offer' => (bool) $product['offer_is_live'],
-                    'regular_price' => (float) $product['selling_price'],
+                    'had_offer' => $variant
+                        ? $variant['effective_offer_price'] !== null
+                        : (bool) $product['offer_is_live'],
+                    'regular_price' => $variant
+                        ? (float) $variant['effective_price']
+                        : (float) $product['selling_price'],
                     'bogo_enabled' => (bool) $product['bogo_enabled'],
                     'discount_source' => $product['offer_is_live'] ? $product['discount_source'] : null,
                 ];
@@ -88,7 +132,8 @@ final class Order extends Model
                 ? $promotionModel->validCoupon($payment['couponCode'], $subtotal, 'product', $memberId, $guestEmail)
                 : null;
             if (!empty($payment['couponCode']) && !$promotion) {
-                throw new RuntimeException('That coupon code is invalid, expired, or no longer applicable.');
+                // One message for every rejection reason — see api/validate-coupon.php.
+                throw new RuntimeException('Invalid or Expired Coupon Code.');
             }
 
             // Priority rule: Coupon > Flash Sale > Product Offer > Category Offer > Regular Price.
@@ -201,8 +246,8 @@ final class Order extends Model
             $orderId = (int) $this->db->lastInsertId();
 
             $itemStmt = $this->db->prepare(
-                'INSERT INTO order_items (order_id, product_id, product_name, sku, qty, unit_price, subtotal, discount_source)
-                 VALUES (:order_id, :product_id, :product_name, :sku, :qty, :unit_price, :subtotal, :discount_source)'
+                'INSERT INTO order_items (order_id, product_id, product_name, sku, qty, unit_price, subtotal, discount_source, variant_id, variant_label)
+                 VALUES (:order_id, :product_id, :product_name, :sku, :qty, :unit_price, :subtotal, :discount_source, :variant_id, :variant_label)'
             );
             foreach ($resolvedLines as $i => $line) {
                 $itemStmt->execute(array_merge(['order_id' => $orderId, 'discount_source' => $lineMeta[$i]['discount_source']], $line));

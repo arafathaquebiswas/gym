@@ -165,6 +165,43 @@ final class ProductVariant extends Model
     }
 
     /** Merges a variant's fields on top of its parent product's, so callers get one flat "what to sell at" record. */
+    /**
+     * "0.25" -> "250 g", "1.000" -> "1 kg", "1.5" -> "1.5 kg".
+     * Weights are stored in kg; grams read better below 1kg, which is most of them.
+     */
+    public static function weightLabel(float|string|null $kg): ?string
+    {
+        if ($kg === null || $kg === '' || (float) $kg <= 0) {
+            return null;
+        }
+        $kg = (float) $kg;
+        $trim = static fn (string $n): string => rtrim(rtrim($n, '0'), '.');
+
+        return $kg < 1
+            ? $trim(number_format($kg * 1000, 2, '.', '')) . ' g'
+            : $trim(number_format($kg, 3, '.', '')) . ' kg';
+    }
+
+    /**
+     * What to call this variant in a picker, cart line or invoice: its weight when it
+     * has one, otherwise its attribute combination ("Size: M"), otherwise its SKU.
+     */
+    public static function label(array $variant): string
+    {
+        $weight = self::weightLabel($variant['weight'] ?? null);
+        if ($weight !== null) {
+            return $weight;
+        }
+
+        $parts = [];
+        foreach ($variant['attribute_values'] ?? [] as $value) {
+            $parts[] = $value['value'] ?? '';
+        }
+        $parts = array_filter($parts);
+
+        return $parts !== [] ? implode(' / ', $parts) : (string) ($variant['sku'] ?? 'Option');
+    }
+
     public function withResolvedPricing(array $variant, array $product): array
     {
         $variant['effective_sku'] = $variant['sku'];

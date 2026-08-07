@@ -882,3 +882,20 @@ h1, h2, h3, h4, h5, h6 { font-weight: 700; letter-spacing: -0.02em; }
   color: var(--ps-text-muted, #9aa0a6); line-height: 1; cursor: pointer;
 }
 .password-toggle-btn:hover { color: var(--ps-orange, #ff6a1a); }
+
+/* Weight/option picker on the product page — one tile per variant. */
+.variant-option {
+  min-width: 96px;
+  text-align: center;
+  cursor: pointer;
+  padding: .5rem .75rem;
+}
+.variant-option.active {
+  border-color: #ff6a1a;
+  background: rgba(255, 106, 26, .15);
+  color: #fff;
+}
+.variant-option.disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}

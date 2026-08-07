@@ -1,6 +1,7 @@
 <?php
 $pageTitle = $product['name'];
 /** @var array $product */
+/** @var array $variants */
 /** @var array $images */
 /** @var array $reviews */
 /** @var array $ratingSummary */
@@ -106,16 +107,104 @@ $extraScripts = ['js/pricing-countdown.js'];
           <span class="badge mb-3" style="background:#ff6a1a">Buy One Get One Free</span>
         <?php endif; ?>
 
-        <?php if (!$isOutOfStock || ($product['allow_preorder'] && Feature::on('preorder'))): ?>
-        <form method="post" action="<?= url('/cart/add') ?>" class="d-flex gap-2 align-items-center mb-3">
+        <?php
+          // A product with variants is bought by the weight, never as a bare product, so
+          // stock and purchasability are judged on the variants when there are any.
+          $hasVariants = !empty($variants);
+          $variantStock = 0;
+          foreach ($variants as $v) {
+            $variantStock += (int) $v['effective_stock'];
+          }
+          $canBuy = $hasVariants
+            ? ($variantStock > 0 || ($product['allow_preorder'] && Feature::on('preorder')))
+            : (!$isOutOfStock || ($product['allow_preorder'] && Feature::on('preorder')));
+        ?>
+        <?php if ($canBuy): ?>
+        <form method="post" action="<?= url('/cart/add') ?>" class="mb-3">
           <?= Security::csrfField() ?>
           <input type="hidden" name="product_id" value="<?= (int) $product['id'] ?>">
           <input type="hidden" name="redirect_to" value="store/<?= e($product['slug']) ?>">
-          <label class="me-1 mb-0">Qty</label>
-          <input type="number" name="qty" value="1" min="1" <?= $isOutOfStock ? '' : 'max="' . (int) $product['stock_qty'] . '"' ?> class="form-control" style="width:90px">
-          <button type="submit" class="btn btn-ps-outline"><i class="bi bi-cart-plus"></i> Add to Cart</button>
-          <button type="submit" name="buy_now" value="1" class="btn btn-ps">Buy Now</button>
+
+          <?php if ($hasVariants): ?>
+          <div class="mb-3">
+            <label class="d-block mb-2 fw-semibold">Choose Weight</label>
+            <div class="d-flex flex-wrap gap-2" id="variantPicker">
+              <?php foreach ($variants as $i => $variant): ?>
+                <?php
+                  $vLabel = ProductVariant::label($variant);
+                  $vPrice = $variant['effective_offer_price'] ?? $variant['effective_price'];
+                  $vStock = (int) $variant['effective_stock'];
+                  $soldOut = $vStock <= 0 && !($product['allow_preorder'] && Feature::on('preorder'));
+                ?>
+                <label class="variant-option btn <?= $soldOut ? 'btn-outline-secondary disabled' : 'btn-outline-light' ?>"
+                       data-price="<?= (float) $vPrice ?>"
+                       data-base-price="<?= (float) $variant['effective_price'] ?>"
+                       data-stock="<?= $vStock ?>"
+                       data-label="<?= e($vLabel) ?>">
+                  <input type="radio" name="variant_id" value="<?= (int) $variant['id'] ?>" class="d-none variant-radio"
+                         <?= $soldOut ? 'disabled' : '' ?> <?= $i === 0 && !$soldOut ? 'checked' : '' ?> required>
+                  <span class="d-block fw-semibold"><?= e($vLabel) ?></span>
+                  <span class="d-block small">৳<?= number_format((float) $vPrice) ?></span>
+                  <?php if ($soldOut): ?><span class="d-block small text-danger">Sold out</span><?php endif; ?>
+                </label>
+              <?php endforeach; ?>
+            </div>
+            <p class="text-white-50 small mt-2 mb-0" id="variantStockNote"></p>
+          </div>
+          <?php endif; ?>
+
+          <div class="d-flex gap-2 align-items-center flex-wrap">
+            <label class="me-1 mb-0">Qty</label>
+            <input type="number" name="qty" id="qtyInput" value="1" min="1"
+                   <?= $hasVariants ? '' : ($isOutOfStock ? '' : 'max="' . (int) $product['stock_qty'] . '"') ?>
+                   class="form-control" style="width:90px">
+            <button type="submit" class="btn btn-ps-outline"><i class="bi bi-cart-plus"></i> Add to Cart</button>
+            <button type="submit" name="buy_now" value="1" class="btn btn-ps">Buy Now</button>
+          </div>
         </form>
+
+        <?php if ($hasVariants): ?>
+        <script>
+        (function () {
+          // Reflects the price of the selected weight. The figure shown here is only a
+          // display of what the server already sent per variant; Order::create() re-reads
+          // the variant row and prices the line itself.
+          var picker = document.getElementById('variantPicker');
+          if (!picker) return;
+          var priceEl = document.querySelector('[data-pkg-card] .pkg-price');
+          var stockNote = document.getElementById('variantStockNote');
+          var qtyInput = document.getElementById('qtyInput');
+          var money = function (n) { return '৳' + Math.round(n).toLocaleString('en-US'); };
+
+          function select(label) {
+            picker.querySelectorAll('.variant-option').forEach(function (el) {
+              el.classList.toggle('active', el === label);
+            });
+            var price = parseFloat(label.dataset.price || '0');
+            var stock = parseInt(label.dataset.stock || '0', 10);
+            if (priceEl) priceEl.textContent = money(price);
+            if (qtyInput) {
+              qtyInput.max = stock > 0 ? stock : '';
+              if (stock > 0 && parseInt(qtyInput.value, 10) > stock) qtyInput.value = stock;
+            }
+            if (stockNote) {
+              stockNote.textContent = stock > 0
+                ? label.dataset.label + ' — ' + stock + ' in stock'
+                : label.dataset.label + ' — available to pre-order';
+            }
+          }
+
+          picker.querySelectorAll('.variant-radio').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+              if (radio.checked) select(radio.closest('.variant-option'));
+            });
+          });
+
+          var checked = picker.querySelector('.variant-radio:checked');
+          if (checked) select(checked.closest('.variant-option'));
+        })();
+        </script>
+        <?php endif; ?>
         <?php else: ?>
           <p class="text-white-50 small">This item is currently unavailable for online purchase.</p>
           <form method="post" action="<?= url('/store/' . $product['slug'] . '/notify-back-in-stock') ?>" class="d-flex gap-2 mb-3" style="max-width:400px">

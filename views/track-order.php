@@ -41,7 +41,7 @@ $deliveryEstimate = (new Setting())->get('delivery_estimate_text', '3–5 busine
             <thead><tr><th>Item</th><th>Qty</th><th>Subtotal</th></tr></thead>
             <tbody>
               <?php foreach ($items as $item): ?>
-              <tr><td><?= e($item['product_name']) ?></td><td><?= (int) $item['qty'] ?></td><td><?= money((float) $item['subtotal']) ?></td></tr>
+              <tr><td><?= e($item['product_name']) ?><?= !empty($item['variant_label']) ? ' (' . e($item['variant_label']) . ')' : '' ?></td><td><?= (int) $item['qty'] ?></td><td><?= money((float) $item['subtotal']) ?></td></tr>
               <?php endforeach; ?>
             </tbody>
           </table>

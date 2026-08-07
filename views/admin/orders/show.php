@@ -51,7 +51,7 @@ $isTerminal = in_array($order['status'], ['delivered', 'cancelled', 'returned'],
         <thead><tr><th>Product</th><th>SKU</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th></tr></thead>
         <tbody>
           <?php foreach ($items as $item): ?>
-          <tr><td><?= e($item['product_name']) ?></td><td><?= e($item['sku']) ?></td><td><?= (int) $item['qty'] ?></td><td>৳<?= number_format((float) $item['unit_price']) ?></td><td>৳<?= number_format((float) $item['subtotal']) ?></td></tr>
+          <tr><td><?= e($item['product_name']) ?><?= !empty($item['variant_label']) ? ' (' . e($item['variant_label']) . ')' : '' ?></td><td><?= e($item['sku']) ?></td><td><?= (int) $item['qty'] ?></td><td>৳<?= number_format((float) $item['unit_price']) ?></td><td>৳<?= number_format((float) $item['subtotal']) ?></td></tr>
           <?php endforeach; ?>
         </tbody>
       </table>

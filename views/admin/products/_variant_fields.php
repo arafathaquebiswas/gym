@@ -10,7 +10,7 @@ $vv = fn ($key, $default = '') => e((string) ($variant[$key] ?? $default));
   <?php foreach ($assignedAttributes as $attr): ?>
   <div class="col-md-4">
     <label><?= e($attr['name']) ?></label>
-    <select name="attribute_value_ids[]" class="form-select form-select-sm" required>
+    <select name="attribute_value_ids[]" class="form-select form-select-sm">
       <option value="">— Select —</option>
       <?php foreach ($attributeValuesById[$attr['id']] ?? [] as $val): ?>
         <option value="<?= (int) $val['id'] ?>" <?= in_array((int) $val['id'], $variantValueIds, true) ? 'selected' : '' ?>><?= e($val['value']) ?></option>
@@ -23,7 +23,7 @@ $vv = fn ($key, $default = '') => e((string) ($variant[$key] ?? $default));
 <div class="row g-2">
   <div class="col-md-4">
     <label>SKU *</label>
-    <input type="text" name="sku" class="form-control form-control-sm" value="<?= $vv('sku') ?>" required>
+    <input type="text" name="sku" class="form-control form-control-sm" value="<?= $vv('sku') ?>" placeholder="auto">
   </div>
   <div class="col-md-4">
     <label>Barcode</label>

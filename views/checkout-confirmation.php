@@ -13,7 +13,7 @@
           <thead><tr><th>Item</th><th>Qty</th><th>Subtotal</th></tr></thead>
           <tbody>
             <?php foreach ($items as $item): ?>
-            <tr><td><?= e($item['product_name']) ?></td><td><?= (int) $item['qty'] ?></td><td>৳<?= number_format((float) $item['subtotal']) ?></td></tr>
+            <tr><td><?= e($item['product_name']) ?><?= !empty($item['variant_label']) ? ' (' . e($item['variant_label']) . ')' : '' ?></td><td><?= (int) $item['qty'] ?></td><td>৳<?= number_format((float) $item['subtotal']) ?></td></tr>
             <?php endforeach; ?>
           </tbody>
         </table>
