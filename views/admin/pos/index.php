@@ -192,7 +192,13 @@
   let activeChip = ''; // '' = All, '__favorites', '__recent', or category name
   const FAVORITES_KEY = 'pos_favorites';
   const RECENT_KEY = 'pos_recent';
+  const DRAFT_KEY = 'pos_draft';
   const MAX_RECENT = 12;
+
+  // True only on the first POS load after a sale was actually created — see
+  // PosController::index(). Everything else (Back to POS, a refresh, a failed
+  // checkout) leaves the draft alone.
+  const draftConsumed = <?= !empty($draftConsumed) ? 'true' : 'false' ?>;
 
   function loadIds(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { return []; } }
   function saveIds(key, ids) { localStorage.setItem(key, JSON.stringify(ids)); }
@@ -229,6 +235,8 @@
   const detailsAddBtn = document.getElementById('posDetailsAddBtn');
   const memberSelect = document.getElementById('posMemberSelect');
   const memberIdField = document.getElementById('posMemberIdField');
+  const couponInput = document.getElementById('posCouponCode');
+  const paymentSelect = document.getElementById('posPaymentMethod');
   let detailsProductId = null;
 
   function getDetailsModal() {
@@ -470,10 +478,73 @@
     checkoutBtn.disabled = lines.length === 0;
 
     cartJson.value = JSON.stringify(lines.map(l => ({ product_id: l.product.id, qty: l.qty })));
+
+    saveDraft();
+  }
+
+  /*
+   * Draft persistence.
+   *
+   * The cart lived only in the `cart` object above, so any full page load —
+   * Back to POS, a refresh, wandering off to another admin screen — re-ran this
+   * script and started from empty. Nothing was clearing it; it simply never
+   * outlived the page. It is now mirrored into localStorage on every change and
+   * restored on load, so an unfinished transaction survives navigation.
+   *
+   * Only product ids and quantities are stored, never prices: products are
+   * re-resolved from the freshly rendered `products` payload on restore, and the
+   * server re-reads every price and stock level again at checkout regardless.
+   */
+  function saveDraft() {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        lines: Object.values(cart).map(l => ({ product_id: l.product.id, qty: l.qty })),
+        discount: discountInput.value || '0',
+        coupon: couponInput ? couponInput.value : '',
+        payment_method: paymentSelect ? paymentSelect.value : '',
+        member_id: memberSelect ? memberSelect.value : '',
+        saved_at: Date.now()
+      }));
+    } catch (e) {
+      // A full or disabled localStorage must never break the sale in progress.
+    }
+  }
+
+  function clearDraft() {
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+  }
+
+  function restoreDraft() {
+    let draft;
+    try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { return; }
+    if (!draft || !Array.isArray(draft.lines)) return;
+
+    draft.lines.forEach(function (line) {
+      const product = products.find(p => p.id === line.product_id);
+      if (!product) return;                       // delisted or out of stock since
+      const qty = Math.min(parseInt(line.qty, 10) || 0, product.stock_qty);
+      if (qty > 0) cart[product.id] = { product, qty };
+    });
+
+    if (discountInput && draft.discount != null) discountInput.value = draft.discount;
+    if (couponInput && draft.coupon) couponInput.value = draft.coupon;
+    if (paymentSelect && draft.payment_method) paymentSelect.value = draft.payment_method;
+    if (memberSelect && draft.member_id) {
+      memberSelect.value = draft.member_id;
+      memberSelect.dispatchEvent(new Event('change'));
+    }
   }
 
   search.addEventListener('input', () => renderGrid(search.value));
   discountInput.addEventListener('input', updateTotals);
+
+  // Coupon, payment method and customer do not affect the client-side totals, so
+  // they never reached updateTotals() — they still have to be part of the draft.
+  [couponInput, paymentSelect, memberSelect].forEach(function (el) {
+    if (!el) return;
+    el.addEventListener('change', saveDraft);
+    el.addEventListener('input', saveDraft);
+  });
 
   checkoutForm.addEventListener('submit', () => {
     updateTotals();
@@ -495,6 +566,15 @@
   renderChips();
   grid.innerHTML = skeletonHtml(12);
   requestAnimationFrame(() => renderGrid(''));
+
+  // A completed sale spends its draft; anything else resumes where the admin
+  // left off. renderCart() then paints the restored lines and, through
+  // updateTotals(), rebuilds cart_json and the totals.
+  if (draftConsumed) {
+    clearDraft();
+  } else {
+    restoreDraft();
+  }
   renderCart();
 })();
 </script>

@@ -23,6 +23,14 @@ final class PosController extends AdminController
             redirect('admin/pos');
         }
 
+        // Set by checkout() only when a sale was actually created. Consumed here so
+        // the browser clears its saved draft exactly once, on the first POS page
+        // load after a completed sale — whether the admin came back via the
+        // invoice's Print/Download or straight through Back to POS. A checkout
+        // that failed never sets it, so the draft survives to be corrected.
+        $draftConsumed = !empty($_SESSION['pos_draft_consumed']);
+        unset($_SESSION['pos_draft_consumed']);
+
         $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
 
         $this->adminView('pos/index', [
@@ -31,6 +39,7 @@ final class PosController extends AdminController
             'membersJson' => json_encode((new Member())->allForPicker(), $jsonFlags),
             'taxEnabled' => $settingModel->getBool('tax_enabled'),
             'taxPercent' => (float) $settingModel->get('tax_percent', '0'),
+            'draftConsumed' => $draftConsumed,
         ]);
     }
 
@@ -89,6 +98,11 @@ final class PosController extends AdminController
             flash('danger', $e->getMessage());
             redirect('admin/pos');
         }
+
+        // The sale is now real, so the browser's saved draft is spent. Flagged
+        // rather than cleared inline because this response redirects to the
+        // invoice — the POS page is what owns the stored draft.
+        $_SESSION['pos_draft_consumed'] = true;
 
         $this->logActivity('pos_sale_completed', "Completed sale {$result['invoice_no']}");
 
