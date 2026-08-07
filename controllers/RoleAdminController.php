@@ -11,6 +11,18 @@
  */
 final class RoleAdminController extends AdminController
 {
+    /**
+     * Roles the Staff section does NOT cover: the two privileged roles get their own
+     * section, and members are not staff accounts at all.
+     *
+     * Everything else — staff, admin, receptionist, trainer, store_manager, delivery —
+     * is listed in the Staff table, so the Edit/Suspend/Delete guards have to accept
+     * that whole set. Matching on the literal slug 'staff' instead made the page render
+     * Edit links for a receptionist or trainer and then 404 on the way in. Kept as one
+     * constant so the listing query and the guards can never drift apart again.
+     */
+    private const NON_STAFF_ROLES = ['main_admin', 'super_admin', 'member'];
+
     public function __construct()
     {
         parent::__construct();
@@ -30,7 +42,7 @@ final class RoleAdminController extends AdminController
             "SELECT u.*, r.name AS role_name, r.slug AS role_slug
              FROM users u
              JOIN roles r ON r.id = u.role_id
-             WHERE r.slug NOT IN ('main_admin', 'super_admin', 'member')
+             WHERE r.slug NOT IN ('" . implode("','", self::NON_STAFF_ROLES) . "')
              ORDER BY u.name ASC"
         )->fetchAll();
 
@@ -266,6 +278,64 @@ final class RoleAdminController extends AdminController
 
     // ---------------------------------------------------------------- Shared helpers
 
+    /**
+     * Would removing or suspending this account leave nobody able to administer the
+     * system? Role Management admits only Main Admin and Super Admin, so once the last
+     * active one is gone there is no way back in through the UI — the account would have
+     * to be restored directly in the database. Counted live rather than cached because
+     * the answer changes with every suspension.
+     */
+    private function isLastAdminStanding(int $id): bool
+    {
+        $stmt = $this->db()->prepare(
+            "SELECT COUNT(*) FROM users u
+             JOIN roles r ON r.id = u.role_id
+             WHERE r.slug IN ('main_admin', 'super_admin')
+               AND u.status = 'active'
+               AND u.id <> :id"
+        );
+        $stmt->execute(['id' => $id]);
+
+        return (int) $stmt->fetchColumn() === 0;
+    }
+
+    private function db(): PDO
+    {
+        return Database::connection();
+    }
+
+    /**
+     * Refuses the two ways an admin can lock everyone out: removing their own account,
+     * or removing the last one that can still reach this screen. Returns a reason to
+     * show, or null when the action is safe.
+     */
+    private function lockoutReason(array $target, string $verb): ?string
+    {
+        if ((int) $target['id'] === (int) Auth::user()['id']) {
+            return "You can't $verb your own account.";
+        }
+        if (in_array($target['role_slug'], ['main_admin', 'super_admin'], true)
+            && $this->isLastAdminStanding((int) $target['id'])) {
+            return "This is the last active administrator — $verb it and nobody could sign in to manage roles.";
+        }
+
+        return null;
+    }
+
+    /**
+     * Is this account managed by the section that is acting on it?
+     *
+     * 'super_admin' is exact. Any other section means the Staff table, which lists
+     * every non-privileged, non-member role — so the check is "not excluded" rather
+     * than an equality test against one slug.
+     */
+    private function inSection(array $user, string $section): bool
+    {
+        return $section === 'super_admin'
+            ? $user['role_slug'] === 'super_admin'
+            : !in_array($user['role_slug'], self::NON_STAFF_ROLES, true);
+    }
+
     private function requireMainAdmin(): void
     {
         if (!Auth::hasRole('main_admin', 'super_admin')) {
@@ -323,7 +393,7 @@ final class RoleAdminController extends AdminController
     {
         $userModel = new User();
         $member = $userModel->findById((int) $id);
-        if (!$member || $member['role_slug'] !== $roleSlug) {
+        if (!$member || !$this->inSection($member, $roleSlug)) {
             $this->abort404();
         }
 
@@ -340,7 +410,7 @@ final class RoleAdminController extends AdminController
 
         $userModel = new User();
         $target = $userModel->findById((int) $id);
-        if (!$target || $target['role_slug'] !== $roleSlug) {
+        if (!$target || !$this->inSection($target, $roleSlug)) {
             $this->abort404();
         }
 
@@ -378,11 +448,17 @@ final class RoleAdminController extends AdminController
 
         $userModel = new User();
         $target = $userModel->findById((int) $id);
-        if (!$target || $target['role_slug'] !== $roleSlug) {
+        if (!$target || !$this->inSection($target, $roleSlug)) {
             $this->abort404();
         }
 
         $newStatus = $target['status'] === 'suspended' ? 'active' : 'suspended';
+        // Only suspending can lock people out; re-activating never can.
+        if ($newStatus === 'suspended' && ($reason = $this->lockoutReason($target, 'suspend')) !== null) {
+            flash('danger', $reason);
+            redirect('admin/roles');
+        }
+
         $userModel->update((int) $id, ['status' => $newStatus]);
 
         $this->logActivity($roleSlug . '_status_toggled', "Set {$target['name']} (#$id) to $newStatus");
@@ -396,8 +472,13 @@ final class RoleAdminController extends AdminController
 
         $userModel = new User();
         $target = $userModel->findById((int) $id);
-        if (!$target || $target['role_slug'] !== $roleSlug) {
+        if (!$target || !$this->inSection($target, $roleSlug)) {
             $this->abort404();
+        }
+
+        if (($reason = $this->lockoutReason($target, 'delete')) !== null) {
+            flash('danger', $reason);
+            redirect('admin/roles');
         }
 
         $userModel->delete((int) $id);
