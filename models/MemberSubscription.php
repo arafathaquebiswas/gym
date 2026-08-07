@@ -2,6 +2,84 @@
 
 final class MemberSubscription extends Model
 {
+    /**
+     * Lifetime terms carry this instead of a NULL end_date — see the
+     * 20260807_membership_grants migration for why a sentinel beats nullable.
+     */
+    public const LIFETIME_END_DATE = '9999-12-31';
+
+    /** Terms an admin can grant. months = null means the term needs explicit handling. */
+    public const TERMS = [
+        '1m' => ['label' => '1 Month', 'months' => 1],
+        '3m' => ['label' => '3 Months', 'months' => 3],
+        '6m' => ['label' => '6 Months', 'months' => 6],
+        '12m' => ['label' => '12 Months', 'months' => 12],
+        '2y' => ['label' => '2 Years', 'months' => 24],
+        '4y' => ['label' => '4 Years', 'months' => 48],
+        'lifetime' => ['label' => 'Lifetime', 'months' => null],
+        'custom' => ['label' => 'Custom end date', 'months' => null],
+    ];
+
+    public const GRANT_TYPES = [
+        'paid' => 'Paid',
+        'gift' => 'Gift',
+        'complimentary' => 'Complimentary',
+    ];
+
+    /**
+     * The end date a term reaches from $startDate.
+     *
+     * Counted in months rather than days so a "1 Month" term from 31 January
+     * lands on 28 February, not 2 March. PHP's relative months overflow, so the
+     * day is clamped to the target month's length.
+     */
+    public static function endDateFor(string $term, string $startDate, ?string $customEnd = null): string
+    {
+        if ($term === 'lifetime') {
+            return self::LIFETIME_END_DATE;
+        }
+        if ($term === 'custom') {
+            return $customEnd ?: $startDate;
+        }
+
+        $months = self::TERMS[$term]['months'] ?? null;
+        if ($months === null) {
+            return $startDate;
+        }
+
+        $start = new DateTimeImmutable($startDate);
+        $target = $start->modify("+$months months");
+
+        // "+1 month" from 31 Jan gives 3 Mar; step back to the last day of the
+        // month we actually meant.
+        if ((int) $target->format('d') !== (int) $start->format('d')) {
+            $target = $target->modify('last day of previous month');
+        }
+
+        return $target->format('Y-m-d');
+    }
+
+    /** "Lifetime", "365 days remaining", or "Expired 07 Aug 2026" — whichever fits the row. */
+    public static function remainingLabel(array $subscription): string
+    {
+        if (!empty($subscription['is_lifetime'])) {
+            return 'Lifetime';
+        }
+
+        $end = new DateTimeImmutable($subscription['end_date']);
+        $today = new DateTimeImmutable(date('Y-m-d'));
+        $days = (int) $today->diff($end)->format('%r%a');
+
+        if ($days < 0) {
+            return 'Expired ' . $end->format('d M Y');
+        }
+        if ($days === 0) {
+            return 'Expires today';
+        }
+
+        return $days . ' day' . ($days === 1 ? '' : 's') . ' remaining';
+    }
+
     public function latestForMember(int $memberId): ?array
     {
         $stmt = $this->db->prepare(
@@ -33,8 +111,8 @@ final class MemberSubscription extends Model
     public function create(array $data): int
     {
         $stmt = $this->db->prepare(
-            'INSERT INTO member_subscriptions (member_id, package_id, start_date, end_date, price_paid, discount_amount, notes, status, created_by, created_at)
-             VALUES (:member_id, :package_id, :start_date, :end_date, :price_paid, :discount_amount, :notes, "active", :created_by, NOW())'
+            "INSERT INTO member_subscriptions (member_id, package_id, start_date, end_date, price_paid, discount_amount, notes, status, grant_type, is_lifetime, created_by, created_at)
+             VALUES (:member_id, :package_id, :start_date, :end_date, :price_paid, :discount_amount, :notes, 'active', :grant_type, :is_lifetime, :created_by, NOW())"
         );
         $stmt->execute([
             'member_id' => $data['member_id'],
@@ -44,6 +122,10 @@ final class MemberSubscription extends Model
             'price_paid' => $data['price_paid'],
             'discount_amount' => $data['discount_amount'] ?? null,
             'notes' => $data['notes'] ?? null,
+            // Defaults keep every existing caller (renewMember, POS, registration)
+            // producing exactly the rows it produced before.
+            'grant_type' => $data['grant_type'] ?? 'paid',
+            'is_lifetime' => !empty($data['is_lifetime']) ? 1 : 0,
             'created_by' => $data['created_by'] ?? null,
         ]);
         return (int) $this->db->lastInsertId();
