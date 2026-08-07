@@ -249,6 +249,16 @@
   memberSelect.innerHTML += members.map(m => `<option value="${m.id}">${escapeHtml(m.name)}${m.member_code ? ' (' + escapeHtml(m.member_code) + ')' : ''}</option>`).join('');
   memberSelect.addEventListener('change', () => { memberIdField.value = memberSelect.value; });
 
+  // Captured once the selects are populated but before any saved draft is
+  // restored, so "clear" means "back to exactly how a fresh POS load starts"
+  // rather than to values hard-coded here that could drift from the markup.
+  const posDefaults = {
+    discount: discountInput ? discountInput.value : '0',
+    coupon: couponInput ? couponInput.value : '',
+    payment_method: paymentSelect ? paymentSelect.value : '',
+    member_id: memberSelect ? memberSelect.value : ''
+  };
+
   function priceHtml(p) {
     if (p.offer_is_live && Number(p.display_price) < Number(p.selling_price)) {
       const pct = p.discount_percent || Math.round(((Number(p.selling_price) - Number(p.display_price)) / Number(p.selling_price)) * 100);
@@ -407,11 +417,46 @@
     renderCart();
   }
 
+  /**
+   * Is there anything to clear? Items alone are not the test any more: an admin
+   * may have typed a discount or picked a customer before adding a product, and
+   * Clear Cart has to be able to undo that too.
+   */
+  function draftHasContent() {
+    return Object.keys(cart).length > 0
+      || (discountInput && discountInput.value !== posDefaults.discount)
+      || (couponInput && couponInput.value !== posDefaults.coupon)
+      || (paymentSelect && paymentSelect.value !== posDefaults.payment_method)
+      || (memberSelect && memberSelect.value !== posDefaults.member_id);
+  }
+
+  /**
+   * Starts a completely new transaction: items, quantities, discount, coupon,
+   * payment method and customer all go back to the page's initial state. Touches
+   * nothing beyond the draft — completed sales, payments, stock and products are
+   * all server-side and untouched by this.
+   *
+   * renderCart() runs updateTotals(), which rewrites cart_json and calls
+   * saveDraft(), so the emptied draft is what gets persisted.
+   */
+  function resetDraft() {
+    for (const k in cart) delete cart[k];
+
+    if (discountInput) discountInput.value = posDefaults.discount;
+    if (couponInput) couponInput.value = posDefaults.coupon;
+    if (paymentSelect) paymentSelect.value = posDefaults.payment_method;
+    if (memberSelect) {
+      memberSelect.value = posDefaults.member_id;
+      memberSelect.dispatchEvent(new Event('change')); // keeps the hidden member_id field in step
+    }
+
+    renderCart();
+  }
+
   clearCartBtn.addEventListener('click', () => {
-    if (Object.keys(cart).length === 0) return;
-    if (confirm('Clear all items from cart?')) {
-      for (const k in cart) delete cart[k];
-      renderCart();
+    if (!draftHasContent()) return;
+    if (confirm('Clear this transaction? Items, discount, coupon, payment method and customer will all be reset.')) {
+      resetDraft();
     }
   });
 
