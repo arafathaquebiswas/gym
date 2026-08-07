@@ -8,6 +8,21 @@ final class PosController extends AdminController
     {
         $settingModel = new Setting();
 
+        // The receipt page sends the admin back here with ?completed={saleId}
+        // once they have printed or downloaded the invoice. The id is looked up
+        // rather than the invoice number being passed in the URL, so the number
+        // shown is always a real one and nothing user-supplied reaches the page.
+        $completedId = (int) $this->input('completed');
+        if ($completedId > 0) {
+            $sale = (new Sale())->find($completedId);
+            if ($sale) {
+                flash('success', 'Sale completed — invoice ' . $sale['invoice_no']);
+            }
+            // Redirect so the message is not repeated on refresh, and the query
+            // string does not linger on the POS screen.
+            redirect('admin/pos');
+        }
+
         $jsonFlags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
 
         $this->adminView('pos/index', [
@@ -76,7 +91,10 @@ final class PosController extends AdminController
         }
 
         $this->logActivity('pos_sale_completed', "Completed sale {$result['invoice_no']}");
-        flash('success', 'Sale completed — invoice ' . $result['invoice_no']);
+
+        // No "Sale completed" flash here: the invoice page states the number and
+        // status plainly, and the confirmation now belongs on the POS screen the
+        // admin lands back on after printing or downloading — see index().
         redirect('admin/pos/receipt/' . $result['id']);
     }
 

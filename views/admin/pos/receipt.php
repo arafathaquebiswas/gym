@@ -313,14 +313,59 @@ $paymentStatusLabel = strtoupper((string) $sale['payment_status']);
       <div class="receipt-toolbar">
         <a href="<?= url('/admin/pos') ?>" class="receipt-btn">&larr; Back to POS</a>
         <div class="toolbar-actions">
-          <button type="button" class="receipt-btn" onclick="window.print()">Print Invoice (A4)</button>
-          <a href="<?= url('/admin/pos/receipt/' . $sale['id'] . '/pdf') ?>" class="receipt-btn receipt-btn-primary">Download PDF</a>
+          <button type="button" class="receipt-btn" id="receiptPrintBtn">Print Invoice (A4)</button>
+          <a href="<?= url('/admin/pos/receipt/' . $sale['id'] . '/pdf') ?>" class="receipt-btn receipt-btn-primary" id="receiptPdfBtn">Download PDF</a>
         </div>
       </div>
       <div class="receipt-tip">
         <strong>Clean Print Tip:</strong> In your browser print dialog, uncheck <em>"Headers and footers"</em> (to remove date/URL) and check <em>"Background graphics"</em> (for full-color badges).
       </div>
     </div>
+    <script>
+    (function () {
+      // Printing or downloading returns the admin to the POS screen, where the
+      // "Sale completed — invoice ..." confirmation is shown. Back to POS is a
+      // plain link and deliberately does none of this: the sale was already
+      // finalised at checkout, so leaving via that link must stay silent.
+      var posUrl = <?= json_encode(url('/admin/pos?completed=' . (int) $sale['id'])) ?>;
+      var printBtn = document.getElementById('receiptPrintBtn');
+      var pdfBtn = document.getElementById('receiptPdfBtn');
+      var leaving = false;
+
+      function returnToPos() {
+        if (leaving) { return; }   // both paths can fire; only navigate once
+        leaving = true;
+        window.location.href = posUrl;
+      }
+
+      if (printBtn) {
+        printBtn.addEventListener('click', function () {
+          // afterprint fires when the dialog closes, whether the admin printed
+          // or cancelled — browsers do not report which, and the sale is
+          // complete either way.
+          if ('onafterprint' in window) {
+            window.addEventListener('afterprint', returnToPos, { once: true });
+          } else {
+            setTimeout(returnToPos, 3000);
+          }
+          window.print();
+        });
+      }
+
+      if (pdfBtn) {
+        pdfBtn.addEventListener('click', function (event) {
+          event.preventDefault();
+          // Downloaded through a hidden iframe so the current page stays put and
+          // can navigate on afterwards; a plain link would replace it.
+          var frame = document.createElement('iframe');
+          frame.style.display = 'none';
+          frame.src = pdfBtn.getAttribute('href');
+          document.body.appendChild(frame);
+          setTimeout(returnToPos, 2500);
+        });
+      }
+    })();
+    </script>
   <?php endif; ?>
 
   <!-- Invoice Header -->
