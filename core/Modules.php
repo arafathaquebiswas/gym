@@ -20,6 +20,7 @@ final class Modules
         'orders' => 'Orders',
         'reports' => 'Reports',
         'reviews' => 'Reviews',
+        'blog' => 'Blog',
         'messages' => 'Messages',
         'audit_logs' => 'Audit Logs',
         'settings' => 'Settings',

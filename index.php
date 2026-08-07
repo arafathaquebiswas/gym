@@ -313,6 +313,15 @@ $router->get('/admin/registrations', [PaymentVerificationAdminController::class,
 $router->post('/admin/registrations/{id}/verify', [PaymentVerificationAdminController::class, 'verify']);
 $router->post('/admin/registrations/{id}/reject', [PaymentVerificationAdminController::class, 'reject']);
 
+// ---- Admin: Blog ------------------------------------------------------------------
+$router->get('/admin/blog', [BlogAdminController::class, 'index']);
+$router->get('/admin/blog/create', [BlogAdminController::class, 'create']);
+$router->post('/admin/blog', [BlogAdminController::class, 'store']);
+$router->get('/admin/blog/{id}/edit', [BlogAdminController::class, 'edit']);
+$router->post('/admin/blog/{id}', [BlogAdminController::class, 'update']);
+$router->post('/admin/blog/{id}/delete', [BlogAdminController::class, 'destroy']);
+$router->post('/admin/blog/{id}/toggle-status', [BlogAdminController::class, 'toggleStatus']);
+
 // ---- Admin: Reviews ---------------------------------------------------------------
 $router->get('/admin/reviews', [ReviewAdminController::class, 'index']);
 $router->get('/admin/audit-log', [AuditLogController::class, 'index']);

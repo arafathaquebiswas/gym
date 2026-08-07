@@ -55,6 +55,9 @@ if (Permission::can('reports')) {
 if (Permission::can('messages')) {
     $navItems[] = ['messages', 'Messages', 'bi-envelope', url('/admin/messages'), null];
 }
+if (Feature::on('blog') && Permission::can('blog')) {
+    $navItems[] = ['blog', 'Blog', 'bi-journal-text', url('/admin/blog'), null];
+}
 if (Feature::on('reviews') && Permission::can('reviews')) {
     $navItems[] = ['reviews', 'Reviews', 'bi-star', url('/admin/reviews'), null];
 }
