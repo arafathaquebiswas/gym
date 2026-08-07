@@ -93,6 +93,39 @@ final class MemberSubscription extends Model
         return $sub ?: null;
     }
 
+    /** One term, scoped to its member so an id from another member's history can't be reached. */
+    public function findForMember(int $subscriptionId, int $memberId): ?array
+    {
+        $stmt = $this->db->prepare(
+            'SELECT * FROM member_subscriptions WHERE id = :id AND member_id = :member_id LIMIT 1'
+        );
+        $stmt->execute(['id' => $subscriptionId, 'member_id' => $memberId]);
+
+        return $stmt->fetch() ?: null;
+    }
+
+    /** Edits one term in place. Callers must write the audit row first — see MembershipChange. */
+    public function updateTerm(int $subscriptionId, array $data): void
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE member_subscriptions
+             SET package_id = :package_id, start_date = :start_date, end_date = :end_date,
+                 price_paid = :price_paid, grant_type = :grant_type, is_lifetime = :is_lifetime,
+                 notes = :notes
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            'package_id' => $data['package_id'],
+            'start_date' => $data['start_date'],
+            'end_date' => $data['end_date'],
+            'price_paid' => $data['price_paid'],
+            'grant_type' => $data['grant_type'],
+            'is_lifetime' => $data['is_lifetime'],
+            'notes' => $data['notes'] ?? null,
+            'id' => $subscriptionId,
+        ]);
+    }
+
     public function history(int $memberId): array
     {
         $stmt = $this->db->prepare(

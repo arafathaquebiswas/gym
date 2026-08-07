@@ -131,6 +131,8 @@ $router->post('/admin/members/{id}', [MemberAdminController::class, 'update']);
 $router->post('/admin/members/{id}/delete', [MemberAdminController::class, 'destroy']);
 $router->get('/admin/members/{id}', [MemberAdminController::class, 'show']);
 $router->post('/admin/members/{id}/renew', [MemberAdminController::class, 'renew']);
+$router->post('/admin/members/{id}/membership', [MemberAdminController::class, 'grantMembership']);
+$router->post('/admin/members/{id}/membership/{subscriptionId}', [MemberAdminController::class, 'editMembership']);
 $router->post('/admin/members/{id}/checkin', [MemberAdminController::class, 'checkIn']);
 $router->post('/admin/members/{id}/checkout', [MemberAdminController::class, 'checkOut']);
 $router->post('/admin/members/{id}/charge-trainer-fee', [MemberAdminController::class, 'chargeTrainerFee']);

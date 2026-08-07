@@ -309,6 +309,145 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
       </form>
     </div>
 
+    <?php
+      /** @var array|null $currentSubscription */
+      /** @var array $membershipChanges */
+      $grantTerms = MemberSubscription::TERMS;
+      $grantTypes = MemberSubscription::GRANT_TYPES;
+      // Extending should continue from where the current term ends, not overlap it.
+      $defaultStart = $currentSubscription && empty($currentSubscription['is_lifetime'])
+        && $currentSubscription['end_date'] >= date('Y-m-d')
+          ? $currentSubscription['end_date']
+          : date('Y-m-d');
+    ?>
+    <?php if (Permission::can('members', 'create')): ?>
+    <div class="admin-card mb-4">
+      <h6 class="mb-3">Grant Membership</h6>
+      <?php if ($currentSubscription): ?>
+        <p class="text-white-50 small">
+          Current: <strong class="text-white"><?= e($currentSubscription['package_name']) ?></strong> —
+          <?= e(MemberSubscription::remainingLabel($currentSubscription)) ?>.
+          A new grant is added alongside it; nothing existing is overwritten.
+        </p>
+      <?php endif; ?>
+      <form method="post" action="<?= url('/admin/members/' . (int) $member['id'] . '/membership') ?>" class="row g-3 admin-form" id="grantMembershipForm">
+        <?= Security::csrfField() ?>
+        <div class="col-md-6">
+          <label for="grantPackage">Membership Plan <span class="text-danger">*</span></label>
+          <select name="package_id" id="grantPackage" class="form-select" required>
+            <option value="">— Select a plan —</option>
+            <?php foreach ($packages as $pkg): ?>
+              <option value="<?= (int) $pkg['id'] ?>" data-price="<?= (float) $pkg['display_price'] ?>">
+                <?= e($pkg['name']) ?> (<?= money((float) $pkg['display_price']) ?>)
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="grantStart">Start Date <span class="text-danger">*</span></label>
+          <input type="date" name="start_date" id="grantStart" class="form-control" value="<?= e($defaultStart) ?>" required>
+        </div>
+        <div class="col-md-3">
+          <label for="grantTerm">Duration <span class="text-danger">*</span></label>
+          <select name="term" id="grantTerm" class="form-select" required>
+            <?php foreach ($grantTerms as $key => $term): ?>
+              <option value="<?= e($key) ?>" <?= $key === '12m' ? 'selected' : '' ?>><?= e($term['label']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-md-3 d-none" id="grantCustomEndWrap">
+          <label for="grantCustomEnd">Custom End Date</label>
+          <input type="date" name="custom_end_date" id="grantCustomEnd" class="form-control">
+        </div>
+        <div class="col-md-3">
+          <label for="grantType">Grant Type <span class="text-danger">*</span></label>
+          <select name="grant_type" id="grantType" class="form-select" required>
+            <?php foreach ($grantTypes as $key => $label): ?>
+              <option value="<?= e($key) ?>"><?= e($label) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-md-3" id="grantPriceWrap">
+          <label for="grantPrice">Price</label>
+          <input type="number" name="price" id="grantPrice" class="form-control" min="0" step="0.01" value="0">
+        </div>
+        <div class="col-md-3 d-none" id="grantMethodWrap">
+          <label for="grantMethod">Payment Method</label>
+          <select name="payment_method" id="grantMethod" class="form-select">
+            <?php foreach (['cash' => 'Cash', 'card' => 'Card', 'bkash' => 'bKash', 'nagad' => 'Nagad', 'rocket' => 'Rocket', 'bank_transfer' => 'Bank Transfer'] as $m => $mLabel): ?>
+              <option value="<?= $m ?>"><?= $mLabel ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="col-12" id="grantFreeNote" style="display:none">
+          <p class="text-white-50 small mb-0"><i class="bi bi-gift"></i> Free membership — ৳0 is recorded and no payment or revenue entry is created.</p>
+        </div>
+        <div class="col-12">
+          <label for="grantReason">Reason / Note</label>
+          <input type="text" name="reason" id="grantReason" class="form-control" maxlength="255" placeholder="e.g. Complimentary membership for staff referral">
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-ps btn-sm"><i class="bi bi-award"></i> Grant Membership</button>
+          <span class="text-white-50 small ms-2" id="grantSummary"></span>
+        </div>
+      </form>
+    </div>
+    <script>
+    (function () {
+      var form = document.getElementById('grantMembershipForm');
+      if (!form) return;
+      var term = document.getElementById('grantTerm');
+      var type = document.getElementById('grantType');
+      var price = document.getElementById('grantPrice');
+      var pkg = document.getElementById('grantPackage');
+      var start = document.getElementById('grantStart');
+      var customWrap = document.getElementById('grantCustomEndWrap');
+      var customEnd = document.getElementById('grantCustomEnd');
+      var priceWrap = document.getElementById('grantPriceWrap');
+      var methodWrap = document.getElementById('grantMethodWrap');
+      var freeNote = document.getElementById('grantFreeNote');
+      var summary = document.getElementById('grantSummary');
+      var MONTHS = { '1m': 1, '3m': 3, '6m': 6, '12m': 12, '2y': 24, '4y': 48 };
+
+      // Mirrors MemberSubscription::endDateFor() — the server recomputes it anyway,
+      // this only shows the admin what they are about to create.
+      function preview() {
+        if (term.value === 'lifetime') return 'Lifetime — no expiry';
+        if (term.value === 'custom') return customEnd.value ? 'Expires ' + customEnd.value : 'Pick a custom end date';
+        var months = MONTHS[term.value];
+        if (!months || !start.value) return '';
+        var d = new Date(start.value + 'T00:00:00');
+        var day = d.getDate();
+        d.setMonth(d.getMonth() + months);
+        if (d.getDate() !== day) d.setDate(0);
+        return 'Expires ' + d.toISOString().slice(0, 10);
+      }
+
+      function sync() {
+        var isFree = type.value !== 'paid';
+        customWrap.classList.toggle('d-none', term.value !== 'custom');
+        customEnd.required = term.value === 'custom';
+        priceWrap.classList.toggle('d-none', isFree);
+        methodWrap.classList.toggle('d-none', isFree || parseFloat(price.value || '0') <= 0);
+        freeNote.style.display = isFree ? '' : 'none';
+        if (isFree) price.value = '0';
+        summary.textContent = preview();
+      }
+
+      pkg.addEventListener('change', function () {
+        var opt = pkg.options[pkg.selectedIndex];
+        if (type.value === 'paid' && opt && opt.dataset.price) price.value = opt.dataset.price;
+        sync();
+      });
+      [term, type, start, customEnd, price].forEach(function (el) {
+        el.addEventListener('change', sync);
+        el.addEventListener('input', sync);
+      });
+      sync();
+    })();
+    </script>
+    <?php endif; ?>
+
     <div class="admin-card mb-4">
       <h6 class="mb-3">Subscription History</h6>
       <?php if (empty($subscriptionHistory)): ?>
@@ -316,13 +455,25 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
       <?php else: ?>
       <div class="table-responsive">
         <table class="admin-table">
-          <thead><tr><th>Package</th><th>Start</th><th>End</th><th>Price Paid</th><th>Status</th></tr></thead>
+          <thead><tr><th>Package</th><th>Type</th><th>Start</th><th>End</th><th>Price Paid</th><th>Status</th></tr></thead>
           <tbody>
             <?php foreach ($subscriptionHistory as $sub): ?>
             <tr>
               <td><?= e($sub['package_name']) ?></td>
+              <td>
+                <?php $gt = $sub['grant_type'] ?? 'paid'; ?>
+                <span class="badge text-bg-<?= $gt === 'paid' ? 'secondary' : 'info' ?>">
+                  <?= e(MemberSubscription::GRANT_TYPES[$gt] ?? ucfirst($gt)) ?>
+                </span>
+              </td>
               <td><?= format_date($sub['start_date']) ?></td>
-              <td><?= format_date($sub['end_date']) ?></td>
+              <td>
+                <?php if (!empty($sub['is_lifetime'])): ?>
+                  <span class="badge text-bg-warning">Lifetime</span>
+                <?php else: ?>
+                  <?= format_date($sub['end_date']) ?>
+                <?php endif; ?>
+              </td>
               <td><?= money((float) $sub['price_paid']) ?></td>
               <td><?= e(ucfirst($sub['status'])) ?></td>
             </tr>
@@ -330,6 +481,63 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'suspended' =>
           </tbody>
         </table>
       </div>
+      <?php endif; ?>
+    </div>
+
+    <div class="admin-card mb-4">
+      <h6 class="mb-3">Membership Change History</h6>
+      <?php if (empty($membershipChanges)): ?>
+        <p class="text-white-50 mb-0">No membership changes recorded yet.</p>
+      <?php else: ?>
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr><th>When</th><th>Action</th><th>Plan</th><th>Period</th><th>Type</th><th>Amount</th><th>By</th><th>Reason</th></tr>
+          </thead>
+          <tbody>
+            <?php foreach ($membershipChanges as $change): ?>
+              <?php
+                // "x → y" only where the value actually moved; a grant has no previous half.
+                $arrow = static function (?string $from, ?string $to): string {
+                    if ($from === null || $from === '' || $from === $to) {
+                        return e((string) $to);
+                    }
+                    return '<span class="text-white-50">' . e($from) . '</span> → ' . e((string) $to);
+                };
+                $endLabel = static fn (?string $date, $lifetime): string =>
+                    !empty($lifetime) ? 'Lifetime' : ($date ? date('d M Y', strtotime($date)) : '—');
+              ?>
+            <tr>
+              <td class="small text-nowrap"><?= format_date($change['created_at'], 'd M Y, g:i a') ?></td>
+              <td><span class="badge text-bg-secondary"><?= e(MembershipChange::ACTIONS[$change['action']] ?? $change['action']) ?></span></td>
+              <td class="small"><?= $arrow($change['previous_package_name'], $change['new_package_name']) ?></td>
+              <td class="small text-nowrap">
+                <?= $arrow(
+                      $change['previous_start_date'] ? date('d M Y', strtotime($change['previous_start_date'])) : null,
+                      $change['new_start_date'] ? date('d M Y', strtotime($change['new_start_date'])) : null
+                    ) ?><br>
+                <span class="text-white-50">to</span>
+                <?= $arrow(
+                      $change['previous_end_date'] ? $endLabel($change['previous_end_date'], $change['previous_lifetime']) : null,
+                      $endLabel($change['new_end_date'], $change['new_lifetime'])
+                    ) ?>
+              </td>
+              <td class="small"><?= $arrow(
+                    $change['previous_grant_type'] ? (MemberSubscription::GRANT_TYPES[$change['previous_grant_type']] ?? $change['previous_grant_type']) : null,
+                    MemberSubscription::GRANT_TYPES[$change['new_grant_type']] ?? $change['new_grant_type']
+                  ) ?></td>
+              <td class="small text-nowrap"><?= $arrow(
+                    $change['previous_price'] !== null ? money((float) $change['previous_price']) : null,
+                    $change['new_price'] !== null ? money((float) $change['new_price']) : '—'
+                  ) ?></td>
+              <td class="small"><?= e($change['changed_by_name'] ?? 'System') ?></td>
+              <td class="small text-white-50"><?= e($change['reason'] ?? '—') ?></td>
+            </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+      <p class="text-white-50 small mb-0 mt-2">This log is append-only — entries cannot be edited or deleted from the admin panel.</p>
       <?php endif; ?>
     </div>
 

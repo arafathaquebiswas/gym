@@ -304,6 +304,8 @@ final class MemberAdminController extends AdminController
             'member' => $member,
             'preferredPackage' => $preferredPackage,
             'subscriptionHistory' => (new MemberSubscription())->history((int) $id),
+            'currentSubscription' => (new MemberSubscription())->latestForMember((int) $id),
+            'membershipChanges' => (new MembershipChange())->forMember((int) $id),
             'attendanceLog' => $attendanceModel->recentForMember((int) $id),
             'openSession' => $attendanceModel->openSessionForMember((int) $id),
             'packages' => (new Package())->allForAdmin(),
@@ -381,6 +383,241 @@ final class MemberAdminController extends AdminController
         $this->logActivity('member_renewed', "Renewed membership for member #$id ({$package['name']})");
         flash('success', 'Membership renewed successfully.');
         redirect('admin/members/' . $id);
+    }
+
+    /**
+     * Manually grant a membership term — the free/gift/complimentary path that
+     * renew() cannot serve, because renew() requires a payment method and a
+     * non-zero amount before it will activate anything.
+     *
+     * Always appends a new member_subscriptions row. Nothing existing is
+     * rewritten, so a member's previous terms stay exactly as they were.
+     */
+    public function grantMembership(string $id): void
+    {
+        Security::requireCsrf();
+        Permission::require('members', 'create');
+
+        $memberModel = new Member();
+        $member = $memberModel->find((int) $id);
+        if (!$member) {
+            $this->abort404();
+        }
+
+        $back = 'admin/members/' . $id;
+        $package = (new Package())->find((int) $this->input('package_id'));
+        if (!$package) {
+            flash('danger', 'Please select a membership plan.');
+            redirect($back);
+        }
+
+        $term = $this->input('term');
+        if (!isset(MemberSubscription::TERMS[$term])) {
+            flash('danger', 'Please choose a duration.');
+            redirect($back);
+        }
+
+        $grantType = $this->input('grant_type');
+        if (!isset(MemberSubscription::GRANT_TYPES[$grantType])) {
+            flash('danger', 'Please choose whether this is Paid, Gift or Complimentary.');
+            redirect($back);
+        }
+
+        $startDate = $this->input('start_date') ?: date('Y-m-d');
+        if (!$this->isValidDate($startDate)) {
+            flash('danger', 'Please enter a valid start date.');
+            redirect($back);
+        }
+
+        $customEnd = $this->input('custom_end_date') ?: null;
+        if ($term === 'custom') {
+            if (!$customEnd || !$this->isValidDate($customEnd)) {
+                flash('danger', 'Please enter a valid custom end date.');
+                redirect($back);
+            }
+            if ($customEnd < $startDate) {
+                flash('danger', 'The end date cannot be before the start date.');
+                redirect($back);
+            }
+        }
+
+        $isLifetime = $term === 'lifetime';
+        $endDate = MemberSubscription::endDateFor($term, $startDate, $customEnd);
+
+        // Gift and complimentary are free by definition; a price typed into the
+        // box is ignored rather than quietly stored against a free membership.
+        $price = $grantType === 'paid' ? max(0, (float) $this->input('price', '0')) : 0.0;
+
+        $subscriptionId = (new MemberSubscription())->create([
+            'member_id' => (int) $id,
+            'package_id' => (int) $package['id'],
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'price_paid' => $price,
+            'notes' => $this->rawInput('reason') ?: null,
+            'grant_type' => $grantType,
+            'is_lifetime' => $isLifetime,
+            'created_by' => (int) Auth::user()['id'],
+        ]);
+
+        // Only real money reaches the payments table — a gift must never show up
+        // as revenue in the reports.
+        if ($grantType === 'paid' && $price > 0) {
+            $method = $this->input('payment_method');
+            (new Payment())->record([
+                'member_id' => (int) $id,
+                'subscription_id' => $subscriptionId,
+                'type' => 'membership',
+                'amount' => $price,
+                'method' => in_array($method, self::ALLOWED_PAYMENT_METHODS, true) ? $method : 'cash',
+                'recorded_by' => (int) Auth::user()['id'],
+            ]);
+        }
+
+        $previous = $this->latestOtherSubscription((int) $id, $subscriptionId);
+        (new MembershipChange())->record([
+            'member_id' => (int) $id,
+            'subscription_id' => $subscriptionId,
+            'action' => $previous ? 'extended' : 'granted',
+            'previous_package_id' => $previous['package_id'] ?? null,
+            'previous_start_date' => $previous['start_date'] ?? null,
+            'previous_end_date' => $previous['end_date'] ?? null,
+            'previous_grant_type' => $previous['grant_type'] ?? null,
+            'previous_price' => $previous['price_paid'] ?? null,
+            'previous_lifetime' => isset($previous['is_lifetime']) ? (int) $previous['is_lifetime'] : null,
+            'new_package_id' => (int) $package['id'],
+            'new_start_date' => $startDate,
+            'new_end_date' => $endDate,
+            'new_grant_type' => $grantType,
+            'new_price' => $price,
+            'new_lifetime' => $isLifetime ? 1 : 0,
+            'reason' => $this->rawInput('reason') ?: null,
+        ]);
+
+        $memberModel->recomputeStatus((int) $id);
+
+        $this->logActivity(
+            'membership_granted',
+            sprintf(
+                '%s membership for member #%s: %s, %s',
+                ucfirst($grantType),
+                $id,
+                $package['name'],
+                $isLifetime ? 'Lifetime' : "$startDate to $endDate"
+            )
+        );
+
+        flash('success', sprintf(
+            '%s membership granted: %s, %s.',
+            MemberSubscription::GRANT_TYPES[$grantType],
+            $package['name'],
+            $isLifetime ? 'Lifetime (no expiry)' : 'expires ' . date('d M Y', strtotime($endDate))
+        ));
+        redirect($back);
+    }
+
+    /**
+     * Edits one existing term in place — changing plan, dates, grant type or
+     * price. Every before/after pair is written to membership_changes first, so
+     * the original values survive the overwrite.
+     */
+    public function editMembership(string $id, string $subscriptionId): void
+    {
+        Security::requireCsrf();
+        Permission::require('members', 'edit');
+
+        $memberModel = new Member();
+        $member = $memberModel->find((int) $id);
+        $subscriptionModel = new MemberSubscription();
+        $existing = $subscriptionModel->findForMember((int) $subscriptionId, (int) $id);
+
+        // Scoped to this member, so a guessed subscription id from another
+        // member's history cannot be edited through this route.
+        if (!$member || !$existing) {
+            $this->abort404();
+        }
+
+        $back = 'admin/members/' . $id;
+        $package = (new Package())->find((int) $this->input('package_id')) ?: null;
+        $term = $this->input('term');
+        $grantType = $this->input('grant_type');
+
+        if (!$package || !isset(MemberSubscription::TERMS[$term]) || !isset(MemberSubscription::GRANT_TYPES[$grantType])) {
+            flash('danger', 'Please complete every field before saving the membership.');
+            redirect($back);
+        }
+
+        $startDate = $this->input('start_date') ?: $existing['start_date'];
+        $customEnd = $this->input('custom_end_date') ?: null;
+        if (!$this->isValidDate($startDate) || ($term === 'custom' && (!$customEnd || !$this->isValidDate($customEnd)))) {
+            flash('danger', 'Please enter valid dates.');
+            redirect($back);
+        }
+
+        $isLifetime = $term === 'lifetime';
+        $endDate = MemberSubscription::endDateFor($term, $startDate, $customEnd);
+        if (!$isLifetime && $endDate < $startDate) {
+            flash('danger', 'The end date cannot be before the start date.');
+            redirect($back);
+        }
+
+        $price = $grantType === 'paid' ? max(0, (float) $this->input('price', '0')) : 0.0;
+
+        (new MembershipChange())->record([
+            'member_id' => (int) $id,
+            'subscription_id' => (int) $subscriptionId,
+            'action' => 'edited',
+            'previous_package_id' => (int) $existing['package_id'],
+            'previous_start_date' => $existing['start_date'],
+            'previous_end_date' => $existing['end_date'],
+            'previous_grant_type' => $existing['grant_type'],
+            'previous_price' => (float) $existing['price_paid'],
+            'previous_lifetime' => (int) $existing['is_lifetime'],
+            'new_package_id' => (int) $package['id'],
+            'new_start_date' => $startDate,
+            'new_end_date' => $endDate,
+            'new_grant_type' => $grantType,
+            'new_price' => $price,
+            'new_lifetime' => $isLifetime ? 1 : 0,
+            'reason' => $this->rawInput('reason') ?: null,
+        ]);
+
+        $subscriptionModel->updateTerm((int) $subscriptionId, [
+            'package_id' => (int) $package['id'],
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'price_paid' => $price,
+            'grant_type' => $grantType,
+            'is_lifetime' => $isLifetime ? 1 : 0,
+            'notes' => $this->rawInput('reason') ?: $existing['notes'],
+        ]);
+
+        $memberModel->recomputeStatus((int) $id);
+        $this->logActivity('membership_edited', "Edited subscription #$subscriptionId for member #$id");
+
+        flash('success', 'Membership updated.');
+        redirect($back);
+    }
+
+    /** The member's most recent other term, used to fill the "previous" half of an audit row. */
+    private function latestOtherSubscription(int $memberId, int $excludeId): ?array
+    {
+        $stmt = Database::connection()->prepare(
+            'SELECT * FROM member_subscriptions
+             WHERE member_id = :member_id AND id <> :exclude
+             ORDER BY end_date DESC, id DESC LIMIT 1'
+        );
+        $stmt->execute(['member_id' => $memberId, 'exclude' => $excludeId]);
+
+        return $stmt->fetch() ?: null;
+    }
+
+    /** Rejects anything strtotime would happily reinterpret, e.g. "2026-02-31". */
+    private function isValidDate(string $date): bool
+    {
+        $parsed = DateTimeImmutable::createFromFormat('Y-m-d', $date);
+
+        return $parsed !== false && $parsed->format('Y-m-d') === $date;
     }
 
     public function bulkAction(): void

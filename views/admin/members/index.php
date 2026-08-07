@@ -157,7 +157,16 @@ $statusColors = ['pending' => 'secondary', 'active' => 'success', 'expired' => '
           <td><span class="badge text-bg-<?= $statusColors[$member['status']] ?? 'secondary' ?>"><?= e($statusLabels[$member['status']] ?? $member['status']) ?></span></td>
           <td><?= e($member['package_name'] ?? '—') ?></td>
           <td><?= e($member['trainer_name'] ?? '—') ?></td>
-          <td><?= $member['subscription_end'] ? format_date($member['subscription_end']) : '—' ?></td>
+          <td>
+            <?php if (!empty($member['subscription_is_lifetime'])): ?>
+              <span class="badge text-bg-warning">Lifetime</span>
+            <?php elseif ($member['subscription_end']): ?>
+              <?= format_date($member['subscription_end']) ?>
+              <div class="small text-white-50"><?= e(MemberSubscription::remainingLabel(['end_date' => $member['subscription_end'], 'is_lifetime' => 0])) ?></div>
+            <?php else: ?>
+              —
+            <?php endif; ?>
+          </td>
           <td>
             <div class="dropdown">
               <button type="button" class="btn btn-ps-outline btn-sm" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-three-dots-vertical"></i></button>

@@ -21,12 +21,14 @@ final class Member extends Model
     private const BASE_SELECT = "SELECT m.*, u.name, u.email, u.phone, u.status AS account_status,
              t.name AS trainer_name,
              sub.package_name, sub.end_date AS subscription_end, sub.status AS subscription_status,
+             sub.is_lifetime AS subscription_is_lifetime, sub.grant_type AS subscription_grant_type,
              (SELECT COUNT(*) FROM attendance a WHERE a.member_id = m.id AND a.check_in >= DATE_FORMAT(NOW(), '%Y-%m-01')) AS attendance_this_month
              FROM members m
              JOIN users u ON u.id = m.user_id
              LEFT JOIN trainers t ON t.id = m.trainer_id
              LEFT JOIN (
-                 SELECT ms.member_id, mp.name AS package_name, ms.end_date, ms.status
+                 SELECT ms.member_id, mp.name AS package_name, ms.end_date, ms.status,
+                        ms.is_lifetime, ms.grant_type
                  FROM member_subscriptions ms
                  JOIN membership_packages mp ON mp.id = ms.package_id
                  WHERE ms.id IN (SELECT MAX(id) FROM member_subscriptions GROUP BY member_id)
