@@ -523,7 +523,26 @@
     discountDisplay.textContent = '− ' + money(discount);
     if (taxDisplay) taxDisplay.textContent = money(tax);
     totalDisplay.textContent = money(total);
-    checkoutBtn.disabled = lines.length === 0;
+    /*
+     * Anything the server would reject blocks the button here, so the admin
+     * finds out while they can still fix it rather than after a round-trip.
+     * This is a convenience only: Sale::create() re-reads stock and product
+     * status inside its transaction and remains the authority — the button
+     * state is not a security boundary and is not treated as one.
+     */
+    const blockers = [];
+    if (lines.some(l => l.product.unavailable)) {
+      blockers.push('Remove unavailable product before completing this sale.');
+    }
+    lines.forEach(function (l) {
+      if (l.product.unavailable || l.qty <= l.product.stock_qty) return;
+      blockers.push(l.product.stock_qty > 0
+        ? l.product.name + ': ' + l.qty + ' in cart, only ' + l.product.stock_qty + ' in stock — reduce the quantity.'
+        : l.product.name + ' is out of stock — remove it from this sale.');
+    });
+
+    checkoutBtn.disabled = lines.length === 0 || blockers.length > 0;
+    showCheckoutBlockers(blockers);
 
     cartJson.value = JSON.stringify(lines.map(l => ({ product_id: l.product.id, qty: l.qty })));
 
@@ -571,6 +590,25 @@
 
   function clearDraft() {
     try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
+  }
+
+  /**
+   * Says why Complete Sale is unavailable, directly above the button so the
+   * reason is where the admin is looking. Rebuilt on every totals recalculation,
+   * so it clears itself the moment the problem is fixed — nothing else has to
+   * remember to remove it.
+   */
+  function showCheckoutBlockers(messages) {
+    const existing = document.getElementById('posCheckoutBlock');
+    if (existing) existing.remove();
+    if (!messages.length) return;
+
+    const box = document.createElement('div');
+    box.id = 'posCheckoutBlock';
+    box.className = 'alert alert-danger py-2 px-3 small mb-2';
+    box.innerHTML = '<i class="bi bi-exclamation-octagon"></i> '
+      + messages.map(m => escapeHtml(m)).join('<br><i class="bi bi-exclamation-octagon invisible"></i> ');
+    checkoutBtn.parentNode.insertBefore(box, checkoutBtn);
   }
 
   /**
