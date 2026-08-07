@@ -403,7 +403,10 @@
     const newQty = line.qty + delta;
     if (newQty <= 0) {
       delete cart[productId];
-    } else if (newQty > line.product.stock_qty) {
+    } else if (delta > 0 && newQty > line.product.stock_qty) {
+      // Only block going *up* past stock. A restored draft can legitimately hold
+      // more than is currently in stock, and refusing the decrease as well left
+      // the admin unable to correct it by any means but deleting the line.
       alert('Not enough stock for ' + line.product.name);
       return;
     } else {
@@ -540,7 +543,18 @@
    * re-resolved from the freshly rendered `products` payload on restore, and the
    * server re-reads every price and stock level again at checkout regardless.
    */
+  /*
+   * True only while a saved draft is being read back onto the page. Restoring
+   * runs renderCart() -> updateTotals() -> saveDraft(), which used to write the
+   * just-restored cart straight back over the stored one. If restoring had
+   * altered anything, that alteration became permanent — one page load could
+   * quietly shrink the draft, and the next could shrink it again. The stored
+   * draft is now only ever rewritten by a real change the admin makes.
+   */
+  let restoring = false;
+
   function saveDraft() {
+    if (restoring) return;
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify({
         lines: Object.values(cart).map(l => ({ product_id: l.product.id, qty: l.qty })),
@@ -559,17 +573,75 @@
     try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
   }
 
+  /**
+   * Reports what changed under a restored draft — short stock, or a product that
+   * is no longer sellable. Shown above the cart rather than as an alert() so the
+   * admin can read it while working, and rebuilt on every restore so a stale
+   * warning never lingers.
+   */
+  function showDraftWarnings(messages) {
+    const existing = document.getElementById('posDraftWarning');
+    if (existing) existing.remove();
+    if (!messages.length) return;
+
+    const box = document.createElement('div');
+    box.id = 'posDraftWarning';
+    box.className = 'alert alert-warning alert-dismissible fade show py-2 px-3 small mb-2';
+    box.innerHTML =
+      '<strong><i class="bi bi-exclamation-triangle"></i> Cart restored — please check:</strong>'
+      + '<ul class="mb-0 mt-1 ps-3">'
+      + messages.map(m => '<li>' + escapeHtml(m) + '</li>').join('')
+      + '</ul>'
+      + '<button type="button" class="btn-close btn-close-white p-2" data-bs-dismiss="alert" aria-label="Close"></button>';
+    cartList.parentNode.insertBefore(box, cartList);
+  }
+
   function restoreDraft() {
     let draft;
     try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { return; }
     if (!draft || !Array.isArray(draft.lines)) return;
 
+    /*
+     * The saved quantity is restored exactly as it was saved. Stock is reported,
+     * never enforced here: Sale::create() re-reads stock inside its transaction
+     * and refuses the sale if it is short, so the browser has no business
+     * quietly editing what the admin put in the cart. A product that cannot be
+     * resolved is kept as a placeholder line rather than deleted, so nothing
+     * vanishes without the admin being told.
+     */
+    const warnings = [];
+
     draft.lines.forEach(function (line) {
+      const qty = parseInt(line.qty, 10) || 0;
+      if (qty <= 0) return;
+
       const product = products.find(p => p.id === line.product_id);
-      if (!product) return;                       // delisted or out of stock since
-      const qty = Math.min(parseInt(line.qty, 10) || 0, product.stock_qty);
-      if (qty > 0) cart[product.id] = { product, qty };
+
+      if (!product) {
+        cart[line.product_id] = {
+          qty,
+          product: {
+            id: line.product_id,
+            name: 'Unavailable product (#' + line.product_id + ')',
+            sku: '',
+            display_price: 0,
+            stock_qty: 0,
+            image_url: null,
+            unavailable: true
+          }
+        };
+        warnings.push('Product #' + line.product_id + ' (×' + qty + ') is no longer available for sale. Remove it before completing this sale.');
+        return;
+      }
+
+      cart[product.id] = { product, qty };
+
+      if (qty > product.stock_qty) {
+        warnings.push(product.name + ': ' + qty + ' in cart, only ' + product.stock_qty + ' in stock.');
+      }
     });
+
+    showDraftWarnings(warnings);
 
     if (discountInput && draft.discount != null) discountInput.value = draft.discount;
     if (couponInput && draft.coupon) couponInput.value = draft.coupon;
@@ -615,12 +687,18 @@
   // A completed sale spends its draft; anything else resumes where the admin
   // left off. renderCart() then paints the restored lines and, through
   // updateTotals(), rebuilds cart_json and the totals.
+  // renderCart() is inside the guard as well: it calls updateTotals(), which
+  // calls saveDraft(). Without that the very first paint would write the
+  // restored cart back over the stored one, making any restore-time difference
+  // permanent. Nothing is written until the admin actually changes something.
+  restoring = true;
   if (draftConsumed) {
     clearDraft();
   } else {
     restoreDraft();
   }
   renderCart();
+  restoring = false;
 })();
 </script>
 </div>
