@@ -75,6 +75,11 @@ $servedBy = $sale['sold_by_name'] ?? 'Staff';
 // an install where the sale-cancellation migration has not been run yet.
 $saleCancelled = (($sale['status'] ?? 'completed') === 'cancelled');
 
+// No point offering a button that cannot work. Where the migration is still
+// outstanding the toolbar keeps its original Back to POS link, and the invoice
+// behaves exactly as it did before the feature existed.
+$canCancelSale = Schema::hasColumn('sales', 'status');
+
 $subtotal = (float) $sale['subtotal'];
 $discount = (float) $sale['discount'];
 $tax = (float) ($sale['tax'] ?? 0);
@@ -372,7 +377,7 @@ $paymentStatusLabel = $saleCancelled ? 'CANCELLED' : strtoupper((string) $sale['
         <div class="receipt-flash receipt-flash-<?= $flashType ?>"><?= e($flash['message']) ?></div>
       <?php endforeach; ?>
       <div class="receipt-toolbar">
-        <?php if ($saleCancelled): ?>
+        <?php if ($saleCancelled || !$canCancelSale): ?>
           <?php /* Nothing left to cancel, so the slot goes back to being a plain way out. */ ?>
           <a href="<?= url('/admin/pos') ?>" class="receipt-btn">&larr; Back to POS</a>
         <?php else: ?>

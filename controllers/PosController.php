@@ -161,6 +161,15 @@ final class PosController extends AdminController
             $this->abort404();
         }
 
+        // Named explicitly rather than left to the catch below, which can only say
+        // "something failed". Deploys land before migrations are run by hand, so
+        // this is the one predictable reason for the feature to be unavailable and
+        // it deserves an answer the admin can act on.
+        if (!Schema::hasColumn('sales', 'status')) {
+            flash('danger', 'Cancelling a sale needs a one-off database update that has not been run on this server yet. Run database/migrations/20260808_sale_cancellation.php, then try again. Nothing was changed.');
+            redirect('admin/pos/receipt/' . (int) $id);
+        }
+
         try {
             $cancelled = $saleModel->cancel((int) $id, (int) Auth::user()['id']);
         } catch (Throwable $e) {
