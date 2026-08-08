@@ -1067,19 +1067,17 @@ CREATE TABLE notifications (
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =============================================================
--- TRIGGERS: keep product stock in sync with sales/purchases
+-- TRIGGERS: keep product stock in sync with purchases
 -- =============================================================
+--
+-- There is deliberately NO trigger on sale_items. Sale::create() subtracts the
+-- stock itself, because that is the only version that also runs on SQLite, that
+-- writes the matching stock_movements row, and that fires the low-stock alert.
+-- Having a trigger here as well made every POS sale deduct twice; see
+-- database/migrations/20260808_fix_double_stock_decrement.php, which drops it
+-- from databases created before this was corrected.
 
 DELIMITER //
-
-CREATE TRIGGER trg_sale_items_after_insert
-AFTER INSERT ON sale_items
-FOR EACH ROW
-BEGIN
-    UPDATE products
-    SET stock_qty = stock_qty - NEW.qty
-    WHERE id = NEW.product_id;
-END//
 
 CREATE TRIGGER trg_purchase_items_after_insert
 AFTER INSERT ON purchase_items

@@ -107,6 +107,113 @@ final class Sale extends Model
         }
     }
 
+    /**
+     * Reverses a completed POS sale: the stock goes back on the shelf, a refund
+     * is recorded against the takings, and any coupon becomes usable again.
+     *
+     * The sale row itself survives. invoice_no is unique and sequential, so
+     * deleting one would leave a hole in the numbering that no audit could ever
+     * explain; the row is stamped 'cancelled' instead and still prints, marked
+     * as such.
+     *
+     * @return bool false when the sale does not exist or was already cancelled.
+     *              The caller must treat that as "nothing happened" — cancelling
+     *              twice would hand back the same stock twice.
+     */
+    public function cancel(int $saleId, int $cancelledBy): bool
+    {
+        $now = date('Y-m-d H:i:s');
+
+        $this->db->beginTransaction();
+        try {
+            // Claim the sale before touching anything else. "AND status <> 'cancelled'"
+            // is the whole guard: whichever request updates the row wins, and a second
+            // click — or a double-submitted form — matches zero rows and stops here.
+            // Reading the status first and then writing would leave a window in which
+            // two requests both passed the check and both restored the stock.
+            $claim = $this->db->prepare(
+                "UPDATE sales
+                    SET status = 'cancelled', payment_status = 'refunded',
+                        cancelled_at = :cancelled_at, cancelled_by = :cancelled_by
+                  WHERE id = :id AND status <> 'cancelled'"
+            );
+            $claim->execute([
+                'cancelled_at' => $now,
+                'cancelled_by' => $cancelledBy,
+                'id' => $saleId,
+            ]);
+            if ($claim->rowCount() === 0) {
+                $this->db->rollBack();
+                return false;
+            }
+
+            $saleStmt = $this->db->prepare(
+                'SELECT invoice_no, member_id, total, payment_method, promotion_id
+                   FROM sales WHERE id = :id'
+            );
+            $saleStmt->execute(['id' => $saleId]);
+            $sale = $saleStmt->fetch();
+
+            $itemStmt = $this->db->prepare('SELECT product_id, qty FROM sale_items WHERE sale_id = :sale_id');
+            $itemStmt->execute(['sale_id' => $saleId]);
+
+            $restoreStmt = $this->db->prepare('UPDATE products SET stock_qty = stock_qty + :qty WHERE id = :product_id');
+            $stockMovementModel = new StockMovement();
+
+            foreach ($itemStmt->fetchAll() as $item) {
+                $productId = (int) $item['product_id'];
+                $qty = (int) $item['qty'];
+
+                $restoreStmt->execute(['qty' => $qty, 'product_id' => $productId]);
+
+                // 'return' is the existing movement type for stock coming back in;
+                // the positive change_qty mirrors the negative one create() wrote, so
+                // the movement history for the product still sums to the real count.
+                $stockMovementModel->record(
+                    $productId,
+                    $qty,
+                    'return',
+                    $saleId,
+                    'Cancelled sale ' . $sale['invoice_no'],
+                    $cancelledBy
+                );
+            }
+
+            // A negative refund row rather than deleting the original payment: the
+            // takings must show that money came in and then went back out, not that
+            // it was never taken. Every report that sums payments.amount then
+            // self-corrects with no query changes.
+            $this->db->prepare(
+                'INSERT INTO payments (member_id, sale_id, type, amount, method, status, paid_at, recorded_by)
+                 VALUES (:member_id, :sale_id, "refund", :amount, :method, "completed", :paid_at, :recorded_by)'
+            )->execute([
+                'member_id' => $sale['member_id'],
+                'sale_id' => $saleId,
+                'amount' => -(float) $sale['total'],
+                'method' => $sale['payment_method'],
+                'paid_at' => $now,
+                'recorded_by' => $cancelledBy,
+            ]);
+
+            // Give the coupon back. Without this a single-use code stays spent on a
+            // sale that no longer exists, and the customer cannot re-ring the order.
+            if (!empty($sale['promotion_id'])) {
+                $this->db->prepare(
+                    'UPDATE promotions SET used_count = CASE WHEN used_count > 0 THEN used_count - 1 ELSE 0 END
+                      WHERE id = :id'
+                )->execute(['id' => (int) $sale['promotion_id']]);
+                $this->db->prepare('DELETE FROM coupon_usages WHERE sale_id = :sale_id')
+                    ->execute(['sale_id' => $saleId]);
+            }
+
+            $this->db->commit();
+            return true;
+        } catch (Throwable $e) {
+            $this->db->rollBack();
+            throw $e;
+        }
+    }
+
     public function find(int $id): ?array
     {
         $stmt = $this->db->prepare(

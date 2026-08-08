@@ -44,7 +44,7 @@ final class AdminDashboardController extends AdminController
         )->fetchColumn();
 
         $todaysPosSales = (int) $db->query(
-            'SELECT COUNT(*) FROM sales WHERE DATE(sale_date) = CURDATE()'
+            "SELECT COUNT(*) FROM sales WHERE DATE(sale_date) = CURDATE() AND status <> 'cancelled'"
         )->fetchColumn();
 
         $todaysOnlineOrders = (int) $db->query(

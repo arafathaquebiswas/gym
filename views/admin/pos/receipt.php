@@ -71,16 +71,24 @@ $gymLogo = $resolveImageBase64($logoSetting, 'images/logo/logo.png');
 $customerName = $sale['member_name'] ?? 'Walk-in Customer';
 $servedBy = $sale['sold_by_name'] ?? 'Staff';
 
+// Defaults to 'completed' when the key is absent so the invoice still renders on
+// an install where the sale-cancellation migration has not been run yet.
+$saleCancelled = (($sale['status'] ?? 'completed') === 'cancelled');
+
 $subtotal = (float) $sale['subtotal'];
 $discount = (float) $sale['discount'];
 $tax = (float) ($sale['tax'] ?? 0);
 $grandTotal = (float) $sale['total'];
 $isPaid = ($sale['payment_status'] === 'paid');
-$amountPaid = $isPaid ? $grandTotal : 0.00;
-$amountDue = $isPaid ? 0.00 : $grandTotal;
+
+// A cancelled sale has been refunded in full: nothing was kept and nothing is
+// owed. Without this the 'refunded' payment_status falls through to the "not
+// paid" branch and the invoice shows the whole total as still due.
+$amountPaid = ($isPaid && !$saleCancelled) ? $grandTotal : 0.00;
+$amountDue = ($isPaid || $saleCancelled) ? 0.00 : $grandTotal;
 
 $paymentMethodLabel = strtoupper(str_replace('_', ' ', (string) $sale['payment_method']));
-$paymentStatusLabel = strtoupper((string) $sale['payment_status']);
+$paymentStatusLabel = $saleCancelled ? 'CANCELLED' : strtoupper((string) $sale['payment_status']);
 ?>
 <style>
   /* Universal Invoice Layout Styles */
@@ -126,6 +134,37 @@ $paymentStatusLabel = strtoupper((string) $sale['payment_status']);
   }
   .invoice-badge-paid { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
   .invoice-badge-pending { background: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
+  .invoice-badge-cancelled { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+  /*
+   * The CANCELLED stamp. Deliberately not a tinted background alone: browsers
+   * drop background colours from printouts unless "Background graphics" is
+   * ticked, so the heavy border and the bold letterforms are what carry the
+   * message on paper. It is outside .no-print on purpose — a voided invoice
+   * must say so in every form it leaves the building in, screen, print and PDF.
+   */
+  .invoice-cancelled-banner {
+    border: 3px solid #b91c1c;
+    background: #fef2f2;
+    color: #b91c1c;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+  .invoice-cancelled-banner .stamp {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    line-height: 1.1;
+  }
+  .invoice-cancelled-banner .stamp-note {
+    font-size: 11px;
+    font-weight: 600;
+    color: #7f1d1d;
+    margin-top: 3px;
+  }
 
   .info-table {
     width: 100%;
@@ -195,6 +234,13 @@ $paymentStatusLabel = strtoupper((string) $sale['payment_status']);
   .receipt-btn:hover { background: #f9fafb; border-color: #9ca3af; }
   .receipt-btn-primary { background: #ea580c; border-color: #ea580c; color: #fff; }
   .receipt-btn-primary:hover { background: #c2410c; border-color: #c2410c; color: #fff; }
+  .receipt-btn-danger { background: #fff; border-color: #dc2626; color: #b91c1c; }
+  .receipt-btn-danger:hover { background: #fef2f2; border-color: #b91c1c; color: #991b1b; }
+  .receipt-flash { padding: 9px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    margin-bottom: 10px; border: 1px solid transparent; }
+  .receipt-flash-success { background: #dcfce7; border-color: #bbf7d0; color: #15803d; }
+  .receipt-flash-danger { background: #fee2e2; border-color: #fecaca; color: #b91c1c; }
+  .receipt-flash-warning { background: #fef9c3; border-color: #fef08a; color: #a16207; }
   .receipt-tip { padding: 8px 12px; background: #f9fafb; border: 1px solid #e5e7eb;
     border-radius: 6px; font-size: 11px; color: #4b5563; }
 
@@ -307,11 +353,34 @@ $paymentStatusLabel = strtoupper((string) $sale['payment_status']);
 </style>
 
 <div class="invoice-wrapper">
+  <?php if ($saleCancelled): ?>
+    <!-- Shown on screen, in print and in the PDF alike: a voided invoice must never leave here looking valid. -->
+    <div class="invoice-cancelled-banner">
+      <div class="stamp">Cancelled</div>
+      <div class="stamp-note">
+        This sale was cancelled<?= !empty($sale['cancelled_at']) ? ' on ' . format_date($sale['cancelled_at'], 'd M Y, h:i A') : '' ?>.
+        The stock has been returned and the payment refunded. This invoice is void.
+      </div>
+    </div>
+  <?php endif; ?>
+
   <?php if (!$isPdfMode): ?>
     <!-- Top Action Bar & Print Tip Notice (Screen Only) -->
     <div class="no-print">
+      <?php foreach (get_flashes() as $flash): ?>
+        <?php $flashType = in_array($flash['type'], ['success', 'danger', 'warning'], true) ? $flash['type'] : 'warning'; ?>
+        <div class="receipt-flash receipt-flash-<?= $flashType ?>"><?= e($flash['message']) ?></div>
+      <?php endforeach; ?>
       <div class="receipt-toolbar">
-        <a href="<?= url('/admin/pos') ?>" class="receipt-btn">&larr; Back to POS</a>
+        <?php if ($saleCancelled): ?>
+          <?php /* Nothing left to cancel, so the slot goes back to being a plain way out. */ ?>
+          <a href="<?= url('/admin/pos') ?>" class="receipt-btn">&larr; Back to POS</a>
+        <?php else: ?>
+          <form method="post" action="<?= url('/admin/pos/receipt/' . $sale['id'] . '/cancel') ?>" id="cancelSaleForm" style="margin:0;">
+            <?= Security::csrfField() ?>
+            <button type="submit" class="receipt-btn receipt-btn-danger" id="cancelSaleBtn">Cancel Sell</button>
+          </form>
+        <?php endif; ?>
         <div class="toolbar-actions">
           <button type="button" class="receipt-btn" id="receiptPrintBtn">Print Invoice (A4)</button>
           <a href="<?= url('/admin/pos/receipt/' . $sale['id'] . '/pdf') ?>" class="receipt-btn receipt-btn-primary" id="receiptPdfBtn">Download PDF</a>
@@ -330,7 +399,32 @@ $paymentStatusLabel = strtoupper((string) $sale['payment_status']);
       var posUrl = <?= json_encode(url('/admin/pos?completed=' . (int) $sale['id'])) ?>;
       var printBtn = document.getElementById('receiptPrintBtn');
       var pdfBtn = document.getElementById('receiptPdfBtn');
+      var cancelForm = document.getElementById('cancelSaleForm');
       var leaving = false;
+
+      if (cancelForm) {
+        // Confirmed here rather than server-side because there is no undo: the
+        // stock has moved and a refund has been written by the time the next page
+        // renders. The submit button is disabled on the way out so an impatient
+        // second click cannot post the form twice — the model refuses a repeat
+        // cancellation regardless, this just avoids the confusing warning.
+        cancelForm.addEventListener('submit', function (event) {
+          var ok = window.confirm(
+            'Cancel this sale?\n\n' +
+            'The items go back into stock and the payment is refunded. ' +
+            'The invoice will be kept and marked CANCELLED.\n\nThis cannot be undone.'
+          );
+          if (!ok) {
+            event.preventDefault();
+            return;
+          }
+          var btn = document.getElementById('cancelSaleBtn');
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Cancelling…';
+          }
+        });
+      }
 
       function returnToPos() {
         if (leaving) { return; }   // both paths can fire; only navigate once
@@ -394,8 +488,8 @@ $paymentStatusLabel = strtoupper((string) $sale['payment_status']);
           <div><strong>Date:</strong> <?= format_date($sale['sale_date'], 'd M Y, h:i A') ?></div>
         </div>
         <div style="margin-top: 6px;">
-          <span class="invoice-badge <?= $isPaid ? 'invoice-badge-paid' : 'invoice-badge-pending' ?>">
-            Payment: <?= e($paymentStatusLabel) ?>
+          <span class="invoice-badge <?= $saleCancelled ? 'invoice-badge-cancelled' : ($isPaid ? 'invoice-badge-paid' : 'invoice-badge-pending') ?>">
+            <?= $saleCancelled ? 'Status: ' : 'Payment: ' ?><?= e($paymentStatusLabel) ?>
           </span>
         </div>
       </td>

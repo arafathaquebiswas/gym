@@ -241,6 +241,7 @@ $router->get('/admin/pos', [PosController::class, 'index']);
 $router->post('/admin/pos/checkout', [PosController::class, 'checkout']);
 $router->get('/admin/pos/receipt/{id}', [PosController::class, 'receipt']);
 $router->get('/admin/pos/receipt/{id}/pdf', [PosController::class, 'pdf']);
+$router->post('/admin/pos/receipt/{id}/cancel', [PosController::class, 'cancelSale']);
 
 // ---- Admin: Orders (online store) ------------------------------------------------
 $router->get('/admin/orders', [OrderAdminController::class, 'index']);

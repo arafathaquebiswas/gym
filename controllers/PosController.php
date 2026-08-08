@@ -143,6 +143,46 @@ final class PosController extends AdminController
         exit;
     }
 
+    /**
+     * Voids a sale from its own invoice page and puts the stock back.
+     *
+     * Gated on the POS module's 'delete' action rather than plain access: ringing
+     * a sale up and unwinding one are different levels of trust, and a cashier
+     * who can do the first should not automatically be able to do the second.
+     */
+    public function cancelSale(string $id): void
+    {
+        Security::requireCsrf();
+        Permission::require('pos', 'delete');
+
+        $saleModel = new Sale();
+        $sale = $saleModel->find((int) $id);
+        if (!$sale) {
+            $this->abort404();
+        }
+
+        try {
+            $cancelled = $saleModel->cancel((int) $id, (int) Auth::user()['id']);
+        } catch (Throwable $e) {
+            error_log('Sale cancellation failed for sale ' . (int) $id . ': ' . $e->getMessage());
+            flash('danger', 'The sale could not be cancelled and nothing was changed. Please try again.');
+            redirect('admin/pos/receipt/' . (int) $id);
+        }
+
+        if (!$cancelled) {
+            // Already cancelled — a double click, or a stale page left open in
+            // another tab. Say so plainly rather than reporting a second success,
+            // which would imply the stock had gone back twice.
+            flash('warning', 'That sale was already cancelled. Nothing was changed.');
+            redirect('admin/pos/receipt/' . (int) $id);
+        }
+
+        $this->logActivity('pos_sale_cancelled', "Cancelled sale {$sale['invoice_no']} and restored its stock");
+
+        flash('success', 'Sale ' . $sale['invoice_no'] . ' was cancelled and the stock has been restored.');
+        redirect('admin/pos/receipt/' . (int) $id);
+    }
+
     private function saleItemsWithDetails(int $saleId): array
     {
         $stmt = Database::connection()->prepare(
