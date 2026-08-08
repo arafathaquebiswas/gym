@@ -259,10 +259,14 @@ final class ReportController extends AdminController
         $group = $this->input('group', 'daily') === 'monthly' ? 'monthly' : 'daily';
         $dateExpr = $group === 'monthly' ? "DATE_FORMAT(sale_date, '%Y-%m')" : 'DATE(sale_date)';
 
+        // See AdminDashboardController: skipped when the cancellation migration has
+        // not run, so the report degrades to its old totals instead of erroring.
+        $notCancelled = Schema::hasColumn('sales', 'status') ? " AND status <> 'cancelled'" : '';
+
         $stmt = Database::connection()->prepare(
             "SELECT $dateExpr AS period, COUNT(*) AS sale_count, SUM(subtotal) AS subtotal, SUM(discount) AS discount, SUM(total) AS total
-             FROM sales WHERE sale_date BETWEEN :from AND :to AND status <> 'cancelled'
-             GROUP BY period ORDER BY period ASC"
+             FROM sales WHERE sale_date BETWEEN :from AND :to" . $notCancelled . '
+             GROUP BY period ORDER BY period ASC'
         );
         $stmt->execute(['from' => $from, 'to' => $to . ' 23:59:59']);
         $rows = $stmt->fetchAll();

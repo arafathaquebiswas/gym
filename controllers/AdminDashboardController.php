@@ -43,8 +43,14 @@ final class AdminDashboardController extends AdminController
             "SELECT COUNT(*) FROM orders WHERE status = 'pending'"
         )->fetchColumn();
 
+        // Cancelled sales are not sales. Guarded because this is the first page of
+        // the admin panel: if the cancellation migration has not been run yet, an
+        // unguarded reference to sales.status would take the dashboard down rather
+        // than just over-count by the number of voided sales.
+        $notCancelled = Schema::hasColumn('sales', 'status') ? " AND status <> 'cancelled'" : '';
+
         $todaysPosSales = (int) $db->query(
-            "SELECT COUNT(*) FROM sales WHERE DATE(sale_date) = CURDATE() AND status <> 'cancelled'"
+            "SELECT COUNT(*) FROM sales WHERE DATE(sale_date) = CURDATE()" . $notCancelled
         )->fetchColumn();
 
         $todaysOnlineOrders = (int) $db->query(
