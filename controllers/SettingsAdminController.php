@@ -41,6 +41,7 @@ final class SettingsAdminController extends AdminController
         $this->adminView('settings/index', [
             'pageTitle' => 'Settings',
             'settings' => $settings,
+            'databaseUpdates' => DatabaseUpdate::status(),
         ]);
     }
 
@@ -157,6 +158,45 @@ final class SettingsAdminController extends AdminController
         $this->logActivity('data_reset', 'Cleared transaction data — ' . $summary);
 
         flash('success', 'Data cleared. Removed: ' . $summary . '. Products, packages, trainers, blog, gallery and all admin accounts were kept.');
+        redirect('admin/settings');
+    }
+
+    /**
+     * Applies outstanding schema updates from the browser.
+     *
+     * Owner-level only, like the reset — this changes the shape of the database,
+     * even though every step is additive and re-runnable. No confirmation phrase:
+     * the alternative to pressing this is running the same statements over SSH,
+     * and making it feel dangerous would only push people towards the shell.
+     */
+    public function runDatabaseUpdates(): void
+    {
+        Security::requireCsrf();
+
+        if (!Auth::hasRole('main_admin', 'super_admin')) {
+            http_response_code(403);
+            die('403 - Permission Denied');
+        }
+
+        if (DatabaseUpdate::pendingCount() === 0) {
+            flash('info', 'The database is already up to date. Nothing to do.');
+            redirect('admin/settings');
+        }
+
+        $result = DatabaseUpdate::runPending();
+
+        if ($result['applied']) {
+            $this->logActivity('database_updated', 'Applied database updates: ' . implode(', ', $result['applied']));
+            flash('success', 'Database updated: ' . implode('; ', $result['applied']) . '.');
+        }
+
+        foreach ($result['failed'] as $label => $message) {
+            // The reason is shown rather than logged away: the person pressing this
+            // is the one who has to decide what to do next, and "it failed" alone
+            // has already cost this project a day.
+            flash('danger', 'Could not apply "' . $label . '": ' . $message);
+        }
+
         redirect('admin/settings');
     }
 

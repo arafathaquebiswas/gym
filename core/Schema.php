@@ -20,6 +20,16 @@ final class Schema
     /** @var array<string, array<string, bool>> table => column => exists */
     private static array $cache = [];
 
+    /**
+     * Drops what has been learned so far. Needed after a schema change inside the
+     * same request — DatabaseUpdate adds a column and then immediately asks
+     * whether it is there, and a stale cache would say no.
+     */
+    public static function forget(): void
+    {
+        self::$cache = [];
+    }
+
     public static function hasColumn(string $table, string $column): bool
     {
         if (!isset(self::$cache[$table])) {

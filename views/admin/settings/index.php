@@ -510,6 +510,56 @@ $yn = function (string $key, string $default = '1') use ($settings) {
     </div>
 
     <div class="tab-pane fade" id="tab-backup">
+      <?php
+        $updates = $databaseUpdates ?? [];
+        $pendingUpdates = array_values(array_filter($updates, fn ($u) => !$u['applied']));
+        $appliedUpdates = array_values(array_filter($updates, fn ($u) => $u['applied']));
+      ?>
+      <div class="admin-card mb-3">
+        <h6 class="mb-3"><i class="bi bi-database-gear"></i> Database Updates</h6>
+        <p class="text-white-50 small mb-3">
+          New features sometimes need a small change to the database structure. The site
+          updates its code automatically, but these changes are applied here. They only add
+          things &mdash; your sales, members and products are never touched.
+        </p>
+
+        <?php if (!$pendingUpdates): ?>
+          <div class="alert alert-success py-2 px-3 small mb-0">
+            <i class="bi bi-check-circle"></i> Your database is up to date. Nothing to apply.
+          </div>
+        <?php else: ?>
+          <div class="alert alert-warning py-2 px-3 small">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong><?= count($pendingUpdates) ?></strong>
+            update<?= count($pendingUpdates) === 1 ? '' : 's' ?> waiting. Features that depend on
+            <?= count($pendingUpdates) === 1 ? 'it' : 'them' ?> stay hidden until applied.
+          </div>
+          <ul class="list-unstyled small mb-3">
+            <?php foreach ($pendingUpdates as $update): ?>
+              <li class="mb-2">
+                <span class="text-white fw-semibold"><i class="bi bi-dot"></i><?= e($update['label']) ?></span>
+                <div class="text-white-50 ps-3"><?= e($update['detail']) ?></div>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+          <button type="submit" form="databaseUpdateForm" class="btn btn-ps btn-sm">
+            <i class="bi bi-arrow-repeat"></i> Apply <?= count($pendingUpdates) ?>
+            Update<?= count($pendingUpdates) === 1 ? '' : 's' ?>
+          </button>
+        <?php endif; ?>
+
+        <?php if ($appliedUpdates): ?>
+          <div class="mt-3 pt-3 border-top border-secondary">
+            <div class="text-white-50 small mb-1">Already applied</div>
+            <?php foreach ($appliedUpdates as $update): ?>
+              <div class="small text-success">
+                <i class="bi bi-check2"></i> <?= e($update['label']) ?>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+      </div>
+
       <div class="admin-card">
         <h6 class="mb-3">Backup &amp; Restore</h6>
         <p class="text-white-50 small mb-4">Backups are exported as a plain <code>.sql</code> file you can store anywhere. Restoring replaces <strong>all current data</strong> — a safety backup of the current state is saved automatically before any restore.</p>
@@ -560,6 +610,10 @@ $yn = function (string $key, string $default = '1') use ($settings) {
 ?>
 <form id="resetDataForm" method="post" action="<?= url('/admin/settings/reset-data') ?>"
       onsubmit="return confirm('Permanently clear all sales, payments, orders and members? This cannot be undone.');">
+  <?= Security::csrfField() ?>
+</form>
+<form id="databaseUpdateForm" method="post" action="<?= url('/admin/settings/database-updates') ?>"
+      onsubmit="return confirm('Apply the pending database updates now? These only add new columns and can be run again safely.');">
   <?= Security::csrfField() ?>
 </form>
 <form id="restoreForm" method="post" action="<?= url('/admin/settings/restore') ?>" enctype="multipart/form-data"

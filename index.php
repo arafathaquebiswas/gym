@@ -284,6 +284,7 @@ $router->get('/admin/settings/backup', [SettingsAdminController::class, 'backup'
 $router->get('/admin/settings/backup-media', [SettingsAdminController::class, 'backupMedia']);
 $router->post('/admin/settings/restore', [SettingsAdminController::class, 'restore']);
 $router->post('/admin/settings/reset-data', [SettingsAdminController::class, 'resetData']);
+$router->post('/admin/settings/database-updates', [SettingsAdminController::class, 'runDatabaseUpdates']);
 
 // ---- Admin: Role & Permission Management (Main Admin + Super Admin only) ----------
 $router->get('/admin/roles', [RoleAdminController::class, 'index']);
